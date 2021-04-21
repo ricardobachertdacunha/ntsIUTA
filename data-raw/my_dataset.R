@@ -1,10 +1,5 @@
 ## code to prepare `my_dataset` dataset goes here
 
-## Dependencies ##
-# if (file.exists("~/.Rprofile-patRoon.R")) {
-#   source("C:/Users/MZmine/Documents/.Rprofile-patRoon.R")
-# }
-
 #usethis::use_data(setupExample, overwrite = TRUE)
 
 #usethis::use_data(rawDataExample, overwrite = TRUE)
