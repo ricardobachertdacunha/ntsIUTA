@@ -1,0 +1,63 @@
+Package: ntsIUTA
+Title: Non-target Screening IUTA
+Version: 0.0.1
+Authors@R: person('Ricardo', 'Cunha', email = 'cunha@iuta.de', role = c('cre', 'aut'))
+Maintainer: Ricardo Cunha <cunha@iuta.de>
+Description: The ntsIUTA package is a tool for processing chromatographically separated mass spectral (MS) data, focusing on promoting routine application of Non-target Screening workflows.
+License: GPL (>= 3)
+Imports: 
+    config,
+    golem,
+    shiny,
+    processx,
+    attempt,
+    DT,
+    glue,
+    htmltools,
+    shinydashboard,
+    shinydashboardPlus,
+    shinyFiles,
+    shinyWidgets,
+    utils,
+    tools,
+    patRoon,
+    Rdpack,
+    dplyr,
+    data.table,
+    magrittr,
+    xcms,
+    BiocParallel,
+    parallel,
+    CAMERA,
+    HyperbolicDist,
+    rstudioapi,
+    RColorBrewer,
+    grDevices,
+    graphics,
+    methods,
+    lattice,
+    plotly,
+    ggplotify,
+    gridExtra,
+    stringr,
+    fuzzyjoin,
+    ggplot2,
+    htmlwidgets,
+    pkgload,
+    Biobase,
+    BiocGenerics,
+    MSnbase
+Encoding: UTF-8
+LazyData: true
+RdMacros: Rdpack
+RoxygenNote: 7.1.1
+URL: https://github.com/ricardobachertdacunha/ntsIUTA.git
+BugReports: https://github.com/ricardobachertdacunha/ntsIUTA.git/issues
+Suggests:
+    BiocStyle,
+    knitr,
+    rmarkdown,
+    kableExtra
+VignetteBuilder: knitr
+Depends: 
+    R (>= 4.0)
