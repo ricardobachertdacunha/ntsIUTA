@@ -26,6 +26,9 @@ library(plotly)
 library(kableExtra)
 
 ```
+# Installation
+
+(to be added)
 
 # Introduction
 
