@@ -82,15 +82,15 @@ checkQC <- function(rawQC = rawData,
   
   
   qcPeaks <- ntsIUTA::peakPicking(rawQC,
-                                  param = param,
+                                  param = paramPeaks,
                                   removeQC = FALSE,
                                   refinePeaks = FALSE,
                                   save = FALSE)
   
   qcFeat <- ntsIUTA::makeFeatures(peaksData = qcPeaks,
-                                  paramPreGrouping = param1,
-                                  paramAlignment = param2,
-                                  paramGrouping = param3,
+                                  paramPreGrouping = paramPreGrouping,
+                                  paramAlignment = paramAlignment,
+                                  paramGrouping = paramGrouping,
                                   ppmForFillingGroups = ppmForFillingGroups,
                                   save = FALSE)
   
