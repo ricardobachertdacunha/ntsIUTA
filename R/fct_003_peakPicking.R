@@ -41,7 +41,7 @@
 #' @importFrom BiocParallel registered SnowParam register bpparam
 #' @importFrom parallel detectCores
 #' @importFrom utils txtProgressBar setTxtProgressBar
-#' @importFrom xcms findChromPeaks MergeNeighboringPeaksParam refineChromPeaks CleanPeaksParam
+#' @import xcms
 #' @importFrom MSnbase filterFile
 #' 
 #'
@@ -49,10 +49,13 @@
 #' 
 #' 
 #' 
-peakPicking <- function(rawData = rawData, param = instParam$PP, removeQC = TRUE,
+peakPicking <- function(rawData = rawData, param = NULL, removeQC = TRUE,
                         refinePeaks = FALSE, expandRt = 1, minProp = 0.9, expandMz = 0, ppm = 0,
                         maxPeakwidth = NULL,
                         save = TRUE, projPath = setup$projPath, maxMultiProcess = TRUE) {
+  
+  #namespace was changed to import xcms interely as hiden functions were not loaded
+  #findChromPeaks MergeNeighboringPeaksParam refineChromPeaks CleanPeaksParam featureData
   
   #Examples
   #setup <- ntsIUTA::makeSetup(projPath = system.file(package = "ntsIUTA", dir = "extdata"), save = FALSE)
