@@ -6,7 +6,7 @@
 \usage{
 peakPicking(
   rawData = rawData,
-  param = instParam$PP,
+  param = NULL,
   removeQC = TRUE,
   refinePeaks = FALSE,
   expandRt = 1,
