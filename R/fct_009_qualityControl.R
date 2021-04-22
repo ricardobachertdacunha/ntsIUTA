@@ -98,7 +98,12 @@ checkQC <- function(rawQC = rawData,
   
   qcPat <- ntsIUTA::getPatData(qcFeat, sampleInfo = sampleInfo[sampleInfo$sample %in% qcFeat$sample_name,])
   
-  if (!base::is.data.frame(screeningList)) sl <- utils::read.csv(screeningList)
+  #load or read screeningList
+  if (!base::is.data.frame(screeningList)) {
+    sl <- utils::read.csv(screeningList)
+  } else {
+    sl <- screeningList
+  }
   if (base::max(sl$rt) < 120) sl$rt <- sl$rt * 60
   
   #check polarity
@@ -164,7 +169,7 @@ checkQC <- function(rawQC = rawData,
     xgroup <- qcdf$group[i]
     xname <- qcdf$name[i]
     if (!base::is.na(xgroup) & qcdf$hasMS2[i]) {
-      xMS2 <- base::as.data.frame(MS2[[xgroup]]$MSMS)
+      xMS2 <- MS2[[xgroup]]$MSMS
       if (!base::is.null(xMS2)) {
         dbMS2 <- base::data.frame(mz = base::as.numeric(base::unlist(base::strsplit(qcdf$mzMS2[i], split=";"))),
                                   intensity = base::as.numeric(base::unlist(base::strsplit(qcdf$intMS2[i], split=";"))),
@@ -278,6 +283,8 @@ checkQC <- function(rawQC = rawData,
                                           names = qcdf$name)
     
     if (save) {
+      results <- base::paste0(projPath,"\\results")
+      if (!base::dir.exists(results)) base::dir.create(results)
       ggplot2::ggsave(base::paste0(projPath,"/results/QC_Deviations.tiff"),
              plot = evalPlot, device = "tiff", path = NULL, scale = 1,
              width = 17, height = 10, units = "cm", dpi = 300, limitsize = TRUE)
@@ -290,6 +297,8 @@ checkQC <- function(rawQC = rawData,
   }
   
   if (save) {
+    results <- base::paste0(projPath,"\\results")
+    if (!base::dir.exists(results)) base::dir.create(results)
     utils::write.csv(dplyr::select(qcdf, -hasMS2, -mzMS2, -intMS2, -preMS2), file = base::paste0(projPath,"/results/QC_CheckResults.csv"))
     rData <- base::paste0(projPath,"\\rData")
     if (!base::dir.exists(rData)) base::dir.create(rData)

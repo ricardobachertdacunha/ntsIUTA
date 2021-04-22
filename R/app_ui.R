@@ -4,7 +4,7 @@
 #'     DO NOT REMOVE.
 #' @import shiny
 #' @import shinydashboard
-#' @import shinydashboardPlus
+#' @importFrom shinydashboardPlus dashboardPagePlus dashboardHeaderPlus
 #' @import shinyFiles
 #' @import shinyWidgets
 #' @noRd
