@@ -116,6 +116,11 @@ importFrom(shiny,NS)
 importFrom(shiny,column)
 importFrom(shiny,shinyApp)
 importFrom(shiny,tagList)
+<<<<<<< HEAD
+=======
+importFrom(shinydashboardPlus,dashboardHeader)
+importFrom(shinydashboardPlus,dashboardPage)
+>>>>>>> 60879cfbc072b46cbbe0945871348c5693aa34bc
 importFrom(stats,cor)
 importFrom(stats,median)
 importFrom(stats,na.omit)

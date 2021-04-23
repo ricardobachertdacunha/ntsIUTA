@@ -95,8 +95,8 @@ peakPicking <- function(rawData = rawData, param = NULL, removeQC = TRUE,
     
     sampleidxs <- base::which(rawData$sample_group == groups[rgidx])
     
-    #TODO add possibility to rund patRoon peakpicking functions and convert to XCMSnExp object
-    #Other methods for peak picking with xcms possible by chnaging param
+    #TODO add possibility to run patRoon peakpicking functions and convert to XCMSnExp object
+    #Other methods for peak picking with xcms possible by changing param
     peaksData[[groups[rgidx]]] <- xcms::findChromPeaks(MSnbase::filterFile(rawData, sampleidxs),
                                                        return.type = "XCMSnExp",
                                                        msLevel = 1, BPPARAM = BiocParallel::bpparam("SnowParam"),
