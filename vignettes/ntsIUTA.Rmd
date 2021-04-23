@@ -26,9 +26,6 @@ library(plotly)
 library(kableExtra)
 
 ```
-# Installation
-
-(to be added)
 
 # Introduction
 
@@ -37,6 +34,22 @@ In this document, the basic back-end workflow of `ntsIUTA` as well as applicatio
 
 ```{r pkgLoad}
 library(ntsIUTA)
+```
+
+# Installation
+
+`ntsIUTA` relies on various other software tools to go through it's workflows for NTS and data processing. These dependencies have to be installed beforehand and can in some instances not be resolved easily during the `ntsIUTA`-installation itself.
+
+The first step for the installation of the `ntsIUTA`R package is, therefore, the installation of the `r Githubpkg("rickhelmus/patRoon")` package, as it needed for `ntsIUTA` and resolves a lot of the dependencies. An installation guide for the `r Githubpkg("rickhelmus/patRoon")` package can be found [here](https://rickhelmus.github.io/patRoon/handbook_bd/installation.html). `patRoon` also provides an [automatic installation script](https://rickhelmus.github.io/patRoon/handbook_bd/automatic-installation-windows-only.html) for Windows users. Alternatively, a  [manual installtion guide](https://rickhelmus.github.io/patRoon/handbook_bd/manual-installation.html) is provided as well.
+
+The `ntsIUTA`package can then be installed from the [ntsIUTA GitHub repository](https://github.com/ricardobachertdacunha/ntsIUTA). 
+
+```{r install_ntsIUTA, eval=FALSE}
+remotes::install_github("ricardobachertdacunha/ntsIUTA", auth_token = "<OAuth_Token>")
+
+#or once the package goes public
+remotes::install_github("ricardobachertdacunha/ntsIUTA")
+
 ```
 
 # Project Setup
