@@ -17,19 +17,19 @@ importRawData(
 }
 \arguments{
 \item{sampleInfo}{The sample \code{data.table} obtained by the \code{\link{makeSetup}} function.
-Note that the \code{sampleInfo} can be filtered beforehand to exclude unwanted mzML files or to redefine the name of relpicate sample groups.}
+Note that the \code{sampleInfo} can be filtered beforehand to exclude unwanted mzML files or to redefine the name of replicate sample groups.}
 
 \item{rtFilter}{A numeric vector with length 2 defining the minimum and maximum chromatographic retention time for the listed files respectively.
-If the files have different time dimentions, \code{rtFilter} should be \code{NULL}.}
+If the files have different time dimensions, \code{rtFilter} should be \code{NULL}.}
 
 \item{timeUnit}{If \code{rtFilter} is given in minutes please keep the default value \code{min} otherwise change to \code{sec} for seconds.}
 
-\item{msLevel}{The MS dimentions for the rtFilter to be applied. Default is for both MS1 and MS2 with \code{c(1,2)}.}
+\item{msLevel}{The MS dimensions for the rtFilter to be applied. Default is for both MS1 and MS2 with \code{c(1,2)}.}
 
 \item{centroidedData}{Logical, set to \code{TRUE} for mzML files with centroided data or \code{FALSE} for profile data.
 \code{NA} will collect all the data from the mzML file.}
 
-\item{removeEmptySpectra}{Logical, set to TRUE if empty spectra shuld be removed.
+\item{removeEmptySpectra}{Logical, set to TRUE if empty spectra should be removed.
 It is recommended to remove empty spectra as it may cause issues during creation of features.}
 
 \item{save}{Logical, set to \code{TRUE} to save the object rawData in the \strong{rData} folder.

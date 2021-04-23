@@ -27,7 +27,7 @@ Note that the function will look into subfolders for mzML files or specified raw
 a grouping tentative will be made using the name of the MS files found in the given \code{projPath}.}
 
 \item{blanks}{The name of the sample replicate group to be used for blank subtraction.
-Different blank groups can be assigned to replicate sample groups by edditing the \code{sampleInfo} in the output \code{setup} list.}
+Different blank groups can be assigned to replicate sample groups by editing the \code{sampleInfo} in the output \code{setup} list.}
 
 \item{polarity}{A vector specifying the polarity mode used in each MS file.
 Possible values are \code{positive} or \code{negative} for positive and negative mode, respectively.}
@@ -47,7 +47,7 @@ If \strong{rData} folder does not exist in given \code{projPath}, the folder wil
 }
 \value{
 The output is a simple list, containing: (1) \code{projPath}, the chosen project path; (2) the \code{date}, the given project date; and 
-(3) the \code{sampleInfo}, a \code{\link[base]{data.frame}} with the folowwing columns:
+(3) the \code{sampleInfo}, a \code{\link[base]{data.frame}} with the following columns:
 (1) \code{filePath}, the path of each mzML file, including any converted MS files;
 (2) \code{sample}, the retrieved file name to be used as sample identifier;
 (3) \code{group}, the name of each replicate sample group
@@ -62,7 +62,7 @@ Setting \code{createRproject} to \code{TRUE} will create and open an R project i
 When \code{convertFiles} is \code{TRUE} the function uses \code{\link{mzMLconverter}} to automatically convert specified raw MS files to mzML.
 }
 \details{
-The data.frame \code{sampleInfo} in the output list can always be eddited for correction of
+The data.frame \code{sampleInfo} in the output list can always be edited for correction of
 sample replicate group names, blank replicate groups and assigned polarity, which is set to \code{positive} by default when not given as argument.
 }
 \examples{
