@@ -4,10 +4,6 @@
 #'     DO NOT REMOVE.
 #' @import shiny
 #' @import shinydashboard
-<<<<<<< HEAD
-=======
-#' @importFrom shinydashboardPlus dashboardPage dashboardHeader
->>>>>>> 60879cfbc072b46cbbe0945871348c5693aa34bc
 #' @import shinyFiles
 #' @import shinyWidgets
 #' @noRd
@@ -16,13 +12,8 @@ app_ui <- function(request) {
     # Leave this function for adding external resources
     golem_add_external_resources(),
     # List the first level UI elements here 
-<<<<<<< HEAD
     dashboardPage(
-      dashboardHeader( 
-=======
-    shinydashboardPlus::dashboardPage(
-      shinydashboardPlus::dashboardHeader( 
->>>>>>> 60879cfbc072b46cbbe0945871348c5693aa34bc
+      dashboardHeader(
         # title = tagList(span(class = "logo-lg", "ntsIUTA"), 
         # icon("think-peaks")),
         # enable_rightsidebar = FALSE,
