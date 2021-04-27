@@ -133,7 +133,7 @@ ntsIUTA::plotTargetCentroids(rawData,
  
 ## Profile vs Centroid
 
-MS data can be directly centroided during conversion to mzML with [ProteoWizard](http://proteowizard.sourceforge.net/) via `makeSetup`. However, centroiding of profile MS data was also implemented with additional capabilities for smotthing and refining the MS data, using tools from the `r Biocpkg("MSnbase")` package. The smothing and refinement can benefit peak finding for data with high noise and low mass accuracy and/or high deviation. Below we plot the an example for centroided and profile MS data of Terbutryn. A high deviation for the mass of Terbutryn is shown on the centroided plot (left), which is likely related to saturation of the MS detector due to the high intensity.
+MS data can be directly centroided during conversion to mzML with [ProteoWizard](http://proteowizard.sourceforge.net/) via `makeSetup`. However, centroiding of profile MS data was also implemented with additional capabilities for smotthing and refining the MS data, using tools from the `r Biocpkg("MSnbase")` package. The smoothing and refinement can benefit peak finding for data with high noise and low mass accuracy and/or high deviation. Below we plot the an example for centroided and profile MS data of Terbutryn. A high deviation for the mass of Terbutryn is shown on the centroided plot (left), which is likely related to saturation of the MS detector due to the high intensity.
 
 ```{r plotCentProf,cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE, results='markup', out.width = "70%", fig.cap="Centroided vs Profile data. Comparison between centroided and profile data for diuron as [M+H]+."}
 setup_prof <- ntsIUTA::makeSetup(projPath, save = F, makeNewProject = F)
@@ -209,7 +209,7 @@ peaksData[[2]]
 
 ## Inspecting peaks
 
-Individual peaks can be accessed via the existing function `chromPeaks` from the `r Biocpkg("xcms")` package. By specifying `mz` and `rt` a specific peak can be found. As `verboseColumns` was `TRUE` during peak picking, usefull information is stored for each peak as shown below for the corresponding peak of diuron (*[M+H]+*). See `?chromPeaks` for more information about the arguments possible and the actual meaning of each peak parameter.
+Individual peaks can be accessed via the existing function `chromPeaks` from the `r Biocpkg("xcms")` package. By specifying `mz` and `rt` a specific peak can be found. As `verboseColumns` was `TRUE` during peak picking, useful information is stored for each peak as shown below for the corresponding peak of diuron (*[M+H]+*). See `?chromPeaks` for more information about the arguments possible and the actual meaning of each peak parameter.
 
 ```{r chromPeaks,  cache=TRUE, message=FALSE, warning=FALSE}
 mz <- 233.0243
@@ -260,7 +260,7 @@ mz_ppm_prof2
 
 # Alignment and grouping
 
-Often several samples, including replicates, are used during MS data processing. Therefore, grouping and alignment of peaks accross samples is implemented within the `ntsIUTA` workflow. Again, the base functions are from the `r Biocpkg("xcms")` package as it provides robusness and easy access to the grouping and aligment results. A straight forward function `makeFeatures` was built, including both grouping and aligment as well as recursive integration of missing peaks via the `fillChromPeaks` function of the `r Biocpkg("xcms")` package.
+Often several samples, including replicates, are used during MS data processing. Therefore, grouping and alignment of peaks across samples is implemented within the `ntsIUTA` workflow. Again, the base functions are from the `r Biocpkg("xcms")` package as it provides robustness and easy access to the grouping and aliment results. A straight forward function `makeFeatures` was built, including both grouping and aliment as well as recursive integration of missing peaks via the `fillChromPeaks` function of the `r Biocpkg("xcms")` package.
 Below the example for alignment and grouping the samples in `peaksData` produced above is shown. As for peak picking, the actual parameters for both aligment and grouping should be optimized for each set of files. Also, other methods are available via the `r Biocpkg("xcms")` package. See [adjustRtime](https://rdrr.io/bioc/xcms/man/adjustRtime.html) and [groupChromPeaks](https://rdrr.io/bioc/xcms/man/groupChromPeaks.html) for more information. 
 
 ```{r makeFeatures, cache=TRUE, message=FALSE, warning=FALSE}
@@ -487,7 +487,7 @@ A major advantage of `ntsIUTA` over other options is the easy access to detailed
 
 # QC check
 
-A quality check can be usefull for both to evaluate the preformance of the instrumentation used during data acquisition and to opmitize the parameters for peak picking, alignment and grouping, according to known reference standards. The latter is rather crucial for optimization using data from different instruments or with different matrix. For this purpose, the function `checkQC` is implemented in `ntsIUTA`. `checkQC` is a comprehensive wrapper function that allows a fast evaluation of features from known substances. The details of reference substances are given to `checkQC` by the path of a simple `.csv`, as shown below, to the argument screeningList. Retention time and MS2 data can be added to the screeningList via the suspect screening workflow presented earlier in this document.
+A quality check can be useful for both to evaluate the performance of the instrumentation used during data acquisition and to optimize the parameters for peak picking, alignment and grouping, according to known reference standards. The latter is rather crucial for optimization using data from different instruments or with different matrix. For this purpose, the function `checkQC` is implemented in `ntsIUTA`. `checkQC` is a comprehensive wrapper function that allows a fast evaluation of features from known substances. The details of reference substances are given to `checkQC` by the path of a simple `.csv`, as shown below, to the argument screeningList. Retention time and MS2 data can be added to the screeningList via the suspect screening workflow presented earlier in this document.
 
 ```{r prepQC}
 #screeningList of the reference standards present in the sample
