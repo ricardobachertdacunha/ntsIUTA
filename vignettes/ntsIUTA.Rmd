@@ -38,9 +38,26 @@ library(ntsIUTA)
 
 # Installation
 
-`ntsIUTA` relies on various other software tools to go through it's workflows for NTS and data processing. These dependencies have to be installed beforehand and can in some instances not be resolved easily during the `ntsIUTA`-installation itself.
+`ntsIUTA` relies on various other software tools to go through it's workflows for NTS and data processing. These dependencies have to be installed beforehand and can in some instances not be resolved easily during the `ntsIUTA`-installation itself. So please make sure certain prerequisites are installed properly first.
 
-The first step for the installation of the `ntsIUTA`R package is, therefore, the installation of the `r Githubpkg("rickhelmus/patRoon")` package, as it needed for `ntsIUTA` and resolves a lot of the dependencies. An installation guide for the `r Githubpkg("rickhelmus/patRoon")` package can be found [here](https://rickhelmus.github.io/patRoon/handbook_bd/installation.html). `patRoon` also provides an [automatic installation script](https://rickhelmus.github.io/patRoon/handbook_bd/automatic-installation-windows-only.html) for Windows users. Alternatively, a  [manual installtion guide](https://rickhelmus.github.io/patRoon/handbook_bd/manual-installation.html) is provided as well.
+## Prerequisites
+
+Before the start of the installation of `ntsIUTA` confirm that [Rtools](https://cran.r-project.org/bin/windows/Rtools/) are installed and the PATH is set up correctly.
+
+The first necessary R package to be installed for the installation of the `ntsIUTA`R package is the `r Githubpkg("rickhelmus/patRoon")` package, as it needed for `ntsIUTA` and has many overlapping dependencies, that are then resolved in this. An installation guide for the `r Githubpkg("rickhelmus/patRoon")` package can be found [here](https://rickhelmus.github.io/patRoon/handbook_bd/installation.html). `patRoon` also provides an [automatic installation script](https://rickhelmus.github.io/patRoon/handbook_bd/automatic-installation-windows-only.html) for Windows users. Alternatively, a  [manual installation guide](https://rickhelmus.github.io/patRoon/handbook_bd/manual-installation.html) is provided as well.
+
+The most basic steps of the `r Githubpkg("rickhelmus/patRoon")` installation are:
+
+```{r patRoon installation, eval=FALSE}
+# the remotes package is needed to install packages directly form GitHub
+install.packages("remotes")
+# install from patRoonDeps (only Windows with latest R version)
+install.packages("patRoon", repos = "https://rickhelmus.github.io/patRoonDeps/", type = "binary")
+# installation of patRoon directly from the GitHub repository
+remotes::install_github("rickhelmus/patRoon")
+```
+
+## Installation of the ntsIUTA package
 
 The `ntsIUTA`package can then be installed from the [ntsIUTA GitHub repository](https://github.com/ricardobachertdacunha/ntsIUTA). 
 
