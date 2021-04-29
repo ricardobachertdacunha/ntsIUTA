@@ -49,20 +49,22 @@ The first necessary R package to be installed for the installation of the `ntsIU
 The most basic steps of the `r Githubpkg("rickhelmus/patRoon")` installation are:
 
 ```{r patRoon installation, eval=FALSE}
-# the remotes package is needed to install packages directly form GitHub
+writeLines('PATH="${RTOOLS40_HOME}\\usr\\bin;${PATH}"', con = "~/.Renviron")
 install.packages("remotes")
-# install from patRoonDeps (only Windows with latest R version)
-install.packages("patRoon", repos = "https://rickhelmus.github.io/patRoonDeps/", type = "binary")
-# installation of patRoon directly from the GitHub repository
-remotes::install_github("rickhelmus/patRoon")
+install.packages("BiocManager")
+BiocManager::install(c("CAMERA","mzR","xcms","Biobase","MSnbase"))
+remotes::install_github("rickhelmus/patRoon", upgrade = "never")
+
 ```
+
+This installs patRoon in then most basic way, as it does not resolve patRoons external software dependencies and does not setup the `.Rprofile-patRoon.R`-file with the paths to these external tools. Using the automatic installation is therefore highly advised. 
 
 ## Installation of the ntsIUTA package
 
 The `ntsIUTA`package can then be installed from the [ntsIUTA GitHub repository](https://github.com/ricardobachertdacunha/ntsIUTA). 
 
 ```{r install_ntsIUTA, eval=FALSE}
-remotes::install_github("ricardobachertdacunha/ntsIUTA", auth_token = "<OAuth_Token>")
+remotes::install_github("ricardobachertdacunha/ntsIUTA", auth_token = "<auth_token>", upgrade = "never")
 
 #or once the package goes public
 remotes::install_github("ricardobachertdacunha/ntsIUTA")
