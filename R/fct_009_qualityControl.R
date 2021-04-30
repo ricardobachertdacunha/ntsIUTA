@@ -94,6 +94,10 @@ checkQC <- function(rawQC = rawData,
                                   ppmForFillingGroups = ppmForFillingGroups,
                                   save = FALSE)
   
+  if (plot) {
+    alignPlot <- ntsIUTA::plotAlignment(qcFeat)
+  }
+  
   qcFeat <- xcms::applyAdjustedRtime(qcFeat)
   
   qcPat <- ntsIUTA::getPatData(qcFeat, sampleInfo = sampleInfo[sampleInfo$sample %in% qcFeat$sample_name,])
@@ -114,7 +118,7 @@ checkQC <- function(rawQC = rawData,
   }
   
   qcID <- patRoon::screenSuspects(qcPat, dplyr::select(sl, -mz), rtWindow = rtWindow, mzWindow = 0.01, adduct = adduct, onlyHits = TRUE)
-  qcdf <- dplyr::arrange(patRoon::as.data.table(qcID, average = TRUE), group)
+  qcdf <- dplyr::arrange(patRoon::as.data.table(qcID, average = FALSE), group)
   qcdf <- dplyr::left_join(qcdf, sl[,base::c("name", "formula", "int10", "hasMS2", "mzMS2", "intMS2", "preMS2")], by = "name")
   qcdf  <- dplyr::left_join(qcdf, dplyr::select(dplyr::arrange(patRoon::screenInfo(qcID), group), group, d_mz, d_rt), by = "group")
   qcdf$av_into <- base::rowMeans(dplyr::select(qcdf, rawQC$sample_name))
@@ -143,23 +147,23 @@ checkQC <- function(rawQC = rawData,
   
   
 #add MS2 to screening list, adds intensity at 10ng/ml to respective column and adds mz corresponding to the polarity for MS2 matching
-  # for (i in 1:nrow(qcdf)) {
+  # for (i in 1:base::nrow(qcdf)) {
   #   xgroup <- qcdf$group[i]
   #   xfrag <- MS2[[xgroup]]$MSMS
-  #   
-  #   if (!is.null(xfrag)) {
+  # 
+  #   if (!base::is.null(xfrag)) {
   #     sl$hasMS2[sl$name %in% qcdf$name[i]] <- TRUE
-  #     sl$mzMS2[sl$name %in% qcdf$name[i]] <- paste(xfrag$mz, collapse = ";")
-  #     sl$intMS2[sl$name %in% qcdf$name[i]] <- paste(xfrag$intensity, collapse = ";")
-  #     sl$preMS2[sl$name %in% qcdf$name[i]] <- paste(xfrag$precursor, collapse = ";")
+  #     sl$mzMS2[sl$name %in% qcdf$name[i]] <- base::paste(xfrag$mz, collapse = ";")
+  #     sl$intMS2[sl$name %in% qcdf$name[i]] <- base::paste(xfrag$intensity, collapse = ";")
+  #     sl$preMS2[sl$name %in% qcdf$name[i]] <- base::paste(xfrag$precursor, collapse = ";")
   #   }
-  #   
+  # 
   #   sl$int10[sl$name %in% qcdf$name[i]] <- qcdf$av_into[i]
-  #   sl$mz[sl$name %in% qcdf$name[i]] <- sl$neutralMass[sl$name %in% qcdf$name[i]] +  base::ifelse(polarity == "positive",
-  #                                                                                                 1.007276, -1.007276)
+  #   sl$rt[sl$name %in% qcdf$name[i]] <- qcdf$ret[i]/60
+  #   sl$mz[sl$name %in% qcdf$name[i]] <- sl$neutralMass[sl$name %in% qcdf$name[i]] +  base::ifelse(polarity == "positive", 1.007276, -1.007276)
   # }
   # 
-  # utils::write.csv(sl, file = paste0(getwd(),"/inst/extdata/QC_ScreeningList_ntsIUTA_MS2_pos.csv"))
+  # utils::write.csv(sl, file = base::paste0(projPath,"/ScreeningList_QC_ntsIUTA_MS2_pos.csv"))
   
   qcdf$nfrag <- 0
   qcdf$pfrag <- 0
@@ -288,9 +292,11 @@ checkQC <- function(rawQC = rawData,
       ggplot2::ggsave(base::paste0(projPath,"/results/QC_Deviations.tiff"),
              plot = evalPlot, device = "tiff", path = NULL, scale = 1,
              width = 17, height = 10, units = "cm", dpi = 300, limitsize = TRUE)
-      htmlwidgets::saveWidget(plotly::partial_bundle(plotFeat), file = base::paste0(projPath,"/results/QC_Features.html"))
+      htmlwidgets::saveWidget(plotly::partial_bundle(alignPlot), file = base::paste0(projPath,"/results/QC_Alignment.html"))
+      htmlwidgets::saveWidget(plotly::partial_bundle(featPlot), file = base::paste0(projPath,"/results/QC_Features.html"))
     }
     
+    QC[["alignPlot"]] <- alignPlot
     QC[["featPlot"]] <- featPlot
     QC[["evalPlot"]] <- evalPlot
     
