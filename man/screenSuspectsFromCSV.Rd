@@ -7,11 +7,14 @@
 screenSuspectsFromCSV(
   patData = patData,
   polarity = "positive",
-  ppm = 10,
-  rtWindow = 15,
-  DB = utils::read.csv(base::file.choose()),
-  withMS2 = FALSE,
-  listMS2 = NULL
+  ppmWindow = 5,
+  rtWindow = 10,
+  screeningList = utils::read.csv(base::file.choose()),
+  removeBlanks = TRUE,
+  blankGroups = "Blank",
+  withMS2 = TRUE,
+  listMS2 = NULL,
+  ppmMS2 = NULL
 )
 }
 \arguments{
@@ -19,15 +22,21 @@ screenSuspectsFromCSV(
 
 \item{polarity}{The polatiry of the MS files in \code{patData}. Possible values are 'positive' or 'negative'.}
 
-\item{ppm}{The allowed mass deviation, in ppm.}
+\item{ppmWindow}{The allowed mass deviation, in ppm.}
 
 \item{rtWindow}{The allowed retention time window, in seconds, when 'rt' is given in the screening list (\code{DB}).}
 
-\item{DB}{A screeningList.}
+\item{screeningList}{A screeningList.}
+
+\item{removeBlanks}{Logical, set to \code{TRUE} to ignore blank samples during suspect screening.}
+
+\item{blankGroups}{A charcater vector with replicate group name of blanks to ignore.}
 
 \item{withMS2}{Logical, set to \code{TRUE} for using MS2 for confirming suspects.}
 
 \item{listMS2}{An MS2 list, if not given it will be calculated.}
+
+\item{ppmMS2}{Optional, sets a different mass deviation (in ppm) allowance for correlation of MS2 data.}
 }
 \value{
 
