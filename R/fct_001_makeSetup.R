@@ -26,14 +26,15 @@
 #' If \strong{rData} folder does not exist in given \code{projPath}, the folder will be created.
 #' @param makeNewProject Logical, set to TRUE to create an R project in the given \code{projPath} and open a new R session.
 #'
-#' @return The output is a simple list, containing: (1) \code{projPath}, the chosen project path; (2) the \code{date}, the given project date; and 
-#' (3) the \code{sampleInfo}, a \code{\link[base]{data.frame}} with the following columns:
+#' @return The output is a dataframe with the following columns:
 #' (1) \code{filePath}, the path of each mzML file, including any converted MS files;
-#' (2) \code{sample}, the retrieved file name to be used as sample identifier;
+#' (2) \code{sample}, the retrieved file name to be used as sample identifier, possbily subjected to renaming to ;
 #' (3) \code{group}, the name of each replicate sample group
 #' (e.g. samples with the same name but with different numbering, such as in the case of replicate samples);
 #' (4) \code{blank}, the specified blank group names or the blank group detected by file name (\emph{i.e.} blank, Blank and/or B as file name);
-#' and (5) \code{polarity}, the polarity mode used for each sample, possible entries are \code{positive} and \code{negative};
+#' (5) \code{polarity}, the polarity mode used for each sample, possible entries are \code{positive} and \code{negative};
+#' (6) \code{date}, the date of analysis, defaults to current date;
+#' and (7) \code{wdir} the working directory of the project, used for meta analysis between different projects; 
 #' 
 #' 
 #' @details The data.frame \code{sampleInfo} in the output list can always be edited for correction of
@@ -66,13 +67,15 @@ setupProject <- function(projPath = utils::choose.dir(base::getwd(), "Select or 
     # setup
     
     
-    setup <- base::list()
-    setup$projPath  <- projPath
-    setup$date <- date
+    #setup <- base::list()
+    #setup$projPath  <- projPath
+    #setup$date <- date
     
     #Create holder for list of samples
-    sampleInfo <- base::data.frame(filePath = base::as.character(), sample = base::as.character(),
-                                       group = base::as.character(), blank = base::as.character())
+    sampleInfo <- base::data.frame(filePath = character(), sample = character(),
+                                    group = character(), blank = character(), 
+                                    polarity = character(), date = character(),
+                                    wdir = character())
     
     
     if (convertFiles)
@@ -86,34 +89,38 @@ setupProject <- function(projPath = utils::choose.dir(base::getwd(), "Select or 
     
     #Screen for MS files in project folder and add info to sampleInfo
     msFiles <- base::list.files(path = projPath, pattern = ".mzML|.mzXML", recursive = TRUE, full.names = TRUE, no.. = TRUE)
-    
+
     if (base::length(msFiles) == 0)
     {
         warning("No mzML or mzXML files were found in selected project path. Use addFiles() to add files to project.")
-    
+
     #Adds files info to sample data frame
     } else {
         sampleInfo[1:base::length(msFiles),] <- NA
         sampleInfo$filePath <- msFiles #base::dirname(msFiles)
         sampleInfo$sample <- tools::file_path_sans_ext(base::basename(msFiles))
         sampleInfo$blank <- blanks
-        
+
         if (base::length(groups) < 2 & base::is.null(groups))
         {
             sampleInfo$group <- tools::file_path_sans_ext(base::basename(msFiles))
             #tentative to group samples and add blank group
             sampleInfo <- dplyr::mutate(sampleInfo, group = base::ifelse(base::grepl("A-r|qc|QC", sampleInfo$sample), "QC", group))
             sampleInfo <- dplyr::mutate(sampleInfo, group = base::ifelse(base::grepl("Blank|blank|B-r", sampleInfo$sample), "Blank", group))
-            
+
         } else sampleInfo$group <- groups
-        
+
         if (base::length(blanks) < 2 & base::is.null(blanks)) sampleInfo$blank <- base::ifelse("Blank" %in% sampleInfo$group, "Blank", NA)
-        
+
         sampleInfo$polarity <- polarity
-        
-        setup$sampleInfo <- sampleInfo
+        sampleInfo$date <- date
+        sampleInfo$wdir <- base::getwd()
+
+        setup <- sampleInfo
     }
     
+    #setup <- ntsIUTA::addFiles(newFiles = setup$sampleInfo$filePath, groups = groups, blanks = blanks, polarity = polarity, date = date)
+    #setup <- setup$sampleInfo
     
     if (save) #TODO Add possibility to move the R project file 
     {
@@ -145,6 +152,8 @@ setup <- readRDS('rData/setup.rds')",
         rstudioapi::openProject(projPath, newSession = TRUE)
         base::print("Run  rstudioapi::navigateToFile('mainScript.R')  in the new project to open the mainScript.R file.")
     }
+    
+    #setup$wdir <- base::getwd()
     
     return(setup)
     
@@ -254,17 +263,17 @@ addFiles <- function(projPath = base::getwd(),
         if (base::length(blanks) < 2 & base::is.null(blanks)) tmpInfo$blank <- base::ifelse("Blank" %in% tmpInfo$group, "Blank", NA)
         
         tmpInfo$polarity <- polarity
-        tmpInfo$date <- base::baseSys.Date()
+        tmpInfo$date <- date
         tmpInfo$wdir <- base::getwd()
     }
     
-    newInfo <- ntsIUTA::removeDuplicateNames(sampleInfo,tmpInfo)
+    newInfo <- removeDuplicateNames(sampleInfo,tmpInfo)
     
     
     # Check new filename against original list
     if(base::nrow(dplyr::semi_join(base::subset(sampleInfo, select =2), base::subset(newInfo, select =2)))>0) {
         base::print("Duplicates found after renaming. Doing recursion.")
-        newInfo <- ntsIUTA::removeDuplicateNames(sampleInfo,newInfo)
+        newInfo <- removeDuplicateNames(sampleInfo,newInfo)
         
     }
     
