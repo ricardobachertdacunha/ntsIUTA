@@ -51,7 +51,7 @@ The \code{list} is named with the name given to the sample replicate groups.
 }
 \description{
 Extracts chromatographic peaks from centroided \linkS4class{OnDiskMSnExp} and returns a \code{list} of \linkS4class{XCMSnExp}
-objects for each replicate sample group as defined in the \code{\link{makeSetup}} function.
+objects for each replicate sample group as defined in the \code{\link{setupProject}} function.
 The \linkS4class{XCMSnExp} objects can be conconated via \code{c()} function of the \pkg{xcms} package.
 We separate the peaks from each replicate group to facilitate workflows that include multi-project cross-analysis.
 The peak picking uses the function \code{\link[xcms]{chromatographic-peak-detection}} from the \pkg{xcms} package.

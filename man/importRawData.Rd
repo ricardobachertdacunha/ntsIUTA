@@ -16,7 +16,7 @@ importRawData(
 )
 }
 \arguments{
-\item{sampleInfo}{The sample \code{data.table} obtained by the \code{\link{makeSetup}} function.
+\item{sampleInfo}{The sample \code{data.table} obtained by the \code{\link{setupProject}} function.
 Note that the \code{sampleInfo} can be filtered beforehand to exclude unwanted mzML files or to redefine the name of replicate sample groups.}
 
 \item{rtFilter}{A numeric vector with length 2 defining the minimum and maximum chromatographic retention time for the listed files respectively.
@@ -43,7 +43,7 @@ The output is a standard \linkS4class{OnDiskMSnExp} object,
 which can be used within the workflow of \pkg{ntsIUTA} but also within \pkg{Bioconductor} packages, such as \pkg{xcms}.
 }
 \description{
-Function to import MS data from the mzML files listed in \code{sampleInfo} from the \code{makeSetup} object.
+Function to import MS data from the mzML files listed in \code{sampleInfo} from the \code{setupProject} object.
 Files should contain centroided spectra.
 The function uses the function \code{\link[MSnbase]{readMSData}} from the \code{MSnbase} package to read the mzML files.
 }

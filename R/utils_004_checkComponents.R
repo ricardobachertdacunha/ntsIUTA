@@ -3,11 +3,11 @@
 
 #' @title checkComponents
 #' @description Inspect components by of given features, mz and retention time or component numbers of specified replicate groups
-#' as defined in \code{\link{makeSetup}}.
+#' as defined in \code{\link{setupProject}}.
 #'
 #' @param xA The list of \linkS4class{xsAnnotate} objects obtained via \code{\link{makeFeatureComponents}}.
 #' @param replicateGroups The replicate groups name or number to filter the \code{xA} list,
-#' which is named according to the experimental replicate groups as defined in \code{\link{makeSetup}}.
+#' which is named according to the experimental replicate groups as defined in \code{\link{setupProject}}.
 #' @param features Feature identifier/s.
 #' @param featData The feature data to get the feature identifiers.
 #' Can be a \linkS4class{XCMSnExp} or \linkS4class{featureGroups} object from \pkg{xcms} or \pkg{patRoon}, respectively.
