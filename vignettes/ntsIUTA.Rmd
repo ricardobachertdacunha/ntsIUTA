@@ -90,13 +90,14 @@ The code below loads the mzML files from the given projPath and selects the six 
 
 ```{r setup}
 projPath <- system.file(package = "ntsIUTA",dir = "extdata")
-setup <- ntsIUTA::makeSetup(projPath, save = F, makeNewProject = F)
+setup <- ntsIUTA::setupProject(projPath, save = F, makeNewProject = F)
 #Filter for selecting the six first files in the sampleInfo
-setup$sampleInfo <- setup$sampleInfo[1:6,]
+setup <- setup[1:6,]
 ```
 
 ```{r sampleInfoExample, cache=FALSE, echo=FALSE, message=FALSE, results='axis'}
-sampleInfo_temp <- setup$sampleInfo
+#sampleInfo_temp <- setup$sampleInfo
+sampleInfo_temp <- setup
 sampleInfo_temp$filePath <- "C:/FilePath/FileName.mzML"
 sampleInfo_temp %>% kbl(caption = "sampleInfo Example") %>% kable_paper("hover", full_width = F) %>% kable_styling(position = "left")
 ```
@@ -106,7 +107,7 @@ sampleInfo_temp %>% kbl(caption = "sampleInfo Example") %>% kable_paper("hover",
 After project setup, the data from the mzML files listed in the `sampleInfo` is imported via `importRawData`. For importing, we used the `r Biocpkg("MSnbase")` which reads both centroided and profile MS data in mzML and mzXML files. The returning object is an [OnDiskMSnExp](https://rdrr.io/bioc/MSnbase/man/OnDiskMSnExp-class.html) object which can also be used for native functions within the `r Biocpkg("MSnbase")` and `r Biocpkg("xcms")` packages. In addition to importing the data, the time window of the files can be refined using the `rtFilter` as shown below and empty septra can be removed by setting `removeEmptySpectra` to `TRUE`. See `?importRawData` for additional information.
 
 ```{r importRawData, cache = TRUE, echo = TRUE, message = FALSE, results = 'hide'}
-rawData <- ntsIUTA::importRawData(setup$sampleInfo,
+rawData <- ntsIUTA::importRawData(setup,
                                   rtFilter = c(c(13, 17)),
                                   timeUnit = "min",
                                   centroidedData = TRUE,
@@ -155,11 +156,11 @@ ntsIUTA::plotTargetCentroids(rawData,
 MS data can be directly centroided during conversion to mzML with [ProteoWizard](http://proteowizard.sourceforge.net/) via `makeSetup`. However, centroiding of profile MS data was also implemented with additional capabilities for smotthing and refining the MS data, using tools from the `r Biocpkg("MSnbase")` package. The smoothing and refinement can benefit peak finding for data with high noise and low mass accuracy and/or high deviation. Below we plot the an example for centroided and profile MS data of Terbutryn. A high deviation for the mass of Terbutryn is shown on the centroided plot (left), which is likely related to saturation of the MS detector due to the high intensity.
 
 ```{r plotCentProf,cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE, results='markup', out.width = "70%", fig.cap="Centroided vs Profile data. Comparison between centroided and profile data for diuron as [M+H]+."}
-setup_prof <- ntsIUTA::makeSetup(projPath, save = F, makeNewProject = F)
+setup_prof <- ntsIUTA::setupProject(projPath, save = F, makeNewProject = F)
 
-setup_prof$sampleInfo <- setup_prof$sampleInfo[7:9,]
+setup_prof <- setup_prof[7:9,]
 
-rawData_prof <- ntsIUTA::importRawData(setup_prof$sampleInfo,
+rawData_prof <- ntsIUTA::importRawData(setup_prof,
                                        rtFilter = c(c(13, 17)),
                                        timeUnit = "min",
                                        centroidedData = FALSE,
@@ -432,7 +433,7 @@ After annotation, the information for each feature is gathered is a comprehensiv
 
 ```{r covertToPat, }
 patData <- ntsIUTA::getPatData(featData,
-                               setup$sampleInfo,
+                               setup,
                                save = FALSE)
 ```
 
@@ -527,7 +528,7 @@ The QC samples can be selected from the `rawData` [OnDiskMSnExp](https://rdrr.io
 rawQC <- MSnbase::filterFile(rawData, file = 4:6)
 
 QC <- ntsIUTA::checkQC(rawQC = rawQC,
-                       sampleInfo = setup$sampleInfo,
+                       sampleInfo = setup,
                        screeningList = sl_qc,
                        paramPeaks = param,
                        paramPreGrouping = param1,
