@@ -26,7 +26,7 @@ plotComponentSpectrum(
 \item{xA}{The list of \linkS4class{xsAnnotate} objects obtained via \code{\link{makeFeatureComponents}}.}
 
 \item{replicateGroups}{The replicate groups name or number to filter the \code{xA} list,
-which is named according to the experimental replicate groups as defined in \code{\link{makeSetup}}.}
+which is named according to the experimental replicate groups as defined in \code{\link{setupProject}}.}
 
 \item{features}{Feature identifier/s.}
 
