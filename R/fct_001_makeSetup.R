@@ -1,7 +1,7 @@
 
 #TODO Make addFiles function
 
-#' @title makeSetup
+#' @title setupProject
 #' @description Project setup by screening a given folder for MS files or
 #' by creating a new folder where the MS files can be added using \code{addFiles}.
 #' Setting \code{createRproject} to \code{TRUE} will create and open an R project in the selected or given folder.
@@ -26,14 +26,15 @@
 #' If \strong{rData} folder does not exist in given \code{projPath}, the folder will be created.
 #' @param makeNewProject Logical, set to TRUE to create an R project in the given \code{projPath} and open a new R session.
 #'
-#' @return The output is a simple list, containing: (1) \code{projPath}, the chosen project path; (2) the \code{date}, the given project date; and 
-#' (3) the \code{sampleInfo}, a \code{\link[base]{data.frame}} with the following columns:
+#' @return The output is a dataframe with the following columns:
 #' (1) \code{filePath}, the path of each mzML file, including any converted MS files;
-#' (2) \code{sample}, the retrieved file name to be used as sample identifier;
+#' (2) \code{sample}, the retrieved file name to be used as sample identifier, possbily subjected to renaming to ;
 #' (3) \code{group}, the name of each replicate sample group
 #' (e.g. samples with the same name but with different numbering, such as in the case of replicate samples);
 #' (4) \code{blank}, the specified blank group names or the blank group detected by file name (\emph{i.e.} blank, Blank and/or B as file name);
-#' and (5) \code{polarity}, the polarity mode used for each sample, possible entries are \code{positive} and \code{negative};
+#' (5) \code{polarity}, the polarity mode used for each sample, possible entries are \code{positive} and \code{negative};
+#' (6) \code{date}, the date of analysis, defaults to current date;
+#' and (7) \code{wdir} the working directory of the project, used for meta analysis between different projects; 
 #' 
 #' 
 #' @details The data.frame \code{sampleInfo} in the output list can always be edited for correction of
@@ -49,7 +50,7 @@
 #' 
 #' 
 #' 
-makeSetup <- function(projPath = utils::choose.dir(base::getwd(), "Select or create a project folder"),
+setupProject <- function(projPath = utils::choose.dir(base::getwd(), "Select or create a project folder"),
                       date = base::Sys.Date(),
                       groups = NULL,
                       blanks = NULL,
@@ -62,17 +63,19 @@ makeSetup <- function(projPath = utils::choose.dir(base::getwd(), "Select or cre
     
     #Examples
     # projPath <-  system.file(package = "ntsIUTA", dir = "extdata")
-    # setup <- makeSetup(projPath = projPath, save = FALSE)
+    # setup <- setupProject(projPath = projPath, save = FALSE)
     # setup
     
     
-    setup <- base::list()
-    setup$projPath  <- projPath
-    setup$date <- date
+    #setup <- base::list()
+    #setup$projPath  <- projPath
+    #setup$date <- date
     
     #Create holder for list of samples
-    sampleInfo <- base::data.frame(filePath = base::as.character(), sample = base::as.character(),
-                                       group = base::as.character(), blank = base::as.character())
+    sampleInfo <- base::data.frame(filePath = character(), sample = character(),
+                                    group = character(), blank = character(), 
+                                    polarity = character(), date = character(),
+                                    wdir = character())
     
     
     if (convertFiles)
@@ -86,34 +89,38 @@ makeSetup <- function(projPath = utils::choose.dir(base::getwd(), "Select or cre
     
     #Screen for MS files in project folder and add info to sampleInfo
     msFiles <- base::list.files(path = projPath, pattern = ".mzML|.mzXML", recursive = TRUE, full.names = TRUE, no.. = TRUE)
-    
+
     if (base::length(msFiles) == 0)
     {
         warning("No mzML or mzXML files were found in selected project path. Use addFiles() to add files to project.")
-    
+
     #Adds files info to sample data frame
     } else {
         sampleInfo[1:base::length(msFiles),] <- NA
         sampleInfo$filePath <- msFiles #base::dirname(msFiles)
         sampleInfo$sample <- tools::file_path_sans_ext(base::basename(msFiles))
         sampleInfo$blank <- blanks
-        
+
         if (base::length(groups) < 2 & base::is.null(groups))
         {
             sampleInfo$group <- tools::file_path_sans_ext(base::basename(msFiles))
             #tentative to group samples and add blank group
             sampleInfo <- dplyr::mutate(sampleInfo, group = base::ifelse(base::grepl("A-r|qc|QC", sampleInfo$sample), "QC", group))
             sampleInfo <- dplyr::mutate(sampleInfo, group = base::ifelse(base::grepl("Blank|blank|B-r", sampleInfo$sample), "Blank", group))
-            
+
         } else sampleInfo$group <- groups
-        
+
         if (base::length(blanks) < 2 & base::is.null(blanks)) sampleInfo$blank <- base::ifelse("Blank" %in% sampleInfo$group, "Blank", NA)
-        
+
         sampleInfo$polarity <- polarity
-        
-        setup$sampleInfo <- sampleInfo
+        sampleInfo$date <- date
+        sampleInfo$wdir <- base::getwd()
+
+        setup <- sampleInfo
     }
     
+    #setup <- ntsIUTA::addFiles(newFiles = setup$sampleInfo$filePath, groups = groups, blanks = blanks, polarity = polarity, date = date)
+    #setup <- setup$sampleInfo
     
     if (save) #TODO Add possibility to move the R project file 
     {
@@ -146,6 +153,8 @@ setup <- readRDS('rData/setup.rds')",
         base::print("Run  rstudioapi::navigateToFile('mainScript.R')  in the new project to open the mainScript.R file.")
     }
     
+    #setup$wdir <- base::getwd()
+    
     return(setup)
     
 }
@@ -153,6 +162,295 @@ setup <- readRDS('rData/setup.rds')",
 
 
 
+
+#' @title addFiles
+#' @description Add files to the sampleInfo object
+#' 
+#' @param projPath The \code{path} where the project is located and files should be stored.
+#' @param newFiles A list of analysis files to be added to the project. Defaults to a dialog to choose the new files.
+#' @param sampleInfo Already existing sampleInfo dataframe to which the new files are to be amended. A new dataframe will be created if no dataframe is given.
+#' @param copyFiles Logical. Parameter to decide whether the analysis files shall be copied to the project directory or remain at their original location. \code{TRUE} means files are copied and \code{FALSE} means files
+#'  only remain in their original location. Defaults to a user prompt asking if files should be copied. As unique filenames are necessary the original files might have to be renamed. A second prompt is then given
+#'  for confirmation.
+#' might have to be renamed during the process. A confirmation prompt is
+#' @param date The project date. The default is the system date generated by \code{\link[base]{Sys.time}}.
+#' @param groups A vector with the identifier/name of each sample replicate group. If \code{NULL},
+#' a grouping tentative will be made using the name of the MS files found in the given \code{projPath}.
+#' @param blanks The name of the sample replicate group to be used for blank subtraction.
+#' Different blank groups can be assigned to replicate sample groups by editing the \code{sampleInfo} in the output \code{setup} list.
+#' @param polarity A vector specifying the polarity mode used in each MS file.
+#' Possible values are \code{positive} or \code{negative} for positive and negative mode, respectively.
+#' 
+#' @return Returns a dataframe containing the sample data for the analysis.
+#' 
+#' 
+#' @importFrom dplyr semi_join anti_join mutate
+#' @importFrom utils choose.files askYesNo
+#' @importFrom tools file_ext
+#' 
+#' @export
+#' 
+
+addFiles <- function(projPath = base::getwd(),
+                     newFiles = utils::choose.files(),
+                     copyFiles = utils::askYesNo("Do you want to copy the analysis files to the project directory?"),
+                     sampleInfo = base::data.frame(filePath = character(), sample = character(),
+                                                   group = character(), blank = character(), 
+                                                   polarity = character(), date = character(),
+                                                   wdir = character()),
+                     date = base::Sys.Date(),
+                     groups = NULL,
+                     blanks = NULL,
+                     polarity = "positive") {
+    
+    
+    # path <- "D:/IUTA/200320/XMLFiles"
+    # blanks <- NA
+    # groups <- NA
+    # polarity <- "positive"
+    # sampleInfo = base::data.frame(filePath = character(), sample = character(),
+    #                                                   group = character(), blank = character(), 
+    #                                                   polarity = character(), date = character(),
+    #                                                   wdir = character())
+    if(base::is.na(copyFiles)) {
+        base::warning("Process aborted due to user input.")
+        stop()
+    }
+    
+    
+    tmpInfo <- base::data.frame(filePath = character(), sample = character(),
+                                group = character(), blank = character(), 
+                                polarity = character(), date = character(),
+                                wdir = character())
+    
+    #if(base::length(sampleInfo)>=1){index <- base::length(sampleInfo)+1}
+    if(base::length(newFiles)>0){
+        if (base::grepl("\\\\", newFiles[1]))
+            newFilesPath <- base::dirname(newFiles[1])
+    }
+    
+    if (base::length(newFiles) == 0) {
+        warning("No mzML or mzXML files were found in selected project path. Use addFiles() to add files to project.")
+        
+        # Adds files info to sample data frame
+    } 
+    else {
+        
+        # Adds files info to sample data frame
+        
+        tmpInfo[1:base::length(newFiles),] <- NA
+        tmpInfo$filePath <- newFiles #base::dirname(msFiles)
+        tmpInfo$sample<-base::gsub(".mzML|.mzXML", "",base::basename(newFiles))
+        #general pattern to remove . and everything past it
+        #sampleInfo$gsub("(.*)\\..*$", "",base::basename(msFiles))
+        
+        # sampleInfo$sample <- tools::file_path_sans_ext(base::basename(msFiles))
+        tmpInfo$blank <- blanks
+        
+        if (base::length(groups) < 2 & base::is.null(groups))  {
+            tmpInfo$group <- base::gsub(".mzML|.mzXML", "",base::basename(newFiles))
+            #general pattern to remove . and everything past it
+            #sampleInfo$gsub("(.*)\\..*$", "",base::basename(msFiles))
+            
+            #sampleInfo$group <- tools::file_path_sans_ext(base::basename(msFiles))
+            #tentative to group samples and add blank group
+            tmpInfo <- dplyr::mutate(tmpInfo, group = base::ifelse(base::grepl("A-r|qc|QC", tmpInfo$sample), "QC", group))
+            tmpInfo <- dplyr::mutate(tmpInfo, group = base::ifelse(base::grepl("Blank|blank|B-r", tmpInfo$sample), "Blank", group))
+            
+        } 
+        else tmpInfo$group <- groups
+        
+        if (base::length(blanks) < 2 & base::is.null(blanks)) tmpInfo$blank <- base::ifelse("Blank" %in% tmpInfo$group, "Blank", NA)
+        
+        tmpInfo$polarity <- polarity
+        tmpInfo$date <- date
+        tmpInfo$wdir <- base::getwd()
+    }
+    
+    newInfo <- removeDuplicateNames(sampleInfo,tmpInfo)
+    
+    
+    # Check new filename against original list
+    if(base::nrow(dplyr::semi_join(base::subset(sampleInfo, select =2), base::subset(newInfo, select =2)))>0) {
+        base::print("Duplicates found after renaming. Doing recursion.")
+        newInfo <- removeDuplicateNames(sampleInfo,newInfo)
+        
+    }
+    
+    
+    # Check for user input again if files should not be copied but need to be renamed.
+    # Before files are renamed user consent is requested.
+    
+    if(base::nrow(dplyr::anti_join(newInfo,tmpInfo))>0 && copyFiles == FALSE) {
+        duplicateNamesPrompt <- utils::askYesNo("Duplicate filenames detected, but analysis files need to have unique names. Allow the original files to be renamed  (Yes) or allow copying to the project directory instead (No).")
+        
+        if(base::is.na(duplicateNamesPrompt)) {
+            warning("Process aborted due to user input. Please allow either renaming or copying")
+            stop()
+            
+        }
+        if (!(duplicateNamesPrompt)) {
+            copyFiles <- TRUE
+            
+        }
+        
+    }  
+    
+    ## Either copy files to the project directory projPath with adjusted names or rename them at their original location
+    
+    if (copyFiles) {
+        
+        base::print("Copying files to project directory...")
+        
+        # Copy files to project directory projPath and rename them if necessary
+        
+        for (i in 1:base::nrow(newInfo)) {
+            # Create the new path of the files
+            newFileTotalPath <- base::paste(projPath,"\\",newInfo$sample[i],".",tools::file_ext(newFiles[1]),sep = "")
+            
+            if(!(base::file.exists(newFileTotalPath))) {
+                base::file.copy(newFiles[i], newFileTotalPath, overwrite = FALSE)
+                base::print(base::paste("Copying file ", newFiles[i], " to ", newFileTotalPath,".", sep = ""))
+                newInfo$filePath[i] <- newFileTotalPath
+            }
+            else {
+                # If a file of the newly generate name already exists at that location, stop.
+                # Avoids data to be overwritten
+                base::warning(paste("File ", newFileTotalPath, " already exist. Try renaming analysis files. Aborting.", sep = ""))
+                stop()
+                
+            }   
+            
+            
+        }
+        base::print("Files have been copied to project directory.")
+    }
+    else {
+        
+        #leave files in their original location and only rename them if necessary
+        
+        for (i in 1:base::nrow(newInfo)) {
+            
+            base::print("Renaming files if necessary...") 
+            #generate the new path of files and adjust names  
+            newFileTotalPath <-base::paste(base::dirname(newInfo$filePath[i]),"\\",newInfo$sample[i],".",tools::file_ext(newFiles[1]), sep="")
+            #print(newFileTotalPath)
+            
+            if(!(base::file.exists(newFileTotalPath))) {
+                base::file.rename(newFiles[i], newFileTotalPath)
+                base::print(base::paste("Renaming file ", newFiles[i], " to ", newFileTotalPath,".", sep = ""))
+                newInfo$filePath[i] <- newFileTotalPath
+            }
+            else {
+                # If a file of the newly generate name already exists at that location, stop.
+                # Avoids data to be overwritten
+                base::warning(paste("File ", newFileTotalPath, " already exist. Try renaming analysis files. Aborting.", sep = ""))
+                stop()
+                
+            }
+        }
+    }
+    
+    
+    
+    
+    
+    sampleInfo <- base::rbind(sampleInfo,newInfo)
+    #print("sampleInfo:")
+    #print(sampleInfo)
+    return(sampleInfo)  
+    
+}
+
+
+#' @title addMetadata
+#' @description Adds metadata and and additional information to the sample
+#' Additional information could be concentration data or other known properties of the samples.
+#' @param sampleInfo The sampleInfo object that is to be amended by metadata.
+#' @param metadata A list or table containing the desired metadata to be added to the sampleInfo object.
+#' Needs to have the same number of entries as their are samples in the sampleInfo object.
+#' @return Returns a dataframe with the added metadata columns.
+#' 
+
+
+addMetadata <- function(sampleInfo, metadata)
+{
+    # if(base::length(sampleInfo)==0){base::warning("Please provide a non-empty list of analysis files")}
+    
+    #if(base::length(sampleInfo)!=base::length(metadata)){base::warning("Number of analysis files does not match the number of metadata entries")}
+    
+    if(base::length(sampleInfo)==0 & base::length(sampleInfo)!=base::length(metadata)) {
+        
+        base::warning("Please make sure the metadata has the same dimensions as the sample data")
+    } else {
+        sampleInfo <- base::cbind(sampleInfo,metadata)
+    }
+    return(sampleInfo)
+}
+
+
+#' @title removeDupliceNames
+#' @description Removes duplicate sample names to avoid problems during further analysis.
+#' @param orgInfo Original dataframe where additional entries are to be added
+#' @param newInfo Dataframe containing the new samples to be added to the original data.
+#' @return Returns a dataframe containing the new entries which changed sample names in case of duplicates.
+#' 
+#' @importFrom dplyr semi_join
+#' @importFrom stringr str_extract
+
+removeDuplicateNames <- function(orgInfo, newInfo) {
+    if( base::nrow(orgInfo)==0)
+    {
+        return(newInfo)
+    }
+    
+    duplicates <- dplyr::semi_join(orgInfo,newInfo, by = "sample")
+    
+    if(base::nrow(duplicates)>0) {
+        
+        print(paste("Number of duplicate names found:",nrow(duplicates),sep = " "))
+        
+        for (i in 1:base::nrow(duplicates)) {
+            
+            endOfString <-  stringr::str_extract(duplicates$sample[i],"_[^_]+$")
+            startOfString <-  stringr::str_extract(duplicates$sample[i],paste("^.*(?=(",endOfString,"))",sep = ""))
+            
+            if((base::grepl("_[1-9]",endOfString)) && (!is.na(endOfString))) {
+                
+                print("Changing the names of the samples.")
+                endOfString <- base::as.numeric( stringr::str_extract(endOfString,"[0-9]"))+1
+                newInfo$sample <- base::gsub(duplicates$sample[i],
+                                             base::paste(startOfString, endOfString, sep="_"),
+                                             newInfo$sample)
+            } else {    
+                matches <- base::grep(duplicates$sample[i], newInfo$sample)
+                #print(paste("number of grep matches at", i , "is:", length(matches), sep = " "))
+                for (kk in 1:base::length(matches)) {
+                    #print(paste("number of grep matches at i=", i ,"and kk=",kk, "is:", length(matches), sep = " "))
+                    newInfo$sample[matches[kk]] <- base::gsub(paste(duplicates$sample[i],"$",sep = ""),base::paste(duplicates$sample[i], kk, sep="_"), newInfo$sample[matches[kk]])
+                    
+                }
+            }
+            
+            
+        }
+        
+        if(base::nrow(dplyr::semi_join(base::subset(orgInfo, select =2), base::subset(newInfo, select =2)))>0) {
+            
+            print("Duplicates found after renaming. Doing recursion.")
+            newInfo <- ntsIUTA::removeDuplicateNames(orgInfo,newInfo)
+            
+        } else {
+            return(newInfo) 
+        }
+        
+        
+        return(newInfo)
+        
+    } else {
+        return(newInfo)
+    }
+}
 
 
 
