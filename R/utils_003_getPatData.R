@@ -4,7 +4,7 @@
 #' @title getPatData
 #'
 #' @param featData A \linkS4class{XCMSnExp} object with feature data to be converted.
-#' @param sampleInfo The \code{sampleInfo} obtained by the \code{\link{makeSetup}} function, matching the \code{featData}.
+#' @param sampleInfo The \code{sampleInfo} obtained by the \code{\link{setupProject}} function, matching the \code{featData}.
 #' @param save Logical, set to \code{TRUE} to save the generated \linkS4class{featureGroups} object in the disk.
 #' @param projPath The \code{projPath} in the \code{setup} object, or the location where to save the generated R object.
 #'

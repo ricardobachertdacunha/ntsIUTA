@@ -2,11 +2,11 @@
 
 
 #' @title importRawData
-#' @description Function to import MS data from the mzML files listed in \code{sampleInfo} from the \code{makeSetup} object.
+#' @description Function to import MS data from the mzML files listed in \code{sampleInfo} from the \code{setupProject} object.
 #' Files should contain centroided spectra.
 #' The function uses the function \code{\link[MSnbase]{readMSData}} from the \code{MSnbase} package to read the mzML files.
 #' 
-#' @param sampleInfo The sample \code{data.table} obtained by the \code{\link{makeSetup}} function.
+#' @param sampleInfo The sample \code{data.table} obtained by the \code{\link{setupProject}} function.
 #' Note that the \code{sampleInfo} can be filtered beforehand to exclude unwanted mzML files or to redefine the name of replicate sample groups.
 #' @param rtFilter A numeric vector with length 2 defining the minimum and maximum chromatographic retention time for the listed files respectively.
 #' If the files have different time dimensions, \code{rtFilter} should be \code{NULL}.
@@ -41,7 +41,7 @@ importRawData <- function(sampleInfo = setup$sampleInfo, rtFilter = NULL, timeUn
                           msLevel = c(1,2), centroidedData = TRUE, removeEmptySpectra = TRUE, save = TRUE, projPath = setup$projPath) {
   
   #Examples
-  # setup <- ntsIUTA::makeSetup(projPath = system.file(package = "ntsIUTA", dir = "extdata"), save = FALSE)
+  # setup <- ntsIUTA::setupProject(projPath = system.file(package = "ntsIUTA", dir = "extdata"), save = FALSE)
   # rawDataExample <- ntsIUTA::importRawData(setup$sampleInfo[1:3,], save = FALSE, centroidedData = TRUE)
   # rawDataExample
   
