@@ -5,7 +5,7 @@
 \title{centroidProfileData}
 \usage{
 centroidProfileData(
-  rawData,
+  x,
   smoothing = TRUE,
   refineMZ = TRUE,
   methodSmoothing = "SavitzkyGolay",
@@ -16,11 +16,11 @@ centroidProfileData(
   signalPercentage = 10,
   stopAtTwo = TRUE,
   save = TRUE,
-  projPath = setup$projPath
+  projPath = base::getwd()
 )
 }
 \arguments{
-\item{rawData}{The \linkS4class{OnDiskMSnExp} object with profile data for centroiding.}
+\item{x}{The \linkS4class{OnDiskMSnExp} object with profile data for centroiding.}
 
 \item{smoothing}{Logical, set to \code{TRUE} for applying smothing to the profile data.}
 
@@ -41,11 +41,10 @@ centroidProfileData(
 \item{stopAtTwo}{Logical, set to \code{TRUE} for allowed two consecutive equal or higher signals.
 \code{FALSE} will stop when one equal or higher centroid is found.}
 
-\item{save}{Logical, set to \code{TRUE} to save the object rawData in the \strong{rData} folder.
-Note, that the profile files will be replaced by the produced centroided files.}
+\item{save}{Logical, set to \code{TRUE} to save or replace the original files in the given \code{projPath}.}
 
 \item{projPath}{If save is \code{TRUE}, the saving location or project path should be given.
-The default is the \code{projPath} in the object \code{setup}.}
+The default is the \code{base::getwd()}.}
 }
 \value{
 Centroiding of profile data from mzML and mzXML files in an \linkS4class{OnDiskMSnExp} object.
@@ -54,7 +53,5 @@ Centroiding of profile data from mzML and mzXML files in an \linkS4class{OnDiskM
 Centroid profile MS data with additional smoothing and refinement of the m/z.
 }
 \examples{
-
-
 
 }

@@ -5,14 +5,14 @@
 \title{importRawData}
 \usage{
 importRawData(
-  sampleInfo = setup$sampleInfo,
+  sampleInfo = sampleInfo,
   rtFilter = NULL,
   timeUnit = "min",
   msLevel = c(1, 2),
   centroidedData = TRUE,
   removeEmptySpectra = TRUE,
   save = TRUE,
-  projPath = setup$projPath
+  projPath = base::getwd()
 )
 }
 \arguments{
@@ -48,8 +48,6 @@ Files should contain centroided spectra.
 The function uses the function \code{\link[MSnbase]{readMSData}} from the \code{MSnbase} package to read the mzML files.
 }
 \examples{
-
-
 
 }
 \references{

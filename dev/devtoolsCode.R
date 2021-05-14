@@ -1,7 +1,7 @@
 
 #Updates documentation and installs the pkg
 devtools::document()
-devtools::install()
+devtools::install(upgrade = "never")
 library(ntsIUTA)
 
 #Check the pkg

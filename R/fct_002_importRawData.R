@@ -112,7 +112,6 @@ importRawData <- function(sampleInfo = sampleInfo,
 #'
 #' @export
 #'
-#' @import magrittr "%>%"
 #' @importFrom MSnbase smooth pickPeaks fileNames writeMSData
 #'
 #' @examples
