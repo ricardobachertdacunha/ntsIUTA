@@ -23,6 +23,4 @@ getPatData
 }
 \examples{
 
-
-
 }

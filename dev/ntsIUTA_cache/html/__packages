@@ -15,3 +15,5 @@ MSnbase
 data.table
 BiocParallel
 xcms
+patRoon
+CAMERA

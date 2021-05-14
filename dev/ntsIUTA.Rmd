@@ -32,46 +32,46 @@ library(kableExtra)
 The objective of `ntsIUTA` is to simplify and facilitate application of highly efficient open source tools for processing of chromatographically separated mass spectral (MS) data, using simple [R](https://cran.r-project.org/bin/windows/base/) objects and comprehensive visualization for both optimization of data extraction and production of results. `ntsIUTA` can be seen as an oriented guide for NTS with a generic but flixible and application-driven functionality. The package `ntsIUTA` relies heavily on open source tools for non-target screening (NTS) using MS data. It does not invent the wheel, but eases its usability. In particular, the packages `r Githubpkg("rickhelmus/patRoon")` and `r Biocpkg("Bioconductor")` play a fundamental role on the functionality  of `ntsIUTA`. While `r Biocpkg("MSnbase")` and `r Biocpkg("xcms")` from the `r Biocpkg("Bioconductor")` are used to extract and visualize raw spectral data, `r Githubpkg("rickhelmus/patRoon")` is crucial for downstream integration of external software. Although, simple objects, such as [list](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/list), [data.frame](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/data.frame) and [vector](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/vector), are used as the main output, native objects from `r Githubpkg("rickhelmus/patRoon")` and `r Biocpkg("Bioconductor")` are preserved to facilitate the use of respective native functions.  
 In this document, the basic back-end workflow of `ntsIUTA` as well as application-driven workflows are described and exemplified. Although the functions from the back-end of `ntsIUTA` can be used for NTS with basic [R](https://cran.r-project.org/bin/windows/base/) knowledge, the use of the shiny Graphical User Interface (GUI) is recommended for better experience.
 
-```{r pkgLoad}
-library(ntsIUTA)
-```
-
 # Installation
 
-`ntsIUTA` relies on various other software tools to go through it's workflows for NTS and data processing. These dependencies have to be installed beforehand and can in some instances not be resolved easily during the `ntsIUTA`-installation itself. So please make sure certain prerequisites are installed properly first.
+`ntsIUTA` depends on external open source software. These external dependencies have to be installed beforehand using the instructions under Prerequisites.
 
 ## Prerequisites
 
-Before the start of the installation of `ntsIUTA` confirm that [Rtools](https://cran.r-project.org/bin/windows/Rtools/) are installed and the PATH is set up correctly.
+Confirm that [Rtools](https://cran.r-project.org/bin/windows/Rtools/) is installed and the PATH is set up correctly in the environmental variables. To set the PATH the following line can be used where PATH is the location of the RTools bin folder.
 
-The first necessary R package to be installed for the installation of the `ntsIUTA`R package is the `r Githubpkg("rickhelmus/patRoon")` package, as it needed for `ntsIUTA` and has many overlapping dependencies, that are then resolved in this. An installation guide for the `r Githubpkg("rickhelmus/patRoon")` package can be found [here](https://rickhelmus.github.io/patRoon/handbook_bd/installation.html). `patRoon` also provides an [automatic installation script](https://rickhelmus.github.io/patRoon/handbook_bd/automatic-installation-windows-only.html) for Windows users. Alternatively, a  [manual installation guide](https://rickhelmus.github.io/patRoon/handbook_bd/manual-installation.html) is provided as well.
-
-The most basic steps of the `r Githubpkg("rickhelmus/patRoon")` installation are:
-
-```{r patRoon installation, eval=FALSE}
+```{r install_RTools, eval=FALSE}
 writeLines('PATH="${RTOOLS40_HOME}\\usr\\bin;${PATH}"', con = "~/.Renviron")
-install.packages("remotes")
-install.packages("BiocManager")
-BiocManager::install(c("CAMERA","mzR","xcms","Biobase","MSnbase"))
-remotes::install_github("rickhelmus/patRoon", upgrade = "never")
-
 ```
 
-This installs patRoon in then most basic way, as it does not resolve patRoons external software dependencies and does not setup the `.Rprofile-patRoon.R`-file with the paths to these external tools. Using the automatic installation is therefore highly advised. 
+`ntsIUTA` largely depends on `r Githubpkg("rickhelmus/patRoon")` package and both have a large number of common dependencies. Therefore, installation of `r Githubpkg("rickhelmus/patRoon")` is recommended before installing `ntsIUTA`. An installation guide for the `r Githubpkg("rickhelmus/patRoon")` package can be found [here](https://rickhelmus.github.io/patRoon/handbook_bd/installation.html). `r Githubpkg("rickhelmus/patRoon")` also provides an [automatic installation script](https://rickhelmus.github.io/patRoon/handbook_bd/automatic-installation-windows-only.html) for Windows users. Alternatively, a  [manual installation guide](https://rickhelmus.github.io/patRoon/handbook_bd/manual-installation.html) is also provided. The most basic steps of the `r Githubpkg("rickhelmus/patRoon")` installation are as follows.
+
+```{r install_external, eval=FALSE}
+install.packages("remotes")
+install.packages("BiocManager")
+BiocManager::install(c("CAMERA", "mzR", "xcms", "Biobase", "MSnbase"))
+remotes::install_github("rickhelmus/patRoon", upgrade = "never")
+```
+
+The code above installs a basic configuration of `r Githubpkg("rickhelmus/patRoon")`. External software, such as [proteowizard](http://proteowizard.sourceforge.net/download.html), [MetFrag](https://ipb-halle.github.io/MetFrag/projects/metfragcl/), needs to be installed and referenced in the `.Rprofile` manually as suggested [here](https://rickhelmus.github.io/patRoon/handbook_bd/installation.html). Alternatively, the automatic installation of `r Githubpkg("rickhelmus/patRoon")` can be used which creates the `.Rprofile-patRoon.R` with all required locations of the external software used in `r Githubpkg("rickhelmus/patRoon")` and consequently `ntsIUTA`.
 
 ## Installation of the ntsIUTA package
 
-The `ntsIUTA`package can then be installed from the [ntsIUTA GitHub repository](https://github.com/ricardobachertdacunha/ntsIUTA). 
+After installing the prerequisites, the `ntsIUTA`package can then be installed from the [ntsIUTA GitHub repository](https://github.com/ricardobachertdacunha/ntsIUTA) using the code line below. 
 
 ```{r install_ntsIUTA, eval=FALSE}
 remotes::install_github("ricardobachertdacunha/ntsIUTA", auth_token = "<auth_token>", upgrade = "never")
-
 #or once the package goes public
 remotes::install_github("ricardobachertdacunha/ntsIUTA")
-
 ```
 
 # Project Setup
+
+The `ntsIUTA` package can be entirely loaded with the code line below but it is recommended to use `ntsIUTA::` before every function call for better interpretation of the script.
+
+```{r pkgLoad}
+library(ntsIUTA)
+```
 
 The basic back-end workflow requires an initial setup where MS data files are provided. The creation of a project folder containing the MS files of interest is highly recommended and can be used for setup. The function `makeSetup` requires the path of the project folder for the argument `projectPath`. Then, the directory and any existing sub-folders are screened for MS files. The data format used in `ntsIUTA` is `mzML` containing centroided MS data. However, a wide variety of data formats, including vendor MS data, can be used as input. The MS files can be converted to `mzML` through `r Githubpkg("rickhelmus/patRoon")` and/or [ProteoWizard](http://proteowizard.sourceforge.net/) within the `makeSetup` function. Conversion of MS files in project folder to `mzML` can be done by setting the argument `convertFiles` to `TRUE`. Currently, the MS file formats recognized are as follows: *thermo*, *bruker*, *agilent*}, *ab* (from *AB Sciex*) and *waters*. See `?makeSetup` for more information. By setting `makeNewProject` to `TRUE`, a new R project will be created in the given project folder and opened in a new R session.
 
@@ -89,17 +89,18 @@ The output from `makeSetup` is a simple [list](https://www.rdocumentation.org/pa
 The code below loads the mzML files from the given projPath and selects the six first files containing centroided data to be exploited further in this document. Setting `save` to `TRUE`, the `setup` object is store in the rData folder created in the `projPath`. Most functions in `ntsIUTA` allow to store the objects in the rData folder for further use. For instance, in cross analyses single objects can be loaded without the need rerunning the basic workflow of ntsIUTA. When `save` is set to `TRUE`, the `projPath` should be given. If the `setup` object is available, the `setup$projPath` is used by default and the created object is saved in the rData subfolder.
 
 ```{r setup}
-projPath <- system.file(package = "ntsIUTA",dir = "extdata")
-setup <- ntsIUTA::setupProject(projPath, save = F, makeNewProject = F)
+projPath <- system.file(package = "ntsIUTA", dir = "extdata")
+sampleInfo <- ntsIUTA::setupProject(projPath,
+                               save = FALSE,
+                               makeNewProject = FALSE)
 #Filter for selecting the six first files in the sampleInfo
-setup <- setup[1:6,]
+sampleInfo <- sampleInfo[1:6, ]
 ```
 
 ```{r sampleInfoExample, cache=FALSE, echo=FALSE, message=FALSE, results='axis'}
-#sampleInfo_temp <- setup$sampleInfo
-sampleInfo_temp <- setup
+sampleInfo_temp <- sampleInfo
 sampleInfo_temp$filePath <- "C:/FilePath/FileName.mzML"
-sampleInfo_temp %>% kbl(caption = "sampleInfo Example") %>% kable_paper("hover", full_width = F) %>% kable_styling(position = "left")
+sampleInfo_temp %>% kbl(caption = "sampleInfo Example") %>% kable_paper("hover", full_width = FALSE) %>% kable_styling(position = "left")
 ```
 
 # Importing data from mzML
@@ -107,12 +108,12 @@ sampleInfo_temp %>% kbl(caption = "sampleInfo Example") %>% kable_paper("hover",
 After project setup, the data from the mzML files listed in the `sampleInfo` is imported via `importRawData`. For importing, we used the `r Biocpkg("MSnbase")` which reads both centroided and profile MS data in mzML and mzXML files. The returning object is an [OnDiskMSnExp](https://rdrr.io/bioc/MSnbase/man/OnDiskMSnExp-class.html) object which can also be used for native functions within the `r Biocpkg("MSnbase")` and `r Biocpkg("xcms")` packages. In addition to importing the data, the time window of the files can be refined using the `rtFilter` as shown below and empty septra can be removed by setting `removeEmptySpectra` to `TRUE`. See `?importRawData` for additional information.
 
 ```{r importRawData, cache = TRUE, echo = TRUE, message = FALSE, results = 'hide'}
-rawData <- ntsIUTA::importRawData(setup,
-                                  rtFilter = c(c(13, 17)),
+rawData <- ntsIUTA::importRawData(sampleInfo,
+                                  rtFilter = c(13, 17),
                                   timeUnit = "min",
                                   centroidedData = TRUE,
                                   removeEmptySpectra = TRUE,
-                                  save = F)
+                                  save = FALSE)
 ```
 
 ```{r showRawData, cache = TRUE, echo = TRUE}
@@ -158,7 +159,7 @@ MS data can be directly centroided during conversion to mzML with [ProteoWizard]
 ```{r plotCentProf,cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE, results='markup', out.width = "70%", fig.cap="Centroided vs Profile data. Comparison between centroided and profile data for diuron as [M+H]+."}
 setup_prof <- ntsIUTA::setupProject(projPath, save = F, makeNewProject = F)
 
-setup_prof <- setup_prof[7:9,]
+setup_prof <- setup_prof[7:9, ]
 
 rawData_prof <- ntsIUTA::importRawData(setup_prof,
                                        rtFilter = c(c(13, 17)),
@@ -177,15 +178,15 @@ p2 <- ntsIUTA::plotTargetCentroids(rawData_prof, fileIndex = 1,
                                    rt = 14.65, rtWindow = 0.5,
                                    rtUnit = "min", plotTargetMark = TRUE)
 
-plotly::subplot(base::list(p1,p2), nrows = 1, margin = 0.04)
+plotly::subplot(base::list(p1, p2), nrows = 1, margin = 0.04)
 ```
 
 A tentative to improve the centroiding can be achieved by `centroidProfileData` as shown in the example below. The centroids for Terbutryn by applying a refinement of the *m/z* values during centroiding of the profile data could be improved. The centroids for Terbutryn are now within the +/- 5 ppm deviation from the expected *m/z* value (red square). As a consequent, the downstream peak finding will yield a much more accurate *m/z* for the feature correspondent to Terbutryn, as later demonstrated in section 4.1 while inspecting peaks. Note that the specific parameters used in `centroidProfileData` should be optimized for each MS data using preferably reference standards and/or peaks. See `?centroidProfileData` for more details.
 
 ```{r plotRefined, cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE, results='markup', out.width = "70%", fig.cap="Mass refinement. Centroided data via MSconvert from ProteoWizard (left) and refined centroided data using functionalities of the MSnbase package via the centroidProfileData function (right)."}
-rawData_prof2 <- centroidProfileData(MSnbase::filterFile(rawData_prof,1),
+rawData_prof2 <- centroidProfileData(MSnbase::filterFile(rawData_prof, 1),
                                      smoothing = FALSE, refineMZ = TRUE,
-                                     methodRefineMz = "kNeighbors",k = 1,
+                                     methodRefineMz = "kNeighbors", k = 1,
                                      save = FALSE)
 
 p1 <- ntsIUTA::plotTargetCentroids(rawData, fileIndex = 4,
@@ -200,7 +201,7 @@ p2 <- ntsIUTA::plotTargetCentroids(rawData_prof2, fileIndex = 1,
                                    rtUnit = "min",
                                    plotTargetMark = TRUE)
 
-plotly::subplot(base::list(p1,p2), nrows = 1, margin = 0.04)
+plotly::subplot(base::list(p1, p2), nrows = 1, margin = 0.04)
 ```
 
 # Peak Picking
