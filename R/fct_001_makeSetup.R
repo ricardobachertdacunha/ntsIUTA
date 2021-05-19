@@ -87,7 +87,7 @@ setupProject <- function(projPath = utils::choose.dir(base::getwd(), "Select or 
     if (base::length(msFiles) == 0) {
         warning("No mzML or mzXML files were found in selected project path. Use addFiles() to add files to project.")
     } else {
-        sampleInfo[base::seq_len(base::length(newFiles)), ] <- NA
+        sampleInfo[base::seq_len(base::length(msFiles)), ] <- NA
         sampleInfo$filePath <- msFiles
         sampleInfo$sample <- tools::file_path_sans_ext(base::basename(msFiles))
         sampleInfo$blank <- blanks
