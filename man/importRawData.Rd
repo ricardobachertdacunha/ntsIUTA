@@ -48,6 +48,9 @@ Files should contain centroided spectra.
 The function uses the function \code{\link[MSnbase]{readMSData}} from the \code{MSnbase} package to read the mzML files.
 }
 \examples{
+sampleInfo <- ntsIUTA::setupProject(projPath = system.file(package = "ntsIUTA", dir = "extdata"), save = FALSE)
+rawData <- ntsIUTA::importRawData(sampleInfo[1,], save = FALSE, centroidedData = TRUE)
+rawData
 
 }
 \references{

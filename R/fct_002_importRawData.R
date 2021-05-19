@@ -32,6 +32,9 @@
 #' @importFrom MSnbase readMSData filterRt filterEmptySpectra
 #'
 #' @examples
+#' sampleInfo <- ntsIUTA::setupProject(projPath = system.file(package = "ntsIUTA", dir = "extdata"), save = FALSE)
+#' rawData <- ntsIUTA::importRawData(sampleInfo[1,], save = FALSE, centroidedData = TRUE)
+#' rawData
 #'
 importRawData <- function(sampleInfo = sampleInfo,
                           rtFilter = NULL,
@@ -39,13 +42,8 @@ importRawData <- function(sampleInfo = sampleInfo,
                           msLevel = c(1, 2),
                           centroidedData = TRUE,
                           removeEmptySpectra = TRUE,
-                          save = TRUE,
+                          save = FALSE,
                           projPath = base::getwd()) {
-
-  #Examples
-  # sampleInfo <- ntsIUTA::setupProject(projPath = system.file(package = "ntsIUTA", dir = "extdata"), save = FALSE)
-  # rawData <- ntsIUTA::importRawData(sampleInfo[1,], save = FALSE, centroidedData = TRUE)
-  # rawData
 
   rawData <- base::suppressWarnings(
     MSnbase::readMSData(sampleInfo$filePath[drop = TRUE],
@@ -72,43 +70,39 @@ importRawData <- function(sampleInfo = sampleInfo,
 
   return(rawData)
 
-
-  #Options to save information from raw data
-  #raw[["rawchrom"]] <- chromatogram(rawData, aggregationFun = "max")
-  #raw[["emptyspec"]] <- length(which(MSnbase::peaksCount(rawData) == 0))
-
-  #TODO For examples afterwards
-  # file <- dir(system.file(package = "MSnbase", dir = "extdata"),
-  #             full.name = TRUE,
-  #             pattern = "mzXML$")
-
-  #TODO Verify if mzML files are centroided ot not
-  #TestDataTypeCent <- table(MSnbase::isCentroided(MSnbase::filterFile(rawData_cent, 1)), useNA = "always")
-  #TestDataTypeCent <- table(MSnbase::isCentroidedFromFile(MSnbase::filterFile(rawData_cent, 1)), useNA = "always")
-
 }
 
 
 
 #' @title centroidProfileData
-#' @description Centroid profile MS data with additional smoothing and refinement of the m/z.
+#' @description Centroiding of profile data with additional possibility for data smoothing before centroiding and \emph{m/z} refinement.
+#' The \code{centroidProfileData} function combines functions \code{smooth} and \code{pickPeaks}
+#' from the \code{MSnbase} package, see references.
 #'
-#' @param x The \linkS4class{OnDiskMSnExp} object with profile data for centroiding.
-#' @param smoothing Logical, set to \code{TRUE} for applying smothing to the profile data.
-#' @param refineMZ Logical, set to \code{TRUE} for applying \emph{m/z} refinement before centroiding.
-#' @param methodSmoothing Method for smoothing.
-#' @param halfWindowSize The window size of the filter.
-#' @param polynomialOrder Polynomial order for smothing, default is 4.
-#' @param methodRefineMz Method for refinement.
-#' @param k Number of closest signals to the centroid.
-#' @param signalPercentage Minimum signal percentage of centroids to refine \emph{m/z}.
-#' @param stopAtTwo Logical, set to \code{TRUE} for allowed two consecutive equal or higher signals.
+#' @param x A \linkS4class{OnDiskMSnExp} object with profile data for centroiding.
+#' @param halfwindow Sets the window size for centroiding as \code{2 * halfwindow + 1}.
+#' The \code{halfwindow} should be slightly larger than the full width at half maximum of the profile peak.
+#' @param SNR The signal-to-noise ratio to consider a local maximum as peak.
+#' @param noiseMethod The method to estimate the noise level. Possible methods are "MAD" (the default) and "SuperSmoother".
+#' See \code{?MSnbase::pickPeaks} for more information.
+#' @param smoothing Logical, set to \code{TRUE} for applying smothing to the profile data before centroiding. The default is FALSE.
+#' @param methodSmoothing Method for data smoothing. The possible methods are "SavitzkyGolay" (the default) and "MovingAverage".
+#' See \code{?MSnbase::smooth} for more information and arguments, which are passed by \code{...}.
+#' @param ... Arguments for selected smoothing method. See \code{?MSnbase::smooth} for possible arguments for each method.
+#' @param methodRefineMz Method for refinement. Possible methods are "none" (the default, for not applying \emph{m/z} refinement), "kNeighbors" and "descendPeak".
+#' See \code{?MSnbase::pickPeaks} for more information.
+#' @param k When refine method is "kNeighbors", \code{k} is number of closest signals to the centroid.
+#' @param signalPercentage When refine method is "descendPeak", \code{signalPercentage} is the minimum signal percentage of centroids to refine \emph{m/z}.
+#' @param stopAtTwo Logical, when refine method is "descendPeak", set to \code{TRUE} for allowing two consecutive equal or higher signals.
 #' \code{FALSE} will stop when one equal or higher centroid is found.
-#' @param save Logical, set to \code{TRUE} to save or replace the original files in the given \code{projPath}.
-#' @param projPath If save is \code{TRUE}, the saving location or project path should be given.
-#' The default is the \code{base::getwd()}.
+#' @param save Logical, set to \code{TRUE} to replace the original files by the centroided files in disk.
+#' The location is taken from the originbal file paths.
 #'
-#' @return Centroiding of profile data from mzML and mzXML files in an \linkS4class{OnDiskMSnExp} object.
+#' @return Centroided \linkS4class{OnDiskMSnExp} object.
+#' When \code{save} is set to TRUE, the profile data in the original mzML or mzXML files are replaced by the centroided data.
+#'
+#' @references
+#' \insertRef{MSnbase2}{ntsIUTA}
 #'
 #' @export
 #'
@@ -117,44 +111,50 @@ importRawData <- function(sampleInfo = sampleInfo,
 #' @examples
 #'
 centroidProfileData <- function(x,
-                                smoothing = TRUE,
-                                refineMZ = TRUE,
+                                halfwindow = 2,
+                                SNR = 0,
+                                noiseMethod = "MAD",
+                                smoothing = FALSE,
                                 methodSmoothing = "SavitzkyGolay",
-                                halfWindowSize = 5,
-                                polynomialOrder = 4,
-                                methodRefineMz = "kNeighbors", k = 2,
+                                methodRefineMz = "kNeighbors",
+                                k = 1,
                                 signalPercentage = 10, stopAtTwo = TRUE,
-                                save = TRUE,
-                                projPath = base::getwd()) {
+                                save = FALSE, ...) {
 
   if (smoothing) {
-    x <- x %>% MSnbase::smooth(method = methodSmoothing,
-                               halfWindowSize = halfWindowSize,
-                               polynomialOrder = polynomialOrder)
+    x <- x %>% MSnbase::smooth(method = methodSmoothing, ...)
   }
 
-  if (refineMZ) {
-    if (methodRefineMz == "kNeighbors") {
-      x <- MSnbase::pickPeaks(x,
-                              refineMz = methodRefineMz,
-                              k = k)
-    }
-
+  if (methodRefineMz == "kNeighbors") {
+    x <- MSnbase::pickPeaks(x,
+                            halfWindowSize = halfwindow,
+                            SNR = SNR,
+                            noiseMethod = noiseMethod,
+                            refineMz = methodRefineMz,
+                            k = k)
+  } else {
     if (methodRefineMz == "descendPeak") {
       x <- MSnbase::pickPeaks(x,
+                              halfWindowSize = halfwindow,
+                              SNR = SNR,
+                              noiseMethod = noiseMethod,
                               refineMz = methodRefineMz,
                               signalPercentage = 0.1,
                               stopAtTwo = TRUE)
+    } else {
+      x <- MSnbase::pickPeaks(x,
+                              halfWindowSize = halfwindow,
+                              SNR = SNR,
+                              noiseMethod = noiseMethod,
+                              refineMz = "none")
     }
   }
 
-  #Save centroided files in disk
   if (save) {
     fls_new <- MSnbase::fileNames(x)
     MSnbase::writeMSData(x, file = fls_new)
   }
 
-  #TODO Finish function to centroid data
   return(x)
 
 }

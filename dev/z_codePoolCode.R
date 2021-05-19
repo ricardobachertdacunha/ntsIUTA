@@ -1,4 +1,112 @@
 
+# projPath <- system.file(package = "ntsIUTA", dir = "extdata")
+
+# sI <- ntsIUTA::setupProject(projPath, save = FALSE, makeNewProject = FALSE)
+
+# sI <- sI[7:9, ]
+
+# rD <- ntsIUTA::importRawData(sI,
+#                              rtFilter = c(c(13, 17)),
+#                              timeUnit = "min",
+#                              centroidedData = FALSE,
+#                              removeEmptySpectra = TRUE,
+#                              save = FALSE)
+
+# ntsIUTA::plotTargetCentroids(rD, fileIndex = 1,
+#                              mz = 242.1434, ppm = 90,
+#                              rt = 14.65, rtWindow = 0.5,
+#                              rtUnit = "min", plotTargetMark = TRUE)
+
+# rawData_prof2 <- centroidProfileData(MSnbase::filterFile(rawData_prof,1),
+#                                      smoothing = FALSE, refineMZ = TRUE,
+#                                      methodRefineMz = "kNeighbors", k = 1,
+#                                      save = FALSE)
+
+
+# x <- rD %>% MSnbase::smooth(method = "SavitzkyGolay", halfWindowSize = 2, polynomialOrder = 3)
+# x <- MSnbase::pickPeaks(x)
+
+# x <- MSnbase::pickPeaks(rD)
+
+# x <- MSnbase::pickPeaks(rD,
+#                         halfWindowSize = 1,
+#                         SNR = 0,
+#                         method = "SuperSmoother",
+#                         refineMz = "none")
+
+# x <- MSnbase::pickPeaks(rD,
+#                         halfWindowSize = 0.8,
+#                         SNR = 0,
+#                         method = "SuperSmoother",
+#                         refineMz = "kNeighbors",
+#                         k = 2)
+
+# x <- x %>% MSnbase::smooth(method = "SavitzkyGolay", halfWindowSize = 2, polynomialOrder = 3)
+
+
+# x <- MSnbase::pickPeaks(rD,
+#                         halfWindowSize = 20,
+#                         SNR = 0,
+#                         method = "SuperSmoother",
+#                         refineMz = "descendPeak",
+#                         signalPercentage = 0.3,
+#                         stopAtTwo = TRUE)
+
+# ntsIUTA::plotTargetCentroids(x, fileIndex = 1,
+#                              mz = 242.1434, ppm = 30,
+#                              rt = 14.65, rtWindow = 0.5,
+#                              rtUnit = "min",
+#                              plotTargetMark = TRUE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Code -----
+
+
+# sampleInfo <- ntsIUTA::setupProject(save = FALSE)
+# View(sampleInfo)
+# sampleInfo <- sampleInfo[19:21, ]
+# View(sampleInfo)
+# rawData <- ntsIUTA::importRawData(sampleInfo = sampleInfo, save = FALSE, centroidedData = FALSE, removeEmptySpectra = FALSE)
+# library(magrittr)
+# rawData2 <- rawData %>% MSnbase::filterRt(rt = c(13 * 60, 17 * 60), msLevel. = c(1, 2)) %>% MSnbase::filterMz(mz = c(230, 300), msLevel. = c(1))
+# MSnbase::writeMSData(rawData2, file = c("Sample04_prof.mzML", "Sample05_prof.mzML", "Sample06_prof.mzML"), copy = TRUE)
+
+
+#Options to save information from raw data
+  #raw[["rawchrom"]] <- chromatogram(rawData, aggregationFun = "max")
+  #raw[["emptyspec"]] <- length(which(MSnbase::peaksCount(rawData) == 0))
+
+  #For examples afterwards
+  # file <- dir(system.file(package = "MSnbase", dir = "extdata"),
+  #             full.name = TRUE,
+  #             pattern = "mzXML$")
+
+  #Verify if mzML files are centroided ot not
+  #TestDataTypeCent <- table(MSnbase::isCentroided(MSnbase::filterFile(rawData_cent, 1)), useNA = "always")
+  #TestDataTypeCent <- table(MSnbase::isCentroidedFromFile(MSnbase::filterFile(rawData_cent, 1)), useNA = "always")
 
 
 

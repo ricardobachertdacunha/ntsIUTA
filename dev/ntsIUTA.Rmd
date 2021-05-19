@@ -157,12 +157,12 @@ ntsIUTA::plotTargetCentroids(rawData,
 MS data can be directly centroided during conversion to mzML with [ProteoWizard](http://proteowizard.sourceforge.net/) via `makeSetup`. However, centroiding of profile MS data was also implemented with additional capabilities for smotthing and refining the MS data, using tools from the `r Biocpkg("MSnbase")` package. The smoothing and refinement can benefit peak finding for data with high noise and low mass accuracy and/or high deviation. Below we plot the an example for centroided and profile MS data of Terbutryn. A high deviation for the mass of Terbutryn is shown on the centroided plot (left), which is likely related to saturation of the MS detector due to the high intensity.
 
 ```{r plotCentProf,cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE, results='markup', out.width = "70%", fig.cap="Centroided vs Profile data. Comparison between centroided and profile data for diuron as [M+H]+."}
-setup_prof <- ntsIUTA::setupProject(projPath, save = F, makeNewProject = F)
+sampleInfo_prof <- ntsIUTA::setupProject(projPath, save = F, makeNewProject = F)
 
-setup_prof <- setup_prof[7:9, ]
+sampleInfo_prof <- sampleInfo_prof[7:9, ]
 
-rawData_prof <- ntsIUTA::importRawData(setup_prof,
-                                       rtFilter = c(c(13, 17)),
+rawData_prof <- ntsIUTA::importRawData(sampleInfo = sampleInfo_prof,
+                                       rtFilter = c(13, 17),
                                        timeUnit = "min",
                                        centroidedData = FALSE,
                                        removeEmptySpectra = TRUE,
@@ -184,10 +184,13 @@ plotly::subplot(base::list(p1, p2), nrows = 1, margin = 0.04)
 A tentative to improve the centroiding can be achieved by `centroidProfileData` as shown in the example below. The centroids for Terbutryn by applying a refinement of the *m/z* values during centroiding of the profile data could be improved. The centroids for Terbutryn are now within the +/- 5 ppm deviation from the expected *m/z* value (red square). As a consequent, the downstream peak finding will yield a much more accurate *m/z* for the feature correspondent to Terbutryn, as later demonstrated in section 4.1 while inspecting peaks. Note that the specific parameters used in `centroidProfileData` should be optimized for each MS data using preferably reference standards and/or peaks. See `?centroidProfileData` for more details.
 
 ```{r plotRefined, cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE, results='markup', out.width = "70%", fig.cap="Mass refinement. Centroided data via MSconvert from ProteoWizard (left) and refined centroided data using functionalities of the MSnbase package via the centroidProfileData function (right)."}
-rawData_prof2 <- centroidProfileData(MSnbase::filterFile(rawData_prof, 1),
-                                     smoothing = FALSE, refineMZ = TRUE,
-                                     methodRefineMz = "kNeighbors", k = 1,
-                                     save = FALSE)
+rawData_prof2 <- ntsIUTA::centroidProfileData(MSnbase::filterFile(rawData_prof, 2),
+                                              halfwindow = 3,
+                                              SNR = 0,
+                                              noiseMethod = "MAD",
+                                              methodRefineMz = "kNeighbors",
+                                              k = 1,
+                                              save = FALSE)
 
 p1 <- ntsIUTA::plotTargetCentroids(rawData, fileIndex = 4,
                                    mz = 242.1434, ppm = 30,
@@ -211,13 +214,13 @@ With centroided data, peak picking can more efficiently be preformed. The functi
 The `peakPicking` function returns not directly an `XCMSnExp` object but a list of `XCMSnExp` objects grouped according to the defined replicate groups in the sampleInfo used in `importRawData`. The list facilitates the use of `XCMSnExp` objects accross projects avoiding the need for re-running peak picking. In `ntsIUTA`, worflows for cross project processing uses existing lists to load name specific replicate sample groups for given project folders.
 
 ```{r peakPicking, cache=TRUE, message=FALSE, warning=FALSE, results='hide'}
-param = xcms::CentWaveParam(ppm = 15, peakwidth = c(6, 60),
-                            snthresh = 5, prefilter = c(6, 300),
-                            mzCenterFun = "wMean", integrate = 2,
-                            mzdiff = -0.0001, fitgauss = TRUE,
-                            noise = 0, verboseColumns = TRUE,
-                            firstBaselineCheck = FALSE,
-                            extendLengthMSW = TRUE)
+param <- xcms::CentWaveParam(ppm = 15, peakwidth = c(6, 60),
+                             snthresh = 5, prefilter = c(6, 300),
+                             mzCenterFun = "mean", integrate = 2,
+                             mzdiff = -0.0001, fitgauss = TRUE,
+                             noise = 0, verboseColumns = TRUE,
+                             firstBaselineCheck = FALSE,
+                             extendLengthMSW = TRUE)
 
 peaksData <- ntsIUTA::peakPicking(rawData,
                                   param = param,
@@ -234,14 +237,14 @@ Individual peaks can be accessed via the existing function `chromPeaks` from the
 
 ```{r chromPeaks,  cache=TRUE, message=FALSE, warning=FALSE}
 mz <- 233.0243
-rt <- 15.7*60
+rt <- 15.7 * 60
 d_ppm <- 10
 d_rt <- 120
 xcms::chromPeaks(peaksData[[2]],
                  #mz = c(233, 245),
-                 mz = c(mz-((d_ppm/1E6)*mz),
-                        mz+((d_ppm/1E6)*mz)),
-                 rt = c(rt-d_rt,rt+d_rt),
+                 mz = c(mz - ((d_ppm / 1E6) * mz),
+                        mz + ((d_ppm / 1E6) * mz)),
+                 rt = c(rt - d_rt, rt + d_rt),
                  type = c("any"))
 ```
 
@@ -255,27 +258,27 @@ peaksData_prof2 <- ntsIUTA::peakPicking(rawData_prof2,
 
 ```{r betterPPM, cache=TRUE, message=FALSE, warning=FALSE}
 mz <- 242.1434
-rt <- 14.65*60
+rt <- 14.65 * 60
 d_ppm <- 10
 d_rt <- 10
 mz_ppm <- xcms::chromPeaks(peaksData[[2]],
-                           mz = c(mz-((d_ppm/1E6)*mz),
-                                  mz+((d_ppm/1E6)*mz)),
-                           rt = c(rt-d_rt,rt+d_rt),
+                           mz = c(mz - ((d_ppm / 1E6) * mz),
+                                  mz + ((d_ppm / 1E6) * mz)),
+                           rt = c(rt - d_rt, rt + d_rt),
                            type = c("any"))
 
 mz_ppm_prof2 <- xcms::chromPeaks(peaksData_prof2[[1]],
-                                 mz = c(mz-((d_ppm/1E6)*mz),
-                                        mz+((d_ppm/1E6)*mz)),
-                                 rt = c(rt-d_rt,rt+d_rt),
+                                 mz = c(mz - ((d_ppm / 1E6) * mz),
+                                        mz + ((d_ppm / 1E6) * mz)),
+                                 rt = c(rt - d_rt, rt + d_rt),
                                  type = c("any"))
 
 #Deviation in ppm for MSconvert centroided data
-mz_ppm <- base::abs(mz_ppm[,"mz"]-242.1434)/242.1434*1E6
+mz_ppm <- base::abs(mz_ppm[, "mz"] - 242.1434) / 242.1434 * 1E6
 mz_ppm
 
 #Deviation in ppm for MSnbase refined centroided data
-mz_ppm_prof2 <- base::abs(mz_ppm_prof2[,"mz"]-242.1434)/242.1434*1E6
+mz_ppm_prof2 <- base::abs(mz_ppm_prof2[, "mz"] - 242.1434) / 242.1434 * 1E6
 mz_ppm_prof2
 ```
 
