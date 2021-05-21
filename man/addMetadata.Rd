@@ -7,15 +7,19 @@
 addMetadata(sampleInfo, metadata)
 }
 \arguments{
-\item{sampleInfo}{The sampleInfo object that is to be amended by metadata.}
+\item{sampleInfo}{The sampleInfo \code{data.frame} object to be amended with metadata.}
 
-\item{metadata}{A list or table containing the desired metadata to be added to the sampleInfo object.
-Needs to have the same number of entries as their are samples in the sampleInfo object.}
+\item{metadata}{A \code{data.frame} with the same number of rows as the sampleInfo contaninig 1 or more columns with metadata.
+Note that the column names in the metadata \code{data.frame} will be used as classifiers.}
 }
 \value{
-Returns a dataframe with the added metadata columns.
+Returns an updated sampleInfo \code{data.frame} objects.
 }
 \description{
-Adds metadata and and additional information to the sample
-Additional information could be concentration data or other known properties of the samples.
+Adds additional information to the sampleInfo \code{data.frame}. For instance,
+additional information could be concentration data or other known properties or classifiers for each sample in the sampleInfo \code{data.frame}.
+The added metadata can then be used for inferential and statistical analyses.
+}
+\examples{
+
 }

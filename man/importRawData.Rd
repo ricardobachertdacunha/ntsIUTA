@@ -11,7 +11,7 @@ importRawData(
   msLevel = c(1, 2),
   centroidedData = TRUE,
   removeEmptySpectra = TRUE,
-  save = TRUE,
+  save = FALSE,
   projPath = base::getwd()
 )
 }

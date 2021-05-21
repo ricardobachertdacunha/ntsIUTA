@@ -2,17 +2,15 @@
 % Please edit documentation in R/fct_001_makeSetup.R
 \name{removeDuplicateNames}
 \alias{removeDuplicateNames}
-\title{removeDupliceNames}
+\title{removeDuplicateNames}
 \usage{
-removeDuplicateNames(orgInfo, newInfo)
+removeDuplicateNames(newJoint)
 }
 \arguments{
-\item{orgInfo}{Original dataframe where additional entries are to be added}
-
-\item{newInfo}{Dataframe containing the new samples to be added to the original data.}
+\item{newJoint}{Original and new sampleInfo \code{data.frame} objects collated by \code{rbind}}
 }
 \value{
-Returns a dataframe containing the new entries which changed sample names in case of duplicates.
+Returns the same \code{data.frame} but with duplicate sample names edited as duplicate sample names are not allowed.
 }
 \description{
 Removes duplicate sample names to avoid problems during further analysis.

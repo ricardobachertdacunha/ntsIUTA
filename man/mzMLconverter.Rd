@@ -5,32 +5,44 @@
 \title{mzMLconverter}
 \usage{
 mzMLconverter(
-  path = setup$projPath,
+  path = base::getwd(),
+  files = NULL,
   convertFrom = "agilent",
-  centroidData = TRUE
+  centroidMethod = "vendor",
+  outPath = NULL,
+  overWrite = FALSE
 )
 }
 \arguments{
 \item{path}{The \code{path} where the files to be converted can be found. The function will look into subfolders.}
 
-\item{convertFrom}{The format/vendor of files to be found and converted.
-Possible entries are: \emph{thermo}, \emph{bruker}, \emph{agilent}, \emph{ab} (from AB Sciex) and \emph{waters}.}
+\item{files}{Alternatevely, a list with complete file paths for conversion.
+Note that this will overwrite the \code{path} argument to look for files. The \code{convertFrom} argument must be anyway given.}
 
-\item{centroidData}{Logical, set to \code{TRUE} to convert profile data into centroided. The default and recommended is TRUE.}
+\item{convertFrom}{The format/vendor of files to be found and converted.
+Possible entries are: \emph{thermo}, \emph{bruker}, \emph{agilent}, \emph{ab} (from AB Sciex) and \emph{waters}.
+The default is \emph{agilent}.}
+
+\item{centroidMethod}{The method for centroiding the data. Possible values are \emph{vendor} (the default) to use the vendor algorithm,
+\emph{cwt} to use the wavelet algorithm or \code{NULL} for skiping dada centroiding. See [ProtesWizard](http://proteowizard.sourceforge.net/) for more information.}
+
+\item{outPath}{The path to store the mzML files. When \code{NULL} the \code{path} is used instead.}
+
+\item{overWrite}{Logical, set to \code{TRUE} to overwrite existing files in the defined storing location (either \code{path} or \code{outPath}).}
 }
 \value{
-The converted files will be saved as mzML in the given path.
+The converted files will be saved as mzML in the given \code{path} or \code{outPath}.
 }
 \description{
-Converts MS files from different formats to mzML format.
-See \pkg{patRoon} \insertCite{Helmus2021}{ntsIUTA} for all the possible formats. 
-Optionally and recommended, it centroids the data.
+Converts raw MS files from different formats to mzML using the external tool \emph{msConvert}
+from [ProtesWizard](http://proteowizard.sourceforge.net/) through the interface of \pkg{patRoon} \insertCite{Helmus2021}{ntsIUTA}.
+Possible formats are: \emph{thermo}, \emph{bruker}, \emph{agilent}, \emph{ab} (from AB Sciex) and \emph{waters}.
 }
 \examples{
-
-
 
 }
 \references{
 \insertRef{Helmus2021}{ntsIUTA}
+
+\insertRef{proteo}{ntsIUTA}
 }

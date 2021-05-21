@@ -15,7 +15,7 @@ centroidProfileData(
   k = 1,
   signalPercentage = 10,
   stopAtTwo = TRUE,
-  save = TRUE,
+  save = FALSE,
   ...
 )
 }
@@ -51,7 +51,8 @@ The location is taken from the originbal file paths.}
 \item{...}{Arguments for selected smoothing method. See \code{?MSnbase::smooth} for possible arguments for each method.}
 }
 \value{
-Centroiding of profile data from mzML and mzXML files in an \linkS4class{OnDiskMSnExp} object.
+Centroided \linkS4class{OnDiskMSnExp} object.
+When \code{save} is set to TRUE, the profile data in the original mzML or mzXML files are replaced by the centroided data.
 }
 \description{
 Centroiding of profile data with additional possibility for data smoothing before centroiding and \emph{m/z} refinement.
