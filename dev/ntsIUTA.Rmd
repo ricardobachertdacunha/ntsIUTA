@@ -73,20 +73,19 @@ The `ntsIUTA` package can be entirely loaded with the code line below but it is 
 library(ntsIUTA)
 ```
 
-The basic back-end workflow requires an initial setup where MS data files are provided. The creation of a project folder containing the MS files of interest is highly recommended and can be used for setup. The function `makeSetup` requires the path of the project folder for the argument `projectPath`. Then, the directory and any existing sub-folders are screened for MS files. The data format used in `ntsIUTA` is `mzML` containing centroided MS data. However, a wide variety of data formats, including vendor MS data, can be used as input. The MS files can be converted to `mzML` through `r Githubpkg("rickhelmus/patRoon")` and/or [ProteoWizard](http://proteowizard.sourceforge.net/) within the `makeSetup` function. Conversion of MS files in project folder to `mzML` can be done by setting the argument `convertFiles` to `TRUE`. Currently, the MS file formats recognized are as follows: *thermo*, *bruker*, *agilent*}, *ab* (from *AB Sciex*) and *waters*. See `?makeSetup` for more information. By setting `makeNewProject` to `TRUE`, a new R project will be created in the given project folder and opened in a new R session.
+The basic back-end workflow requires an initial setup where MS data files are provided. The creation of a project folder containing the MS files of interest is highly recommended and can be used for setup. The function `setupProject` requires the path of the project folder for the argument `projectPath`. Then, the directory and any existing sub-folders are screened for MS files. The data format used in `ntsIUTA` is `mzML` containing centroided MS data. However, a wide variety of data formats, including vendor MS data, can be used as input. The MS files can be converted to `mzML` through `r Githubpkg("rickhelmus/patRoon")` and/or [ProteoWizard](http://proteowizard.sourceforge.net/) within the `setupProject` function. Conversion of MS files in project folder to `mzML` can be done by setting the argument `convertFiles` to `TRUE`. Currently, the MS file formats recognized are as follows: *thermo*, *bruker*, *agilent*}, *ab* (from *AB Sciex*) and *waters*. See `?setupProject` for more information. By setting `makeNewProject` to `TRUE`, a new R project will be created in the given project folder and opened in a new R session, when using RStudio. When not using RStudio, the working directory of the running R session will be changed to the given `projectPath`.
 
-The output from `makeSetup` is a simple [list](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/list), containing:
+The output from `setupProject` is a simple [data.frame](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/data.frame) with the following columns:
 
-* `projPath`, the chosen project path;
-* `date`, the automatically generated date;
-* `sampleInfo`, a [data.frame](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/data.frame) with the folowwing columns:
-  + `filePath`, the directory of each `mzML` file, including any converted MS files;
-  + `sample`, the retrieved file name to be used as sample identifier;
-  + `group`, the group of each sample (e.g. samples with the same name but with different numbering, such as in the case of replicate samples);
-  + `blank`, the blank group detected by file name when present (i.e. blank, Blank and/or B as file name);
-  + `polarity`, the ionization mode used for each file (*positive* or *negative*);
+* `filePath`, the directory of each `mzML` file, including any converted MS files;
+* `sample`, the retrieved file name to be used as sample identifier;
+* `group`, the group of each sample (e.g. samples with the same name but with different numbering, such as in the case of replicate samples);
+* `blank`, the blank group detected by file name when present (i.e. blank, Blank and/or B as file name);
+* `polarity`, the ionization mode used for each file (*positive* or *negative*);
+* `date`, the project date which by default is the `Sys.Date` when the project is created;
+* `wdir`, the project working directory to be used for cross project analysis. 
 
-The code below loads the mzML files from the given projPath and selects the six first files containing centroided data to be exploited further in this document. Setting `save` to `TRUE`, the `setup` object is store in the rData folder created in the `projPath`. Most functions in `ntsIUTA` allow to store the objects in the rData folder for further use. For instance, in cross analyses single objects can be loaded without the need rerunning the basic workflow of ntsIUTA. When `save` is set to `TRUE`, the `projPath` should be given. If the `setup` object is available, the `setup$projPath` is used by default and the created object is saved in the rData subfolder.
+The code below loads the mzML files from the given projPath and selects the six first files containing centroided data to be exploited further in this document. Setting `save` to `TRUE`, the `sampleInfo` object is store in the rData folder created in the `projPath`. Most functions in `ntsIUTA` allow to store the objects in the rData folder for further use. For instance, in cross analysis single objects can be loaded without the need for rerunning the basic workflow of ntsIUTA. When `save` is set to `TRUE`, the `projPath` should be given. The `getwd()` is used by default and the created object is saved in the rData subfolder.
 
 ```{r setup}
 projPath <- system.file(package = "ntsIUTA", dir = "extdata")
@@ -95,17 +94,19 @@ sampleInfo <- ntsIUTA::setupProject(projPath,
                                     makeNewProject = FALSE)
 #Filter for selecting the six first files in the sampleInfo
 sampleInfo <- sampleInfo[1:6, ]
+
+#below the 5 first columns of the sampleInfo
 ```
 
 ```{r sampleInfoExample, cache=FALSE, echo=FALSE, message=FALSE, results='axis'}
-sampleInfo_temp <- sampleInfo
+sampleInfo_temp <- sampleInfo[, 1:5]
 sampleInfo_temp$filePath <- "C:/FilePath/FileName.mzML"
 sampleInfo_temp %>% kbl(caption = "sampleInfo Example") %>% kable_paper("hover", full_width = FALSE) %>% kable_styling(position = "left")
 ```
 
 # Importing data from mzML
 
-After project setup, the data from the mzML files listed in the `sampleInfo` is imported via `importRawData`. For importing, we used the `r Biocpkg("MSnbase")` which reads both centroided and profile MS data in mzML and mzXML files. The returning object is an [OnDiskMSnExp](https://rdrr.io/bioc/MSnbase/man/OnDiskMSnExp-class.html) object which can also be used for native functions within the `r Biocpkg("MSnbase")` and `r Biocpkg("xcms")` packages. In addition to importing the data, the time window of the files can be refined using the `rtFilter` as shown below and empty septra can be removed by setting `removeEmptySpectra` to `TRUE`. See `?importRawData` for additional information.
+After project setup, the data from the mzML files listed in the `sampleInfo` can be imported via `importRawData`. For importing, we used the `r Biocpkg("MSnbase")` which reads both centroided and profile MS data in mzML and mzXML files. The returning object is an [OnDiskMSnExp](https://rdrr.io/bioc/MSnbase/man/OnDiskMSnExp-class.html) object which can also be used for native functions within the `r Biocpkg("MSnbase")` and `r Biocpkg("xcms")` packages. In addition, `importRawData` can refine the time window of the files using the `rtFilter` and empty septra can be removed by setting `removeEmptySpectra` to `TRUE`. See `?importRawData` for additional information.
 
 ```{r importRawData, cache = TRUE, echo = TRUE, message = FALSE, results = 'hide'}
 rawData <- ntsIUTA::importRawData(sampleInfo,
@@ -122,19 +123,19 @@ rawData
 
 ## Inspecting `rawData`
 
-MS data can be visualized from `rawData` to improve downstream processing, such as peak finding. An iteractive total ion chromatogram (TIC) or base peak chromatogram (BPC) can be obtained with `plotRawChrom`, which uses the `r CRANpkg("plotly")`. See `?plotRawChrom` for more details and arguments.
+`rawData` can be inspected to improve downstream processing, such as peak finding. Iteractive total, base and extracted ion chromatograms (TIC, BPC and EIC, respectively) can be obtained via `plotRawChrom` as shown below, using the `r CRANpkg("plotly")` package. See `?plotRawChrom` for more details and arguments.
 
 ```{r plotTIC, cache=TRUE,echo=TRUE,message=FALSE,warning=FALSE,results='markup',fig.align="left",out.width = "70%",fig.cap ="TIC plot."}
 ntsIUTA::plotRawChrom(rawData, type = "tic")
 ```
 
-The same function can be used for an extracted ion chromatogram (EIC) using the subsetting arguments as shown below for diuron.
+The `plotRawChrom` can be used for EIC by specifiying the `mz` and deviation (`ppm`), as shown below for diuron. When `mz` is specified, the type is automatically set to `eic` although `tic` is given as argument.
 
 ```{r plotEIC, cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE, results='markup', fig.align="left", out.width = "70%", fig.cap ="EIC plot. EIC of diuron for the Blank replicate group and Samples."}
 ntsIUTA::plotRawChrom(rawData, type = "tic", mz = 233.0243, ppm = 20)
 ```
 
-To obtained the EIC raw data the function `extractEIC` can be used, returning a data frame as shown below with the retention time, *m/z* and intensity for the specified `mz` and deviation `ppm`. 
+To obtained the EIC raw data the function `extractEIC` can be used, returning a data frame as shown below with the retention time, *m/z* and intensity for the specified `mz` and respective deviation (`ppm`). 
 
 ```{r extractEIC, cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
 EIC_diuron <- ntsIUTA::extractEIC(rawData, fileIndex = 4,
@@ -142,7 +143,7 @@ EIC_diuron <- ntsIUTA::extractEIC(rawData, fileIndex = 4,
 head(EIC_diuron)
 ```
 
-Also, the function `plot(x, type = "XIC")` from the `r Biocpkg("MSnbase")` was adapted to make the `plotTargetCentroids` function, including additional capabilities for plotting. As an example, below the centroids mass (*m/z*) and intensity over the retention time referent to diuron for file 4 in the `rawData` are plotted. A target mark can be added with `plotTargetMark` set to `TRUE`, which adds a square around the target *m/z* with 5 ppm and 10 seconds deviation from the given `mz` and `rt` arguments.
+Also, the function `plot(x, type = "XIC")` from the `r Biocpkg("MSnbase")` package was adapted to make the `plotTargetCentroids` function, including additional capabilities for plotting. As an example, below the centroids mass (*m/z*) and intensity over the retention time referent to diuron for file 4 in the `rawData` are plotted. A target mark can be added with `plotTargetMark` set to `TRUE`, which adds a square around the target *m/z* with 5 ppm and 10 seconds deviation from the given `mz` and `rt` arguments.
 
 ```{r plotCentEIC, cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE, results='markup', fig.align="left", out.width = "70%", fig.cap ="Centroids plot. Centroids of diuron as [M+H]+."}
 ntsIUTA::plotTargetCentroids(rawData,

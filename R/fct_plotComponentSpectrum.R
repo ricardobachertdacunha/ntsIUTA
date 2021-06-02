@@ -27,7 +27,6 @@
 #' 
 #' @export
 #' 
-#' @import magrittr
 #' @importFrom patRoon as.data.table
 #' @importFrom xcms featureSummary featureDefinitions
 #' @importFrom CAMERA getPeaklist

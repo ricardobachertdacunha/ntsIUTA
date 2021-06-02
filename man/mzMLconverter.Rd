@@ -5,7 +5,7 @@
 \title{mzMLconverter}
 \usage{
 mzMLconverter(
-  path = base::getwd(),
+  path = getwd(),
   files = NULL,
   convertFrom = "agilent",
   centroidMethod = "vendor",

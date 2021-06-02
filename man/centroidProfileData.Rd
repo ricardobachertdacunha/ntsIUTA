@@ -5,7 +5,7 @@
 \title{centroidProfileData}
 \usage{
 centroidProfileData(
-  x,
+  raw,
   halfwindow = 2,
   SNR = 0,
   noiseMethod = "MAD",
@@ -20,7 +20,7 @@ centroidProfileData(
 )
 }
 \arguments{
-\item{x}{A \linkS4class{OnDiskMSnExp} object with profile data for centroiding.}
+\item{raw}{A \linkS4class{OnDiskMSnExp} object with profile data for centroiding.}
 
 \item{halfwindow}{Sets the window size for centroiding as \code{2 * halfwindow + 1}.
 The \code{halfwindow} should be slightly larger than the full width at half maximum of the profile peak.}

@@ -44,8 +44,8 @@
 #'
 #' @examples
 #'
-setupProject <- function(projPath = utils::choose.dir(base::getwd(), "Select or create a project folder"),
-                         date = base::Sys.Date(),
+setupProject <- function(projPath = utils::choose.dir(getwd(), "Select or create a project folder"),
+                         date = as.character(Sys.Date()),
                          groups = NULL,
                          polarity = "positive",
                          convertFiles = FALSE,
@@ -58,38 +58,38 @@ setupProject <- function(projPath = utils::choose.dir(base::getwd(), "Select or 
     # setup <- setupProject(projPath = projPath, save = FALSE)
     # setup
 
-  sampleInfo <- base::data.frame(filePath = character(),
-                                 sample = character(),
-                                 group = character(),
-                                 polarity = character(),
-                                 date = character(),
-                                 wdir = character())
+  sampleInfo <- data.frame(filePath = character(),
+                           sample = character(),
+                           group = character(),
+                           polarity = character(),
+                           date = character(),
+                           wdir = character())
 
   if (convertFiles) {
-      if (!base::is.null(convertFrom)) {
-          ntsIUTA::mzMLconverter(path = projPath, convertFrom = convertFrom, centroidData = centroidData)
+      if (!is.null(convertFrom)) {
+          mzMLconverter(path = projPath, convertFrom = convertFrom, centroidData = centroidData)
       } else {
           stop("Vendors should be specified for file recognition. Possible entries are: thermo, bruker, agilent,
                 ab (from AB Sciex) and waters.")
       }
   }
 
-  msFiles <- base::list.files(path = projPath,
-                              pattern = ".mzML|.mzXML",
-                              recursive = TRUE,
-                              full.names = TRUE,
-                              no.. = TRUE)
+  msFiles <- list.files(path = projPath,
+                        pattern = ".mzML|.mzXML",
+                        recursive = TRUE,
+                        full.names = TRUE,
+                        no.. = TRUE)
 
-  if (base::length(msFiles) == 0) {
+  if (length(msFiles) == 0) {
     warning("No mzML or mzXML files were found in selected project path. Use addFiles() to manually add files to project.")
   } else {
-    sampleInfo <- ntsIUTA::addFiles(newFiles = msFiles,
-                                    sampleInfo = sampleInfo,
-                                    copyFiles = FALSE,
-                                    projPath = projPath,
-                                    date = date,
-                                    groups = groups,
-                                    polarity = polarity)
+    sampleInfo <- addFiles(newFiles = msFiles,
+                           sampleInfo = sampleInfo,
+                           copyFiles = FALSE,
+                           projPath = projPath,
+                           date = date,
+                           groups = groups,
+                           polarity = polarity)
   }
 
   if (save) {
@@ -98,8 +98,8 @@ setupProject <- function(projPath = utils::choose.dir(base::getwd(), "Select or 
 
   if (makeNewProject) {
     #TODO add template for main script file
-    sp <- base::file.path(projPath, "mainScript.R")
-    base::cat(
+    sp <- file.path(projPath, "mainScript.R")
+    cat(
 
 "#Copy template from template.R using x and/or use ?ntsIUTA for a tutorial.\n
 #Run the following code to load the project setup:\n
@@ -108,14 +108,14 @@ setup <- readRDS('rData/sampleInfo.rds')",
 
     file = sp, sep = "")
 
-    if (!(base::is.na(base::Sys.getenv()["RSTUDIO"]))) {
+    if (!(is.na(Sys.getenv()["RSTUDIO"]))) {
       rstudioapi::initializeProject(projPath)
       rstudioapi::openProject(projPath, newSession = TRUE)
     } else {
-        base::setwd(projPath)
+      setwd(projPath)
     }
 
-    base::print("When not using RStudio, it is recommended to open the project folder in the IDE to load the files and workspace.
+    print("When not using RStudio, it is recommended to open the project folder in the IDE to load the files and workspace.
                 Run  rstudioapi::navigateToFile('mainScript.R')  in the new project to open the mainScript.R file.")
 
   }
@@ -339,43 +339,43 @@ removeDuplicateNames <- function(newJoint) {
 #'
 #' @examples
 #'
-mzMLconverter <- function(path = base::getwd(),
+mzMLconverter <- function(path = getwd(),
                           files = NULL,
                           convertFrom = "agilent",
                           centroidMethod = "vendor",
                           outPath = NULL,
                           overWrite = FALSE) {
 
-  msFileFilters <- base::data.frame(type = c("agilent", "thermo", "ab", "waters"),
-                                    ext =  c(".\\.d$", ".\\.RAW$", ".\\.wiff$", ".\\.RAW$"))
+  msFileFilters <- data.frame(type = c("agilent", "thermo", "ab", "waters"),
+                              ext =  c(".\\.d$", ".\\.RAW$", ".\\.wiff$", ".\\.RAW$"))
 
   if (convertFrom %in% msFileFilters$type) {
 
-    if (base::is.null(files)) {
+    if (is.null(files)) {
       fileType <- msFileFilters[msFileFilters$type == convertFrom, "ext", drop = TRUE]
-      if (base::length(fileType) == 1) {
-        rawFiles <- base::list.files(path = path, pattern = fileType,
+      if (length(fileType) == 1) {
+        rawFiles <- list.files(path = path, pattern = fileType,
                                     recursive = TRUE, full.names = TRUE,
                                     no.. = FALSE, include.dirs = TRUE, ignore.case = TRUE)
       } else {
-        return(base::cat("Warning: files with the specified format not found in the given path.
+        return(cat("Warning: files with the specified format not found in the given path.
         See ?ntsIUTA::mzMLconverter for information."))
       }
 
     } else {
-      matchfiles <- base::grepl(pattern = msFileFilters[msFileFilters$type == convertFrom, "ext", drop = TRUE], files)
-      if (base::unique(matchfiles)) {
+      matchfiles <- grepl(pattern = msFileFilters[msFileFilters$type == convertFrom, "ext", drop = TRUE], files)
+      if (unique(matchfiles)) {
         rawFiles <- files
       } else {
-        return(base::cat("Warning: one or more files do not match with the specified format.
+        return(cat("Warning: one or more files do not match with the specified format.
         See ?ntsIUTA::mzMLconverter for information."))
       }
     }
 
-    if (base::length(rawFiles) > 1) {
-      if (!base::is.null(centroidMethod) & centroidMethod %in% c("vendor", "cwt")) {
+    if (length(rawFiles) > 1) {
+      if (!is.null(centroidMethod) & centroidMethod %in% c("vendor", "cwt")) {
         patRoon::convertMSFiles(files = rawFiles,
-                                outPath = base::ifelse(base::is.null(outPath), path, outPath),
+                                outPath = ifelse(is.null(outPath), path, outPath),
                                 dirs = FALSE,
                                 anaInfo = NULL,
                                 from = convertFrom,
@@ -386,11 +386,11 @@ mzMLconverter <- function(path = base::getwd(),
                                 filters = c("msLevel 1-2"),
                                 extraOpts = NULL,
                                 PWizBatchSize = 1)
-        return(base::cat("done"))
+        return(cat("done"))
 
       } else {
         patRoon::convertMSFiles(files = rawFiles,
-                                outPath = base::ifelse(base::is.null(outPath), path, outPath),
+                                outPath = ifelse(is.null(outPath), path, outPath),
                                 dirs = FALSE,
                                 anaInfo = NULL,
                                 from = convertFrom,
@@ -401,16 +401,16 @@ mzMLconverter <- function(path = base::getwd(),
                                 filters = NULL,
                                 extraOpts = NULL,
                                 PWizBatchSize = 1)
-        return(base::cat("done"))
+        return(cat("done"))
       }
     } else {
-      return(base::cat("No files found with the given format or vendor.
+      return(cat("No files found with the given format or vendor.
       See ?ntsIUTA::mzMLconverter for information."))
     }
 
 
   } else {
-    return(base::cat("Warning: the format given in convertFrom is not recognized.
+    return(cat("Warning: the format given in convertFrom is not recognized.
     See ?ntsIUTA::mzMLconverter for possible data formats."))
   }
 }
@@ -429,28 +429,28 @@ mzMLconverter <- function(path = base::getwd(),
 #'
 #' @return Saves the given object in the rData folder of the project.
 #'
-saveObject <- function(projPath = base::getwd(), polarity = "positive", ...) {
+saveObject <- function(projPath = getwd(), polarity = "positive", ...) {
 
-  rData <- base::paste0(projPath, "\\rData")
-  if (!base::dir.exists(rData)) base::dir.create(rData)
+  rData <- paste0(projPath, "\\rData")
+  if (!dir.exists(rData)) dir.create(rData)
 
-  dots <- base::list(...)
+  dots <- list(...)
 
-  if ("date" %in% base::names(dots)) {
-    projDate <- base::gsub(pattern = "-", replacement = "", x = dots[2])
-    base::saveRDS(projDate, file = base::paste0(rData, "\\", "projDate.rds"))
+  if ("date" %in% names(dots)) {
+    projDate <- gsub(pattern = "-", replacement = "", x = dots[2])
+    saveRDS(projDate, file = paste0(rData, "\\", "projDate.rds"))
   }
 
-  if (base::file.exists(base::paste0(rData, "\\", "projDate.rds"))) {
-    projDate <- base::readRDS(base::paste0(rData, "\\", "projDate.rds"))
+  if (file.exists(paste0(rData, "\\", "projDate.rds"))) {
+    projDate <- readRDS(paste0(rData, "\\", "projDate.rds"))
   } else {
     projDate <- ""
   }
 
-  fileName <- base::ifelse(polarity == "positive",
-                           base::paste0(base::names(dots[1]), "_", projDate, "pos"),
-                           base::paste0(base::names(dots[1]), "_", projDate, "neg"))
+  fileName <- ifelse(polarity == "positive",
+                      paste0(names(dots[1]), "_", projDate, "pos"),
+                      paste0(names(dots[1]), "_", projDate, "neg"))
 
-  base::saveRDS(dots[1], file = base::paste0(rData, "\\", fileName, ".rds"))
+  saveRDS(dots[1], file = paste0(rData, "\\", fileName, ".rds"))
 
 }

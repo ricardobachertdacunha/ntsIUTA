@@ -7,3 +7,10 @@ library(ntsIUTA)
 
 #Check the pkg
 devtools::check()
+
+#load
+devtools::document()
+devtools::document()
+devtools::load_all()
+
+search()

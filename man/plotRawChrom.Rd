@@ -5,23 +5,24 @@
 \title{plotRawChrom}
 \usage{
 plotRawChrom(
-  x = rawData,
+  raw = rawData,
   fileIndex = NULL,
   mz = NULL,
   ppm = 20,
   rt = NULL,
   rtWindow = NULL,
-  rtUnit = "min",
+  rtUnit = "sec",
   msLevel = 1,
   type = "tic"
 )
 }
 \arguments{
-\item{x}{An \linkS4class{OnDiskMSnExp} object with one or more files.}
+\item{raw}{An \linkS4class{OnDiskMSnExp} object with one or more files.}
 
 \item{fileIndex}{The index of the file/s to extract the centroids or profile data.}
 
-\item{mz}{Optional target \emph{m/z} to obtain an extracted ion chromatogram (EIC).}
+\item{mz}{Optional target \emph{m/z} to obtain an extracted ion chromatogram (EIC).
+When not \code{NULL} (the default), EIC is always returned.}
 
 \item{ppm}{The mass deviation to extract the data for the EIC in \code{ppm}.}
 
@@ -32,19 +33,18 @@ A time interval can be given with a length 2 vector, defining the minimum and ma
 
 \item{rtUnit}{Possible entries are \code{min} or \code{sec}. The default is \code{sec}.}
 
-\item{msLevel}{The MS level to extract the data. POssible values are 1 or 2.}
+\item{msLevel}{The MS level to extract the data. For the momment, only 1 is possible.}
 
-\item{type}{The type of chromatogram. Possible entries are "bpc" of base peak chromatogram or "tic" for total ion chromatogram.
-The default is "tic".}
+\item{type}{The type of chromatogram. Possible entries are "bpc" for base peak chromatogram or "tic" for total ion chromatogram.
+The default is "tic". If \code{mz} is specified (not \code{NULL}), the type is set automatically to EIC.}
 }
 \value{
-An iterative
+An iterative plot for inspection of the raw data in the given \linkS4class{OnDiskMSnExp} object.
 }
 \description{
-Plot BPC or TIC chromatograms of an \linkS4class{OnDiskMSnExp} object using \pkg{plotly} to procude an iteractive plot.
+Plots total, base and extracted ion chromatograms (TIC, BPC and EIC, respectively) of an \linkS4class{OnDiskMSnExp} object,
+using the \pkg{plotly} package to procude an iteractive plot.
 }
 \examples{
-
-
 
 }

@@ -29,7 +29,9 @@
 #'
 #' @export
 #'
-#' @importFrom MSnbase readMSData filterRt filterEmptySpectra
+#' @importClassesFrom MSnbase OnDiskMSnExp
+#' @importFrom MSnbase readMSData
+#' @importMethodsFrom MSnbase filterRt filterEmptySpectra
 #'
 #' @examples
 #' sampleInfo <- ntsIUTA::setupProject(projPath = system.file(package = "ntsIUTA", dir = "extdata"), save = FALSE)
@@ -43,29 +45,30 @@ importRawData <- function(sampleInfo = sampleInfo,
                           centroidedData = TRUE,
                           removeEmptySpectra = TRUE,
                           save = FALSE,
-                          projPath = base::getwd()) {
+                          projPath = getwd()) {
 
-  rawData <- base::suppressWarnings(
-    MSnbase::readMSData(sampleInfo$filePath[drop = TRUE],
-                        pdata = methods::new("NAnnotatedDataFrame",
-                        base::data.frame(sample_name = sampleInfo$sample,
-                                         sample_group = sampleInfo$group)),
-                        mode = "onDisk",
-                        centroided. = centroidedData,
-                        smoothed. = FALSE)
+  rawData <- suppressWarnings(
+    readMSData(sampleInfo$filePath[drop = TRUE],
+               pdata = methods::new("NAnnotatedDataFrame",
+                data.frame(sample_name = sampleInfo$sample,
+                           sample_group = sampleInfo$group)),
+               mode = "onDisk",
+               centroided. = centroidedData,
+               smoothed. = FALSE)
   )
 
-  if (!base::is.null(rtFilter)) {
+  if (!is.null(rtFilter)) {
     if (timeUnit == "min") rtFilter <- rtFilter * 60
-    rawData <- MSnbase::filterRt(rawData, rt = rtFilter, msLevel. = msLevel)
+    rawData <- filterRt(rawData, rt = rtFilter, msLevel. = msLevel)
   }
 
-  if (removeEmptySpectra) rawData <- base::suppressWarnings(MSnbase::filterEmptySpectra(rawData))
+  if (removeEmptySpectra) rawData <- filterEmptySpectra(rawData)
+
+  polarity <- unique(sampleInfo$polarity)
+  polarity <- ifelse("positive" %in% polarity, "positive", "negative")
 
   if (save) {
-    rData <- base::paste0(projPath, "\\rData")
-    if (!base::dir.exists(rData)) base::dir.create(rData)
-    base::saveRDS(rawData, file = base::paste0(rData, "\\rawData.rds"))
+    saveObject(projPath = projPath, polarity = polarity, rawData = rawData)
   }
 
   return(rawData)
@@ -79,7 +82,7 @@ importRawData <- function(sampleInfo = sampleInfo,
 #' The \code{centroidProfileData} function combines functions \code{smooth} and \code{pickPeaks}
 #' from the \code{MSnbase} package, see references.
 #'
-#' @param x A \linkS4class{OnDiskMSnExp} object with profile data for centroiding.
+#' @param raw A \linkS4class{OnDiskMSnExp} object with profile data for centroiding.
 #' @param halfwindow Sets the window size for centroiding as \code{2 * halfwindow + 1}.
 #' The \code{halfwindow} should be slightly larger than the full width at half maximum of the profile peak.
 #' @param SNR The signal-to-noise ratio to consider a local maximum as peak.
@@ -106,11 +109,12 @@ importRawData <- function(sampleInfo = sampleInfo,
 #'
 #' @export
 #'
-#' @importFrom MSnbase smooth pickPeaks fileNames writeMSData
+#' @importClassesFrom MSnbase OnDiskMSnExp
+#' @importMethodsFrom MSnbase fileNames smooth pickPeaks writeMSData
 #'
 #' @examples
 #'
-centroidProfileData <- function(x,
+centroidProfileData <- function(raw,
                                 halfwindow = 2,
                                 SNR = 0,
                                 noiseMethod = "MAD",
@@ -122,39 +126,39 @@ centroidProfileData <- function(x,
                                 save = FALSE, ...) {
 
   if (smoothing) {
-    x <- x %>% MSnbase::smooth(method = methodSmoothing, ...)
+    raw <- raw %>% MSnbase::smooth(method = methodSmoothing, ...)
   }
 
   if (methodRefineMz == "kNeighbors") {
-    x <- MSnbase::pickPeaks(x,
-                            halfWindowSize = halfwindow,
-                            SNR = SNR,
-                            noiseMethod = noiseMethod,
-                            refineMz = methodRefineMz,
-                            k = k)
+    raw <- pickPeaks(raw,
+                     halfWindowSize = halfwindow,
+                     SNR = SNR,
+                     noiseMethod = noiseMethod,
+                     refineMz = methodRefineMz,
+                     k = k)
   } else {
     if (methodRefineMz == "descendPeak") {
-      x <- MSnbase::pickPeaks(x,
-                              halfWindowSize = halfwindow,
-                              SNR = SNR,
-                              noiseMethod = noiseMethod,
-                              refineMz = methodRefineMz,
-                              signalPercentage = 0.1,
-                              stopAtTwo = TRUE)
+      raw <- pickPeaks(raw,
+                       halfWindowSize = halfwindow,
+                       SNR = SNR,
+                       noiseMethod = noiseMethod,
+                       refineMz = methodRefineMz,
+                       signalPercentage = 0.1,
+                       stopAtTwo = TRUE)
     } else {
-      x <- MSnbase::pickPeaks(x,
-                              halfWindowSize = halfwindow,
-                              SNR = SNR,
-                              noiseMethod = noiseMethod,
-                              refineMz = "none")
+      raw <- pickPeaks(raw,
+                       halfWindowSize = halfwindow,
+                       SNR = SNR,
+                       noiseMethod = noiseMethod,
+                       refineMz = "none")
     }
   }
 
   if (save) {
-    fls_new <- MSnbase::fileNames(x)
-    MSnbase::writeMSData(x, file = fls_new)
+    fls_new <- fileNames(raw)
+    writeMSData(raw, file = fls_new)
   }
 
-  return(x)
+  return(raw)
 
 }

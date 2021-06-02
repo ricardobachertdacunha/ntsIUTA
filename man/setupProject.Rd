@@ -5,8 +5,8 @@
 \title{setupProject}
 \usage{
 setupProject(
-  projPath = utils::choose.dir(base::getwd(), "Select or create a project folder"),
-  date = base::Sys.Date(),
+  projPath = utils::choose.dir(getwd(), "Select or create a project folder"),
+  date = as.character(Sys.Date()),
   groups = NULL,
   polarity = "positive",
   convertFiles = FALSE,

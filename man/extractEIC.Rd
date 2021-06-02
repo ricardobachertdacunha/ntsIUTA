@@ -5,7 +5,7 @@
 \title{extractEIC}
 \usage{
 extractEIC(
-  x = rawData1,
+  raw = rawData,
   fileIndex = NULL,
   mz = NULL,
   ppm = NULL,
@@ -13,11 +13,11 @@ extractEIC(
   rtWindow = NULL,
   rtUnit = "sec",
   msLevel = 1,
-  normalize = FALSE
+  normIntensity = FALSE
 )
 }
 \arguments{
-\item{x}{An \linkS4class{OnDiskMSnExp} object with one or more files.}
+\item{raw}{An \linkS4class{OnDiskMSnExp} object with one or more files.}
 
 \item{fileIndex}{The index of the file/s to extract the centroids or profile data.}
 
@@ -31,20 +31,19 @@ With Zero or \code{NULL} the complete retention time will be used.}
 \item{rtWindow}{The time deviation to collect centroids or profile data. The time unit is the defined by \code{rtUnit}.
 A time interval can be given with a length 2 vector, defining the minimum and maximum retention time.}
 
-\item{rtUnit}{Possible entries are \code{min} or \code{sec}. The default is \code{min}.}
+\item{rtUnit}{Possible entries are \code{min} or \code{sec}. The default is \code{sec}.}
 
-\item{msLevel}{The MS level to extract the data. Possible values are 1 or 2.}
+\item{msLevel}{The MS level to extract the data. For the momment, only 1 is possible.}
 
-\item{normalize}{Logical, set to \code{TRUE} for normalizing the intensity values between 1 and 0 for each file in the given \code{x}.}
+\item{normIntensity}{Logical, set to \code{TRUE} for normalizing the intensity values between 1 and 0 for each file in the given \code{raw} object.}
 }
 \value{
-
+A \code{data.frame} with the columns \code{file}, \code{rt}, \code{mz} and \code{i}
+representing the mzML file index, the retention time, the \emph{m/z} and the intensity, respectively.
 }
 \description{
 Extracts the extracted ion chromatogram (EIC) from \code{rawData} of a specified \emph{m/z}.
 }
 \examples{
-
-
 
 }

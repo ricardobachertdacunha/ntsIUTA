@@ -12,7 +12,7 @@ importRawData(
   centroidedData = TRUE,
   removeEmptySpectra = TRUE,
   save = FALSE,
-  projPath = base::getwd()
+  projPath = getwd()
 )
 }
 \arguments{

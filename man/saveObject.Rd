@@ -4,7 +4,7 @@
 \alias{saveObject}
 \title{saveObject}
 \usage{
-saveObject(projPath = base::getwd(), polarity = "positive", ...)
+saveObject(projPath = getwd(), polarity = "positive", ...)
 }
 \arguments{
 \item{projPath}{The project directory. The default is \code{base::getwd()}.}

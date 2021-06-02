@@ -1,4 +1,32 @@
 
+
+library(ntsIUTA)
+projPath <- system.file(package = "ntsIUTA", dir = "extdata")
+sampleInfo <- ntsIUTA::setupProject(projPath,
+                                    save = FALSE,
+                                    makeNewProject = FALSE)
+
+sampleInfo <- sampleInfo[1:6, ]
+
+rawData <- ntsIUTA::importRawData(sampleInfo,
+                                  rtFilter = c(13, 17),
+                                  timeUnit = "min",
+                                  centroidedData = NA,
+                                  removeEmptySpectra = TRUE,
+                                  save = FALSE)
+
+EIC_diuron <- ntsIUTA::extractEIC(rawData, fileIndex = 4,
+                                  mz = 233.0243, ppm = 20)
+head(EIC_diuron)
+
+ntsIUTA::plotRawChrom(rawData, fileIndex = 4,
+type = "tic", mz = 233.0243, ppm = 20, rt = 15, rtWindow = 2, rtUnit = "min")
+
+
+#' @importFrom ProtGenerics ProcessingStep executeProcessingStep filterMz
+#' @importMethodsFrom ProtGenerics filterMz
+#' #' @importClassesFrom ProtGenerics ProcessingStep
+
 # projPath <- system.file(package = "ntsIUTA", dir = "extdata")
 
 # sI <- ntsIUTA::setupProject(projPath, save = FALSE, makeNewProject = FALSE)
@@ -180,47 +208,44 @@
 
 # rawData_cent <- ntsIUTA::importRawData(setup$sampleInfo[3:4, ], save = FALSE, centData = T)
 # rawData <- ntsIUTA::importRawData(setup$sampleInfo[5:6, ], save = FALSE, centData = F)
-# 
+
 # mz <- 407.1966
 # rt <- 22.25
-# 
+
 # #ntsIUTA::plotTargetCentroids(rawData = rawData_cent, fileIndex = c(1,2), mz = mz, ppmWindow = 20, rt = rt, rtWindow = 1, rtUnit = "min")
 # #rawData_cent_2 <- rawData_cent %>% MSnbase::smooth(method = "SavitzkyGolay", halfWindowSize = 6, polynomialOrder = 3)
 # #rawData_cent_2 <- rawData_cent %>% MSnbase::smooth(method = "MovingAverage", halfWindowSize = 2, weighted = T)
 # #ntsIUTA::plotTargetCentroids(rawData = rawData_cent_2, fileIndex = c(1,2), mz = 287.0582, ppmWindow = 20, rt = 22.8, rtWindow = 1, rtUnit = "min")
-# 
-# 
+#
 # #Test Smoothing
-# 
+#
 # ntsIUTA::plotTargetCentroids(rawData = rawData_cent, fileIndex = c(1,2), mz = mz, ppmWindow = 30, rt = rt, rtWindow = 1, rtUnit = "min", title = "Proteo")
-# 
+#
 # rawData0 <- MSnbase::pickPeaks(rawData)
 # ntsIUTA::plotTargetCentroids(rawData = rawData0, fileIndex = c(1,2), mz = mz, ppmWindow = 30, rt = rt, rtWindow = 1, rtUnit = "min", title = "Control")
-# 
+#
 # rawData1 <- rawData %>% MSnbase::smooth(method = "SavitzkyGolay", halfWindowSize = 2, polynomialOrder = 3)
 # rawData1 <- MSnbase::pickPeaks(rawData1)
 # ntsIUTA::plotTargetCentroids(rawData = rawData1, fileIndex = c(1,2), mz = mz, ppmWindow = 30, rt = rt, rtWindow = 1, rtUnit = "min", title = "Test 1")
-# 
+#
 # rawData2 <- rawData %>% MSnbase::smooth(method = "SavitzkyGolay", halfWindowSize = 2, polynomialOrder = 4)
 # rawData2 <- MSnbase::pickPeaks(rawData2)
 # ntsIUTA::plotTargetCentroids(rawData = rawData2, fileIndex = c(1,2), mz = mz, ppmWindow = 30, rt = rt, rtWindow = 1, rtUnit = "min", title = "Test 2")
-# 
+#
 # rawData3 <- rawData %>% MSnbase::smooth(method = "SavitzkyGolay", halfWindowSize = 4, polynomialOrder = 3)
 # rawData3 <- MSnbase::pickPeaks(rawData3)
 # ntsIUTA::plotTargetCentroids(rawData = rawData3, fileIndex = c(1,2), mz = mz, ppmWindow = 30, rt = rt, rtWindow = 1, rtUnit = "min", title = "Test 3")
-# 
+#
 # rawData4 <- rawData %>% MSnbase::smooth(method = "SavitzkyGolay", halfWindowSize = 4, polynomialOrder = 4)
 # rawData4 <- MSnbase::pickPeaks(rawData4)
 # ntsIUTA::plotTargetCentroids(rawData = rawData4, fileIndex = c(1,2), mz = mz, ppmWindow = 30, rt = rt, rtWindow = 1, rtUnit = "min", title = "Test 4")
-# 
+#
 # rawData5 <- rawData %>% MSnbase::smooth(method = "SavitzkyGolay", halfWindowSize = 4, polynomialOrder = 4)
 # rawData5 <- MSnbase::pickPeaks(rawData5, halfWindowSize = 4, refineMz = "descendPeak")
 # ntsIUTA::plotTargetCentroids(rawData = rawData5, fileIndex = c(1,2), mz = mz, ppmWindow = 30, rt = rt, rtWindow = 1, rtUnit = "min", title = "Test 5")
-# 
-# 
-# 
-# 
-# 
+#
+#
+#
 # rawData3 <- rawData %>% MSnbase::smooth(method = "SavitzkyGolay", halfWindowSize = 2, polynomialOrder = 3)
 # #rawData3 <- MSnbase::pickPeaks(rawData3, halfWindowSize = 3, refineMz = "kNeighbors", k = 1)
 # rawData3 <- MSnbase::pickPeaks(rawData3, halfWindowSize = 10, refineMz = "descendPeak")

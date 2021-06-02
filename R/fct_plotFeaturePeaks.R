@@ -23,7 +23,7 @@
 #' 
 #' @import magrittr
 #' @importFrom xcms filterFile hasFeatures featureDefinitions featureChromatograms chromPeaks
-#' @importFrom MSnbase rtime
+#' @importMethodsFrom MSnbase rtime
 #' @importFrom BiocGenerics as.data.frame
 #' @importFrom patRoon as.data.table
 #' @importFrom plotly plot_ly add_trace layout hide_colorbar subplot toRGB

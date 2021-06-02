@@ -5,7 +5,7 @@
 \title{plotTargetCentroids}
 \usage{
 plotTargetCentroids(
-  x = rawData,
+  raw = rawData,
   fileIndex = 1,
   mz = NULL,
   ppm = 20,
@@ -13,18 +13,17 @@ plotTargetCentroids(
   rtWindow = NULL,
   rtUnit = "min",
   title = NULL,
-  plotTargetMark = TRUE,
-  ...
+  plotTargetMark = TRUE
 )
 }
 \arguments{
-\item{x}{An \linkS4class{OnDiskMSnExp} object with one or more files.}
+\item{raw}{An \linkS4class{OnDiskMSnExp} object with one or more MS files.}
 
 \item{fileIndex}{The index of the file/s to extract the centroids or profile data.}
 
 \item{mz}{The target \emph{m/z}. Note that \code{m/z} is not the expected monoisotopic mass but the expected adduct (\emph{i.e.} \code{[M+H]+}).}
 
-\item{ppm}{The mass deviation to extract centroids in \code{ppm}.}
+\item{ppm}{The mass deviation to extract centroids in \code{ppm}. The default is set to 20 ppm.}
 
 \item{rt}{The expected retention time in minutes or seconds, depending on the defined \code{rtUnit}, see below.}
 
@@ -36,17 +35,13 @@ It is recommended a minimum of 1 minute.}
 \item{title}{Optional title for the plot/s.}
 
 \item{plotTargetMark}{Logical, set to TRUE, the defaulft, to plot a target mark with +/- 5 ppm and +/- 10 seconds deviation.}
-
-\item{...}{Other arguments to be paced to the ploting function.}
 }
 \value{
-A plot of the centroids for the requested target.
+An iterative plot of the centroids for the requested target based on given \code{mz}.
 }
 \description{
 Plot centroids or profile data for a target compound using expected \emph{m/z}, retention time and respective deviations.
 }
 \examples{
-
-
 
 }
