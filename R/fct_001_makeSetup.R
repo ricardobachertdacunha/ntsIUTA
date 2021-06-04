@@ -43,6 +43,9 @@
 #' @importFrom rstudioapi initializeProject openProject
 #'
 #' @examples
+#' projPath <-  system.file(package = "ntsIUTA", dir = "extdata")
+#' setup <- setupProject(projPath = projPath, save = FALSE)
+#' setup
 #'
 setupProject <- function(projPath = utils::choose.dir(getwd(), "Select or create a project folder"),
                          date = as.character(Sys.Date()),
@@ -53,10 +56,6 @@ setupProject <- function(projPath = utils::choose.dir(getwd(), "Select or create
                          convertToCentroid = TRUE,
                          save = TRUE,
                          makeNewProject = FALSE) {
-    #Examples
-    # projPath <-  system.file(package = "ntsIUTA", dir = "extdata")
-    # setup <- setupProject(projPath = projPath, save = FALSE)
-    # setup
 
   sampleInfo <- data.frame(filePath = character(),
                            sample = character(),
@@ -66,12 +65,15 @@ setupProject <- function(projPath = utils::choose.dir(getwd(), "Select or create
                            wdir = character())
 
   if (convertFiles) {
-      if (!is.null(convertFrom)) {
-          mzMLconverter(path = projPath, convertFrom = convertFrom, centroidData = centroidData)
-      } else {
-          stop("Vendors should be specified for file recognition. Possible entries are: thermo, bruker, agilent,
-                ab (from AB Sciex) and waters.")
-      }
+    if (!is.null(convertFrom)) {
+      mzMLconverter(path = projPath,
+                    convertFrom = convertFrom,
+                    centroidData = centroidData)
+    } else {
+      stop("Vendors should be specified for file recognition.
+            Possible entries are: thermo, bruker, agilent,
+            ab (from AB Sciex) and waters.")
+    }
   }
 
   msFiles <- list.files(path = projPath,
@@ -81,7 +83,8 @@ setupProject <- function(projPath = utils::choose.dir(getwd(), "Select or create
                         no.. = TRUE)
 
   if (length(msFiles) == 0) {
-    warning("No mzML or mzXML files were found in selected project path. Use addFiles() to manually add files to project.")
+    warning("No mzML or mzXML files were found in selected project path.
+            Use addFiles() to manually add files to project.")
   } else {
     sampleInfo <- addFiles(newFiles = msFiles,
                            sampleInfo = sampleInfo,
@@ -93,7 +96,10 @@ setupProject <- function(projPath = utils::choose.dir(getwd(), "Select or create
   }
 
   if (save) {
-    saveObject(projPath = projPath, polarity = polarity, sampleInfo = sampleInfo, date = date)
+    saveObject(projPath = projPath,
+               polarity = polarity,
+               sampleInfo = sampleInfo,
+               date = date)
   }
 
   if (makeNewProject) {
@@ -101,10 +107,10 @@ setupProject <- function(projPath = utils::choose.dir(getwd(), "Select or create
     sp <- file.path(projPath, "mainScript.R")
     cat(
 
-"#Copy template from template.R using x and/or use ?ntsIUTA for a tutorial.\n
-#Run the following code to load the project setup:\n
-library(ntsIUTA) #/n
-setup <- readRDS('rData/sampleInfo.rds')",
+      "#Copy template from template.R using x and/or use ?ntsIUTA for a tutorial.\n
+      #Run the following code to load the project setup:\n
+      library(ntsIUTA) #/n
+      setup <- readRDS('rData/sampleInfo.rds')",
 
     file = sp, sep = "")
 
@@ -115,8 +121,11 @@ setup <- readRDS('rData/sampleInfo.rds')",
       setwd(projPath)
     }
 
-    print("When not using RStudio, it is recommended to open the project folder in the IDE to load the files and workspace.
-                Run  rstudioapi::navigateToFile('mainScript.R')  in the new project to open the mainScript.R file.")
+    print("When not using RStudio, it is recommended
+          to open the project folder through the IDE
+          so that the files and workspace can be loaded. \n
+          Run  rstudioapi::navigateToFile('mainScript.R')
+          in the new project to open the mainScript.R file.")
 
   }
 
@@ -156,32 +165,32 @@ setup <- readRDS('rData/sampleInfo.rds')",
 #' @examples
 #'
 addFiles <- function(newFiles = utils::choose.files(),
-                     sampleInfo = base::data.frame(filePath = character(), sample = character(),
-                                                   group = character(), blank = character(),
-                                                   polarity = character(), date = character(),
-                                                   wdir = character()),
+                     sampleInfo = data.frame(filePath = character(), sample = character(),
+                                             group = character(), blank = character(),
+                                             polarity = character(), date = character(),
+                                             wdir = character()),
                      copyFiles = FALSE,
-                     projPath = base::getwd(),
-                     date = base::Sys.Date(),
+                     projPath = getwd(),
+                     date = Sys.Date(),
                      groups = NULL,
                      polarity = "positive") {
 
-  if (base::length(newFiles) < 1) return(sampleInfo)
+  if (length(newFiles) < 1) return(sampleInfo)
 
-  tmpInfo <- base::data.frame(filePath = character(), sample = character(),
-                              group = character(), blank = character(),
-                              polarity = character(), date = character(),
-                              wdir = character())
+  tmpInfo <- data.frame(filePath = character(), sample = character(),
+                        group = character(), blank = character(),
+                        polarity = character(), date = character(),
+                        wdir = character())
 
-  tmpInfo[base::seq_len(base::length(newFiles)), ] <- NA
+  tmpInfo[seq_len(length(newFiles)), ] <- NA
   tmpInfo$filePath <- newFiles
-  tmpInfo$sample <- base::gsub(".mzML|.mzXML", "", base::basename(newFiles))
+  tmpInfo$sample <- gsub(".mzML|.mzXML", "", basename(newFiles))
   tmpInfo$blank <- "Blank"
 
-  if (base::is.null(groups)) {
-    tmpInfo$group <- base::gsub(".mzML|.mzXML", "", base::basename(newFiles))
-    tmpInfo <- dplyr::mutate(tmpInfo, group = base::ifelse(base::grepl("A-r|qc|QC", tmpInfo$sample), "QC", group))
-    tmpInfo <- dplyr::mutate(tmpInfo, group = base::ifelse(base::grepl("Blank|blank|B-r", tmpInfo$sample), "Blank", group))
+  if (is.null(groups)) {
+    tmpInfo$group <- gsub(".mzML|.mzXML", "", basename(newFiles))
+    tmpInfo <- mutate(tmpInfo, group = ifelse(grepl("A-r|qc|QC", tmpInfo$sample), "QC", group))
+    tmpInfo <- mutate(tmpInfo, group = ifelse(grepl("Blank|blank|B-r", tmpInfo$sample), "Blank", group))
   } else {
     tmpInfo$group <- groups
   }
@@ -190,57 +199,59 @@ addFiles <- function(newFiles = utils::choose.files(),
   tmpInfo$date <- date
   tmpInfo$wdir <- projPath
 
-  orgJoint <- base::rbind(sampleInfo, tmpInfo)
-  duplicates <- base::duplicated(orgJoint$sample)
+  orgJoint <- rbind(sampleInfo, tmpInfo)
+  duplicates <- duplicated(orgJoint$sample)
 
   duplicateNamesPrompt <- TRUE
   if (TRUE %in% duplicates) {
-    duplicateNamesPrompt <- utils::askYesNo("Duplicate filenames found but must be unique, do you want to rename?")
+    duplicateNamesPrompt <- askYesNo("Duplicate filenames found but must be unique, do you want to rename?")
     newJoint <- removeDuplicateNames(newJoint = orgJoint)
   } else {
     newJoint <- orgJoint
   }
 
-  if (!(duplicateNamesPrompt) || base::is.na(duplicateNamesPrompt))  {
-      warning("Process aborted due to user input. Names must be renamed for compliance even when copied")
+  if (!(duplicateNamesPrompt) || is.na(duplicateNamesPrompt))  {
+      warning("Process aborted due to user input.
+              Names must be renamed for compliance even when copied")
       return(sampleInfo)
   } else {
 
     newDuplicates <- !(orgJoint$sample == newJoint$sample)
 
     if (copyFiles) {
-      mzML <- base::paste0(projPath, "\\mzML")
-      if (!base::dir.exists(mzML)) base::dir.create(mzML)
+      mzML <- paste0(projPath, "\\mzML")
+      if (!dir.exists(mzML)) dir.create(mzML)
     }
 
-    for (i in base::seq_len(base::length(newFiles))) {
-      i2 <- base::which(newJoint$filePath == newFiles[i])
-      ext <- tools::file_ext(newFiles[i])
+    for (i in seq_len(length(newFiles))) {
+      i2 <- which(newJoint$filePath == newFiles[i])
+      ext <- file_ext(newFiles[i])
 
       if (copyFiles) {
         dir <- mzML
       } else {
-        dir <- base::dirname(newJoint$filePath[i2])
+        dir <- dirname(newJoint$filePath[i2])
       }
 
-      newfilepath <- base::paste(dir, "\\", newJoint$sample[i2], ".", ext, sep = "")
+      newfilepath <- paste(dir, "\\", newJoint$sample[i2], ".", ext, sep = "")
 
       if (copyFiles) {
-        if (!(base::file.exists(newfilepath))) {
-        base::file.copy(newFiles[i], newfilepath, overwrite = FALSE)
+        if (!(file.exists(newfilepath))) {
+          file.copy(newFiles[i], newfilepath, overwrite = FALSE)
         } else {
-          base::warning(base::paste("File ", newfilepath, " not added because already exists in given directory."))
+          warning(base::paste("File ", newfilepath,
+                  " not added because already exists in given directory."))
           newfilepath <- NA
         }
       } else {
         if (newDuplicates[i2]) {
-          base::file.rename(newFiles[i], newfilepath)
+          file.rename(newFiles[i], newfilepath)
         }
       }
       newJoint$filePath[i2] <- newfilepath
     }
 
-    newJoint <- newJoint[!base::is.na(newJoint$filePath), ]
+    newJoint <- newJoint[!is.na(newJoint$filePath), ]
 
     return(newJoint)
 
@@ -265,10 +276,10 @@ addFiles <- function(newFiles = utils::choose.files(),
 #' @examples
 #'
 addMetadata <- function(sampleInfo, metadata) {
-  if (base::length(sampleInfo) == 0 & base::length(sampleInfo) != base::length(metadata)) {
-    base::warning("Please make sure the metadata has the same dimensions as the sample data")
+  if (length(sampleInfo) == 0 & base::length(sampleInfo) != length(metadata)) {
+    warning("Please make sure the metadata has the same dimensions as the sample data")
   } else {
-    sampleInfo <- base::cbind(sampleInfo, metadata)
+    sampleInfo <- cbind(sampleInfo, metadata)
   }
   return(sampleInfo)
 }
@@ -286,23 +297,23 @@ addMetadata <- function(sampleInfo, metadata) {
 #' @importFrom stringr str_extract str_pad
 #'
 removeDuplicateNames <- function(newJoint) {
-  duplicates <- base::duplicated(newJoint$sample)
+  duplicates <- duplicated(newJoint$sample)
   if (TRUE %in% duplicates) {
-    base::print(base::paste("Number of duplicate names found:", base::length(duplicates[duplicates == TRUE]), sep = " "))
-    for (i in base::seq_len(base::length(duplicates))) {
+    print(paste("Number of duplicate names found:", length(duplicates[duplicates == TRUE]), sep = " "))
+    for (i in seq_len(length(duplicates))) {
       if (duplicates[i]) {
         endOfString <-  stringr::str_extract(newJoint$sample[i], "_[^_]+$")
-        startOfString <-  stringr::str_extract(newJoint$sample[i], base::paste("^.*(?=(", endOfString, "))", sep = ""))
-        if ((base::grepl("_[0-9]+", endOfString)) && (!base::is.na(endOfString))) {
-          endOfString <- base::as.numeric(stringr::str_extract(endOfString, "[0-9]+")) + 1
+        startOfString <-  stringr::str_extract(newJoint$sample[i], paste("^.*(?=(", endOfString, "))", sep = ""))
+        if ((grepl("_[0-9]+", endOfString)) && (!is.na(endOfString))) {
+          endOfString <- as.numeric(stringr::str_extract(endOfString, "[0-9]+")) + 1
           endOfString <- stringr::str_pad(endOfString, 2, pad = "0")
-          newJoint$sample[i] <- base::paste(startOfString, endOfString, sep = "_")
+          newJoint$sample[i] <- paste(startOfString, endOfString, sep = "_")
         } else {
-          newJoint$sample[i] <- base::paste(newJoint$sample[i], "_01", sep = "")
+          newJoint$sample[i] <- paste(newJoint$sample[i], "_01", sep = "")
         }
       }
     }
-    duplicates <- base::duplicated(newJoint$sample)
+    duplicates <- duplicated(newJoint$sample)
     if (TRUE %in% duplicates) {
       newJoint <- removeDuplicateNames(newJoint)
     }

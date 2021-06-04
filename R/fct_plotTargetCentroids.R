@@ -33,9 +33,6 @@ plotTargetCentroids <- function(raw = rawData, fileIndex = 1,
                                 rtUnit = "min", title = NULL,
                                 plotTargetMark = TRUE) {
 
-  #Examples
-  # plotTargetCentroids(raw = ntsIUTA::rawDataExample, fileIndex = 1, mz = 233.0243, ppm = 20, rt = 15.6809, rtWindow = 1)
-
   # raw = rawData
   # fileIndex = 1
   # mz <- 233.0243
@@ -46,35 +43,35 @@ plotTargetCentroids <- function(raw = rawData, fileIndex = 1,
   # title = NULL
   # plotTargetMark = TRUE
 
-  if (!base::is.null(fileIndex)) raw <- filterFile(raw, fileIndex)
+  if (!is.null(fileIndex)) raw <- filterFile(raw, fileIndex)
 
-  if (base::is.null(mz)) return(base::cat("Target mz should be defined!"))
+  if (is.null(mz)) return(cat("Target mz should be defined!"))
 
-  df <- ntsIUTA::extractEIC(raw = raw,
-                            fileIndex = NULL,
-                            mz = mz, ppm = ppm,
-                            rt = rt, rtWindow = rtWindow,
-                            rtUnit = rtUnit, msLevel = 1,
-                            normIntensity = FALSE)
+  df <- extractEIC(raw = raw,
+                   fileIndex = NULL,
+                   mz = mz, ppm = ppm,
+                   rt = rt, rtWindow = rtWindow,
+                   rtUnit = rtUnit, msLevel = 1,
+                   normIntensity = FALSE)
 
   if (rtUnit == "min") if (!is.null(rt)) rt <- rt * 60
   if (rtUnit == "min") if (!is.null(rtWindow)) rtWindow <- rtWindow * 60
 
   if (is.null(title)) {
-    fns <- base::basename(fileNames(raw))
+    fns <- basename(fileNames(raw))
   } else {
-    fns <- base::rep(title, base::length(fileNames(raw)))
+    fns <- rep(title, length(fileNames(raw)))
   }
 
   sNames <- raw$sample_name
-  rtmin <- base::min(df$rt, na.rm = TRUE)
-  rtmax <- base::max(df$rt, na.rm = TRUE)
-  mzmin <- base::min(df$mz, na.rm = TRUE)
-  mzmax <- base::max(df$mz, na.rm = TRUE)
-  maxInt <- base::max(df$i, na.rm = TRUE) * 1.1
-  df <- base::split(df, df$file)
+  rtmin <- min(df$rt, na.rm = TRUE)
+  rtmax <- max(df$rt, na.rm = TRUE)
+  mzmin <- min(df$mz, na.rm = TRUE)
+  mzmax <- max(df$mz, na.rm = TRUE)
+  maxInt <- max(df$i, na.rm = TRUE) * 1.1
+  df <- split(df, df$file)
 
-  if (base::any(base::unlist(base::lapply(df, nrow)) > 20000))
+  if (any(unlist(lapply(df, nrow)) > 20000))
     warning("The MS area to be plotted seems rather large. It is suggested",
             " to restrict the data first using 'filterRt' and 'filterMz'. ",
             "See also ?chromatogram and ?Chromatogram for more efficient ",
@@ -82,7 +79,7 @@ plotTargetCentroids <- function(raw = rawData, fileIndex = 1,
             "chromatogram.",
             immediate = TRUE, call = FALSE)
 
-  colors <- grDevices::colorRamp(c("#383E47", "#5E8CAA", "#16B9E5", "#16E5C9", "#16E54C"))
+  colors <- colorRamp(c("#383E47", "#5E8CAA", "#16B9E5", "#16E5C9", "#16E54C"))
 
   line <- list(type = "line", line = list(color = "red", dash = "dash", width = 0.5), xref = "x", yref = "y")
 
@@ -92,53 +89,57 @@ plotTargetCentroids <- function(raw = rawData, fileIndex = 1,
   hline <- list()
   rect <- list()
 
-  for (s in base::seq_len(base::length(df))) {
+  for (s in seq_len(length(df))) {
+
+    temp <- df[[s]]
 
     if (plotTargetMark) {
-      vline1 <- list(x0 = rt, x1 = rt, y0 = 0, y1 = base::max(temp$i, na.rm = TRUE))
+      vline1 <- list(x0 = rt, x1 = rt, y0 = 0, y1 = max(temp$i, na.rm = TRUE))
       vline2 <- list(x0 = rt, x1 = rt, y0 = mzmin, y1 = mzmax)
-      hline <- list(x0 = base::min(temp$rt, na.rm = TRUE), x1 =  base::max(temp$rt, na.rm = TRUE), y0 = mz, y1 = mz)
+      hline <- list(x0 = min(temp$rt, na.rm = TRUE), x1 =  max(temp$rt, na.rm = TRUE), y0 = mz, y1 = mz)
       rect <- list(type = "rect", fillcolor = "red", line = list(color = "red"), opacity = 0.1,
                   x0 = rt - 10, x1 = rt + 10, xref = "x",
                   y0 = mz - ((5 / 1E6) * mz), y1 = mz + ((5 / 1E6) * mz), yref = "y")
     }
 
-    p1 <- plotly::plot_ly(data = temp, x = temp$rt, y = temp$i,
-                          type = "scatter", mode = "markers", color = temp$i, colors = colors,
-                          marker = list(size = 8, line = list(color = "white", width = 0.5)), name = paste0(s, "p1"))
+    p1 <- plot_ly(data = temp, x = temp$rt, y = temp$i,
+                  type = "scatter", mode = "markers", color = temp$i, colors = colors,
+                  marker = list(size = 8, line = list(color = "white", width = 0.5)), name = paste0(s, "p1"))
 
-    p1 <- p1 %>% plotly::layout(shapes = c(vline1, line))
+    p1 <- p1 %>% layout(shapes = c(vline1, line))
 
-    p1 <- p1 %>% plotly::add_annotations(text = sNames[s], x = 0.05, y = 1, yref = "paper", xref = "paper",
-                                         xanchor = "left", yanchor = "bottom", align = "center",
-                                         showarrow = FALSE, font = list(size = 14))
+    p1 <- p1 %>% add_annotations(text = sNames[s], x = 0.05, y = 1, yref = "paper", xref = "paper",
+                                 xanchor = "left", yanchor = "bottom", align = "center",
+                                 showarrow = FALSE, font = list(size = 14))
 
-    p2 <- plotly::plot_ly(temp, x = temp$rt, y = temp$mz,
-                          type = "scatter", mode = "markers", color = temp$i, colors = colors,
-                          marker = list(size = 8, line = list(color = "white", width = 0.5)), name = paste0(s, "p2"))
+    p2 <- plot_ly(temp, x = temp$rt, y = temp$mz,
+                  type = "scatter", mode = "markers", color = temp$i, colors = colors,
+                  marker = list(size = 8, line = list(color = "white", width = 0.5)), name = paste0(s, "p2"))
 
-    p2 <- p2 %>% plotly::layout(shapes = list(c(vline2, line), c(hline, line), rect))
+    p2 <- p2 %>% layout(shapes = list(c(vline2, line), c(hline, line), rect))
 
     plotList[[paste0("p1", s)]] <- p1
     plotList[[paste0("p2", s)]] <- p2
   }
 
-  plotList <- plotList[base::order(base::names(plotList))]
+  plotList <- plotList[order(names(plotList))]
 
-  xaxis <- list(linecolor = plotly::toRGB("black"), linewidth = 2, title = "Retention Time (sec.)",
+  xaxis <- list(linecolor = toRGB("black"), linewidth = 2, title = "Retention Time (sec.)",
                 titlefont = list(size = 12, color = "black"))
 
-  yaxis1 <- list(linecolor = plotly::toRGB("black"), linewidth = 2, title = "Intensity",
+  yaxis1 <- list(linecolor = toRGB("black"), linewidth = 2, title = "Intensity",
                 titlefont = list(size = 12, color = "black"), range = c(0, maxInt))
 
-  yaxis2 <- list(linecolor = plotly::toRGB("black"), linewidth = 2, title = "m/z",
+  yaxis2 <- list(linecolor = toRGB("black"), linewidth = 2, title = "m/z",
                 titlefont = list(size = 12, color = "black"), range = c(mzmin, mzmax))
 
-  plot <- plotly::subplot(plotList, nrows = 2, margin = 0.04, shareX = TRUE, shareY = TRUE, which_layout = "merge")
-  plot <- plotly::hide_colorbar(plot)
-  plot <- plotly::hide_legend(plot)
-  plot <- plot %>% plotly::layout(xaxis = xaxis, xaxis2 = xaxis, xaxis3 = xaxis, xaxis4 = xaxis, xaxis5 = xaxis, xaxis6 = xaxis,
-                                  yaxis = yaxis1, yaxis2 = yaxis2)
+  plot <- subplot(plotList, nrows = 2, margin = 0.04, shareX = TRUE, shareY = TRUE, which_layout = "merge")
+  plot <- hide_colorbar(plot)
+  plot <- hide_legend(plot)
+  plot <- plot %>% layout(xaxis = xaxis, xaxis2 = xaxis,
+                          xaxis3 = xaxis, xaxis4 = xaxis,
+                          xaxis5 = xaxis, xaxis6 = xaxis,
+                          yaxis = yaxis1, yaxis2 = yaxis2)
 
   return(plot)
 

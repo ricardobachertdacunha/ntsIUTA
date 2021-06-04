@@ -32,6 +32,7 @@
 #' @importClassesFrom MSnbase OnDiskMSnExp
 #' @importFrom MSnbase readMSData
 #' @importMethodsFrom MSnbase filterRt filterEmptySpectra
+#' @importFrom methods new
 #'
 #' @examples
 #' sampleInfo <- ntsIUTA::setupProject(projPath = system.file(package = "ntsIUTA", dir = "extdata"), save = FALSE)
@@ -49,7 +50,7 @@ importRawData <- function(sampleInfo = sampleInfo,
 
   rawData <- suppressWarnings(
     readMSData(sampleInfo$filePath[drop = TRUE],
-               pdata = methods::new("NAnnotatedDataFrame",
+               pdata = new("NAnnotatedDataFrame",
                 data.frame(sample_name = sampleInfo$sample,
                            sample_group = sampleInfo$group)),
                mode = "onDisk",
@@ -68,7 +69,9 @@ importRawData <- function(sampleInfo = sampleInfo,
   polarity <- ifelse("positive" %in% polarity, "positive", "negative")
 
   if (save) {
-    saveObject(projPath = projPath, polarity = polarity, rawData = rawData)
+    saveObject(projPath = projPath,
+               polarity = polarity,
+               rawData = rawData)
   }
 
   return(rawData)

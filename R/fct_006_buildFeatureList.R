@@ -22,7 +22,7 @@
 #' @importFrom parallel detectCores
 #' @importFrom xcms filterMsLevel chromPeaks featureDefinitions
 #' @importFrom methods as
-#' @importFrom MSnbase fileNames
+#' @importMethodsFrom MSnbase fileNames
 #' @importFrom patRoon importFeatureGroupsXCMS3 as.data.table
 #' @importFrom dplyr select mutate group_by count filter between all_of everything
 #' @importFrom stats quantile sd na.omit

@@ -42,7 +42,7 @@
 #' @importFrom parallel detectCores
 #' @importFrom utils txtProgressBar setTxtProgressBar
 #' @importFrom xcms findChromPeaks MergeNeighboringPeaksParam refineChromPeaks CleanPeaksParam
-#' @importFrom MSnbase filterFile
+#' @importMethodsFrom MSnbase filterFile
 #' 
 #'
 #' @examples

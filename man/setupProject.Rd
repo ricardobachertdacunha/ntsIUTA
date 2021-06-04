@@ -64,5 +64,8 @@ The data.frame \code{sampleInfo} in the output list can always be edited for cor
 sample replicate group names, blank replicate groups and assigned polarity, which is set to \code{positive} by default when not given as argument.
 }
 \examples{
+projPath <-  system.file(package = "ntsIUTA", dir = "extdata")
+setup <- setupProject(projPath = projPath, save = FALSE)
+setup
 
 }

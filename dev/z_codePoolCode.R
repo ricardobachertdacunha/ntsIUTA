@@ -1,31 +1,23 @@
 
 
 library(ntsIUTA)
-projPath <- system.file(package = "ntsIUTA", dir = "extdata")
-sampleInfo <- ntsIUTA::setupProject(projPath,
-                                    save = FALSE,
-                                    makeNewProject = FALSE)
 
+projPath <- system.file(package = "ntsIUTA", dir = "extdata")
+sampleInfo <- setupProject(projPath, save = FALSE, makeNewProject = FALSE)
 sampleInfo <- sampleInfo[1:6, ]
 
-rawData <- ntsIUTA::importRawData(sampleInfo,
-                                  rtFilter = c(13, 17),
-                                  timeUnit = "min",
-                                  centroidedData = NA,
-                                  removeEmptySpectra = TRUE,
-                                  save = FALSE)
+rawData <- importRawData(sampleInfo,
+                         rtFilter = c(13, 17),
+                         timeUnit = "min",
+                         centroidedData = NA,
+                         removeEmptySpectra = TRUE,
+                         save = FALSE)
 
-EIC_diuron <- ntsIUTA::extractEIC(rawData, fileIndex = 4,
-                                  mz = 233.0243, ppm = 20)
-head(EIC_diuron)
+EIC_diuron <- ntsIUTA::extractEIC(rawData, fileIndex = 4, mz = 233.0243, ppm = 20)
 
-ntsIUTA::plotRawChrom(rawData, fileIndex = 4,
-type = "tic", mz = 233.0243, ppm = 20, rt = 15, rtWindow = 2, rtUnit = "min")
+plotRawChrom(rawData, fileIndex = 4, type = "tic", mz = 233.0243, ppm = 20, rt = 15, rtWindow = 2, rtUnit = "min")
 
 
-#' @importFrom ProtGenerics ProcessingStep executeProcessingStep filterMz
-#' @importMethodsFrom ProtGenerics filterMz
-#' #' @importClassesFrom ProtGenerics ProcessingStep
 
 # projPath <- system.file(package = "ntsIUTA", dir = "extdata")
 

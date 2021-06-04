@@ -33,14 +33,14 @@ plotRawChrom <- function(raw = rawData, fileIndex = NULL,
                          rtUnit = "sec",
                          msLevel = 1, type = "tic") {
 
-  raw = rawData
-  fileIndex = NULL
-  mz <- c(233.0243)
-  rt <- NULL
-  rtUnit = "min"
-  ppm <- 20
-  rtWindow = NULL
-  msLevel = 1
+  # raw = rawData
+  # fileIndex = NULL
+  # mz <- c(233.0243)
+  # rt <- NULL
+  # rtUnit = "min"
+  # ppm <- 20
+  # rtWindow = NULL
+  # msLevel = 1
 
   if (!is.null(mz) && length(mz) == 1) {
     if (!is.null(ppm)) ppm <- 20
@@ -64,54 +64,58 @@ plotRawChrom <- function(raw = rawData, fileIndex = NULL,
                    normIntensity = FALSE)
 
   if (type == "tic") {
-    mz <- df %>% dplyr::group_by(rt) %>% dplyr::top_n(1, i)
-    mz <- base::as.data.frame(mz)
-    mz <- dplyr::arrange(mz, rt)
-    y <- df %>% dplyr::group_by(rt) %>% dplyr::summarize(i = sum(i))
-    y <- base::as.data.frame(y)
-    y <- dplyr::arrange(y, rt)
+    mz <- df %>% group_by(rt) %>% top_n(1, i)
+    mz <- as.data.frame(mz)
+    mz <- arrange(mz, rt)
+    y <- df %>% group_by(rt) %>% summarize(i = sum(i))
+    y <- as.data.frame(y)
+    y <- arrange(y, rt)
     mz$i <- y[, "i", drop = TRUE]
     df <- mz
   }
 
   if (type == "bpc") {
-    y <- df %>% dplyr::group_by(rt) %>% dplyr::top_n(1, i)
-    y <- base::as.data.frame(y)
-    df <- dplyr::arrange(y, rt)
+    y <- df %>% group_by(rt) %>% top_n(1, i)
+    y <- as.data.frame(y)
+    df <- arrange(y, rt)
   }
 
-  for (i in base::seq_len(base::length(base::unique(df$file)))) {
+  for (i in seq_len(length(unique(df$file)))) {
     df[df$file == i, "file"] <- raw$sample_name[i]
   }
 
-  title <- base::list(text = main, x = 0.1, y = 0.98, font = base::list(size = 14, color = "black"))
+  title <- list(text = main, x = 0.1, y = 0.98, font = list(size = 14, color = "black"))
 
-  xaxis <- base::list(linecolor = plotly::toRGB("black"), linewidth = 2, title = "Retention Time (sec.)",
-                      titlefont = base::list(size = 12, color = "black"))
+  xaxis <- list(linecolor = toRGB("black"), 
+                linewidth = 2, title = "Retention Time (sec.)",
+                titlefont = list(size = 12, color = "black"))
 
-  yaxis <- base::list(linecolor = plotly::toRGB("black"), linewidth = 2, title = "Intensity",
-                     titlefont = base::list(size = 12, color = "black"))
+  yaxis <- list(linecolor = toRGB("black"),
+                linewidth = 2, title = "Intensity",
+                titlefont = list(size = 12, color = "black"))
 
-  plot <- plotly::plot_ly(df,
-                          x = df[df$file == raw$sample_name[1], "rt"],
-                          y = df[df$file == raw$sample_name[1], "i"],
-                          type = "scatter", mode = "lines+markers",
-                          line = base::list(width = 0.5, color = base::unname(ntsIUTA::getColors(raw, "samples")[1])),
-                          marker = base::list(size = 2, color = base::unname(ntsIUTA::getColors(raw, "samples")[1])),
-                          name = raw$sample_name[1])
+  plot <- plot_ly(df,
+                  x = df[df$file == raw$sample_name[1], "rt"],
+                  y = df[df$file == raw$sample_name[1], "i"],
+                  type = "scatter", mode = "lines+markers",
+                  line = list(width = 0.5, color = unname(getColors(raw, "samples")[1])),
+                  marker = list(size = 2, color = unname(getColors(raw, "samples")[1])),
+                  name = raw$sample_name[1])
 
-  for (i in 2:base::length(base::unique(df$file))) {
-    plot  <- plot %>% plotly::add_trace(df,
-                                        x = df[df$file == raw$sample_name[i], "rt"],
-                                        y = df[df$file == raw$sample_name[i], "i"],
-                                        type = "scatter", mode = "lines+markers",
-                                        line = base::list(width = 0.5, color = base::unname(ntsIUTA::getColors(raw, "samples")[i])),
-                                        marker = base::list(size = 2, color = base::unname(ntsIUTA::getColors(raw, "samples")[i])),
-                                        name = raw$sample_name[i])
+  if (length(unique(df$file)) > 1) {
+    for (i in 2:length(unique(df$file))) {
+      plot  <- plot %>% add_trace(df,
+                                  x = df[df$file == raw$sample_name[i], "rt"],
+                                  y = df[df$file == raw$sample_name[i], "i"],
+                                  type = "scatter", mode = "lines+markers",
+                                  line = list(width = 0.5, color = unname(getColors(raw, "samples")[i])),
+                                  marker = list(size = 2, color = unname(getColors(raw, "samples")[i])),
+                                  name = raw$sample_name[i])
+    }
   }
 
-  plot <- plot %>% plotly::layout(legend = base::list(title = base::list(text = "<b> Sample: </b>")),
-                                  xaxis = xaxis, yaxis = yaxis, title = title)
+  plot <- plot %>% layout(legend = list(title = list(text = "<b> Sample: </b>")),
+                          xaxis = xaxis, yaxis = yaxis, title = title)
 
   return(plot)
 

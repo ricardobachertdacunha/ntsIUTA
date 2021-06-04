@@ -22,6 +22,7 @@
 #'
 #' @importClassesFrom MSnbase OnDiskMSnExp
 #' @importClassesFrom ProtGenerics ProcessingStep
+#' @importFrom ProtGenerics ProcessingStep executeProcessingStep
 #' @importMethodsFrom ProtGenerics filterMz
 #' @importMethodsFrom MSnbase filterFile filterRt filterMz filterMsLevel rtime
 #' @importFrom methods as

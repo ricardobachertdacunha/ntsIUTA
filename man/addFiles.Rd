@@ -6,12 +6,12 @@
 \usage{
 addFiles(
   newFiles = utils::choose.files(),
-  sampleInfo = base::data.frame(filePath = character(), sample = character(), group =
+  sampleInfo = data.frame(filePath = character(), sample = character(), group =
     character(), blank = character(), polarity = character(), date = character(), wdir =
     character()),
   copyFiles = FALSE,
-  projPath = base::getwd(),
-  date = base::Sys.Date(),
+  projPath = getwd(),
+  date = Sys.Date(),
   groups = NULL,
   polarity = "positive"
 )

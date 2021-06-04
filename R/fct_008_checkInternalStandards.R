@@ -32,7 +32,7 @@
 #' @import ggplot2
 #' @importFrom htmlwidgets saveWidget
 #' @importFrom plotly partial_bundle
-#' @importFrom MSnbase fileNames
+#' @importMethodsFrom MSnbase fileNames
 #'
 #' @examples
 #' 
