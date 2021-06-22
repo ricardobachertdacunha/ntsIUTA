@@ -1,0 +1,572 @@
+---
+title: "ntsIUTA: Back-end Workflows"
+author:
+- name: Ricardo Cunha
+  affiliation: Institut für Energie- und Umwelttechnik e. V. (IUTA)
+package: ntsIUTA
+abstract: >
+  The package `ntsIUTA` comprises comprehensive and application-driven workflows for non-target screening (NTS) based on mass spectrometry. The goal is to promote routine use of NTS which is challenging due to the required complex data processing and statistical knowlege to obtain aimed and usefull results.
+output:
+  BiocStyle::html_document:
+    toc_float: true
+vignette: >
+  %\VignetteIndexEntry{ntsIUTA}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}  
+---
+
+```{r settings, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+
+library(magrittr)
+library(plotly)
+library(kableExtra)
+
+```
+
+# Introduction
+
+The objective of `ntsIUTA` is to simplify and facilitate application of highly efficient open source tools for processing of chromatographically separated mass spectral (MS) data, using simple [R](https://cran.r-project.org/bin/windows/base/) objects and comprehensive visualization for both optimization of data extraction and production of results. `ntsIUTA` can be seen as an oriented guide for NTS with a generic but flixible and application-driven functionality. The package `ntsIUTA` relies heavily on open source tools for non-target screening (NTS) using MS data. It does not invent the wheel, but eases its usability. In particular, the packages `r Githubpkg("rickhelmus/patRoon")` and `r Biocpkg("Bioconductor")` play a fundamental role on the functionality  of `ntsIUTA`. While `r Biocpkg("MSnbase")` and `r Biocpkg("xcms")` from the `r Biocpkg("Bioconductor")` are used to extract and visualize raw spectral data, `r Githubpkg("rickhelmus/patRoon")` is crucial for downstream integration of external software. Although, simple objects, such as [list](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/list), [data.frame](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/data.frame) and [vector](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/vector), are used as the main output, native objects from `r Githubpkg("rickhelmus/patRoon")` and `r Biocpkg("Bioconductor")` are preserved to facilitate the use of respective native functions.  
+In this document, the basic back-end workflow of `ntsIUTA` as well as application-driven workflows are described and exemplified. Although the functions from the back-end of `ntsIUTA` can be used for NTS with basic [R](https://cran.r-project.org/bin/windows/base/) knowledge, the use of the shiny Graphical User Interface (GUI) is recommended for better experience.
+
+# Installation
+
+`ntsIUTA` depends on external open source software. These external dependencies have to be installed beforehand using the instructions under Prerequisites.
+
+## Prerequisites
+
+Confirm that [Rtools](https://cran.r-project.org/bin/windows/Rtools/) is installed and the PATH is set up correctly in the environmental variables. To set the PATH the following line can be used where PATH is the location of the RTools bin folder.
+
+```{r install_RTools, eval=FALSE}
+writeLines('PATH="${RTOOLS40_HOME}\\usr\\bin;${PATH}"', con = "~/.Renviron")
+```
+
+`ntsIUTA` largely depends on `r Githubpkg("rickhelmus/patRoon")` package and both have a large number of common dependencies. Therefore, installation of `r Githubpkg("rickhelmus/patRoon")` is recommended before installing `ntsIUTA`. An installation guide for the `r Githubpkg("rickhelmus/patRoon")` package can be found [here](https://rickhelmus.github.io/patRoon/handbook_bd/installation.html). `r Githubpkg("rickhelmus/patRoon")` also provides an [automatic installation script](https://rickhelmus.github.io/patRoon/handbook_bd/automatic-installation-windows-only.html) for Windows users. Alternatively, a  [manual installation guide](https://rickhelmus.github.io/patRoon/handbook_bd/manual-installation.html) is also provided. The most basic steps of the `r Githubpkg("rickhelmus/patRoon")` installation are as follows.
+
+```{r install_external, eval=FALSE}
+install.packages("remotes")
+install.packages("BiocManager")
+BiocManager::install(c("CAMERA", "mzR", "xcms", "Biobase", "MSnbase"))
+remotes::install_github("rickhelmus/patRoon", upgrade = "never")
+```
+
+The code above installs a basic configuration of `r Githubpkg("rickhelmus/patRoon")`. External software, such as [proteowizard](http://proteowizard.sourceforge.net/download.html), [MetFrag](https://ipb-halle.github.io/MetFrag/projects/metfragcl/), needs to be installed and referenced in the `.Rprofile` manually as suggested [here](https://rickhelmus.github.io/patRoon/handbook_bd/installation.html). Alternatively, the automatic installation of `r Githubpkg("rickhelmus/patRoon")` can be used which creates the `.Rprofile-patRoon.R` with all required locations of the external software used in `r Githubpkg("rickhelmus/patRoon")` and consequently `ntsIUTA`.
+
+## Installation of the ntsIUTA package
+
+After installing the prerequisites, the `ntsIUTA`package can then be installed from the [ntsIUTA GitHub repository](https://github.com/ricardobachertdacunha/ntsIUTA) using the code line below. 
+
+```{r install_ntsIUTA, eval=FALSE}
+remotes::install_github("ricardobachertdacunha/ntsIUTA", auth_token = "<auth_token>", upgrade = "never")
+#or once the package goes public
+remotes::install_github("ricardobachertdacunha/ntsIUTA")
+```
+
+# Project Setup
+
+The `ntsIUTA` package can be entirely loaded with the code line below but it is recommended to use `ntsIUTA::` before every function call for better interpretation of the script.
+
+```{r pkgLoad}
+library(ntsIUTA)
+```
+
+The basic back-end workflow requires an initial setup where MS data files are provided. The creation of a project folder containing the MS files of interest is highly recommended and can be used for setup. The function `setupProject` requires the path of the project folder for the argument `projectPath`. Then, the directory and any existing sub-folders are screened for MS files. The data format used in `ntsIUTA` is `mzML` containing centroided MS data. However, a wide variety of data formats, including vendor MS data, can be used as input. The MS files can be converted to `mzML` through `r Githubpkg("rickhelmus/patRoon")` and/or [ProteoWizard](http://proteowizard.sourceforge.net/) within the `setupProject` function. Conversion of MS files in project folder to `mzML` can be done by setting the argument `convertFiles` to `TRUE`. Currently, the MS file formats recognized are as follows: *thermo*, *bruker*, *agilent*}, *ab* (from *AB Sciex*) and *waters*. See `?setupProject` for more information. By setting `makeNewProject` to `TRUE`, a new R project will be created in the given project folder and opened in a new R session, when using RStudio. When not using RStudio, the working directory of the running R session will be changed to the given `projectPath`.
+
+The output from `setupProject` is a simple [data.frame](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/data.frame) with the following columns:
+
+* `filePath`, the directory of each `mzML` file, including any converted MS files;
+* `sample`, the retrieved file name to be used as sample identifier;
+* `group`, the group of each sample (e.g. samples with the same name but with different numbering, such as in the case of replicate samples);
+* `blank`, the blank group detected by file name when present (i.e. blank, Blank and/or B as file name);
+* `polarity`, the ionization mode used for each file (*positive* or *negative*);
+* `date`, the project date which by default is the `Sys.Date` when the project is created;
+* `wdir`, the project working directory to be used for cross project analysis. 
+
+The code below loads the mzML files from the given projPath and selects the six first files containing centroided data to be exploited further in this document. Setting `save` to `TRUE`, the `sampleInfo` object is store in the rData folder created in the `projPath`. Most functions in `ntsIUTA` allow to store the objects in the rData folder for further use. For instance, in cross analysis single objects can be loaded without the need for rerunning the basic workflow of ntsIUTA. When `save` is set to `TRUE`, the `projPath` should be given. The `getwd()` is used by default and the created object is saved in the rData subfolder.
+
+```{r setup}
+projPath <- system.file(package = "ntsIUTA", dir = "extdata")
+sampleInfo <- setupProject(projPath,
+                           save = FALSE,
+                           makeNewProject = FALSE)
+#Filter for selecting the six first files in the sampleInfo
+sampleInfo <- sampleInfo[1:6, ]
+
+#below the 5 first columns of the sampleInfo
+```
+
+```{r sampleInfoExample, cache=FALSE, echo=FALSE, message=FALSE, results='axis'}
+sampleInfo_temp <- sampleInfo[, 1:5]
+sampleInfo_temp$filePath <- "C:/FilePath/FileName.mzML"
+sampleInfo_temp %>% kbl(caption = "sampleInfo Example") %>% kable_paper("hover", full_width = FALSE) %>% kable_styling(position = "left")
+```
+
+# Importing data from mzML
+
+After project setup, the data from the mzML files listed in the `sampleInfo` can be imported via `importRawData`. For importing, we used the `r Biocpkg("MSnbase")` which reads both centroided and profile MS data in mzML and mzXML files. The returning object is an [OnDiskMSnExp](https://rdrr.io/bioc/MSnbase/man/OnDiskMSnExp-class.html) object which can also be used for native functions within the `r Biocpkg("MSnbase")` and `r Biocpkg("xcms")` packages. In addition, `importRawData` can refine the time window of the files using the `rtFilter` and empty septra can be removed by setting `removeEmptySpectra` to `TRUE`. See `?importRawData` for additional information.
+
+```{r importRawData, cache = TRUE, echo = TRUE, message = FALSE, results = 'hide'}
+rawData <- importRawData(sampleInfo,
+                         rtFilter = c(13, 17),
+                         timeUnit = "min",
+                         centroidedData = TRUE,
+                         removeEmptySpectra = TRUE,
+                         save = FALSE)
+```
+
+```{r showRawData, cache = TRUE, echo = TRUE}
+rawData
+```
+
+## Inspecting `rawData`
+
+`rawData` can be inspected to improve downstream processing, such as peak finding. Iteractive total, base and extracted ion chromatograms (TIC, BPC and EIC, respectively) can be obtained via `plotRawChrom` as shown below, using the `r CRANpkg("plotly")` package. See `?plotRawChrom` for more details and arguments.
+
+```{r plotTIC, cache=TRUE,echo=TRUE,message=FALSE,warning=FALSE,results='markup',fig.align="left",out.width = "70%",fig.cap ="TIC plot."}
+plotRawChrom(rawData, type = "tic")
+```
+
+The `plotRawChrom` can be used for EIC by specifiying the `mz` and deviation (`ppm`), as shown below for diuron. When `mz` is specified, the type is automatically set to `eic` although `tic` is given as argument.
+
+```{r plotEIC, cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE, results='markup', fig.align="left", out.width = "70%", fig.cap ="EIC plot. EIC of diuron for the Blank replicate group and Samples."}
+plotRawChrom(rawData, type = "tic", mz = 233.0243, ppm = 20)
+```
+
+To obtained the EIC raw data the function `extractEIC` can be used, returning a data frame as shown below with the file, retention time (`rt`), *m/z* (`mz`) and intensity (`i`) for the specified `mz` and respective deviation (`ppm`).
+
+```{r extractEIC, cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+EIC_diuron <- extractEIC(rawData, fileIndex = 4,
+                         mz = 233.0243, ppm = 20)
+head(EIC_diuron)
+```
+
+Also, the function `plot(x, type = "XIC")` from the `r Biocpkg("MSnbase")` package was adapted to make the `plotTargetCentroids` function, including additional capabilities for plotting. As an example, below the centroids mass (*m/z*) and intensity over the retention time referent to diuron for file 4 in the `rawData` are plotted. A target mark can be added with `plotTargetMark` set to `TRUE`, which adds a square around the target *m/z* with 5 ppm and 10 seconds deviation from the given `mz` and `rt` arguments.
+
+```{r plotCentEIC, cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE, results='markup', fig.align="left", out.width = "70%", fig.cap ="Centroids plot. Centroids of diuron as [M+H]+."}
+plotTargetCentroids(rawData,
+                    fileIndex = 4,
+                    mz = 233.0243, ppm = 20,
+                    rt = 15.7, rtWindow = 1,
+                    rtUnit = "min", plotTargetMark = TRUE)
+```
+ 
+## Profile vs Centroid
+
+MS data can be directly centroided during conversion to mzML with [ProteoWizard](http://proteowizard.sourceforge.net/) via `setupProject`. However, centroiding of profile MS data was also implemented with additional capabilities for smotthing and refining the MS data, using tools from the `r Biocpkg("MSnbase")` package. The smoothing and refinement can benefit peak finding for data with high noise and low mass accuracy and/or high deviation. Below we plot the example for centroided and profile MS data of Terbutryn. A high deviation for the mass of Terbutryn is shown on the centroided plot (left), which is likely related to saturation of the MS detector.
+
+```{r plotCentProf,cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE, results='markup', out.width = "70%", fig.cap="Centroided vs Profile data. Comparison between centroided and profile data for Terbutryn as [M+H]+."}
+sampleInfo_prof <- setupProject(projPath, save = F, makeNewProject = F)
+
+sampleInfo_prof <- sampleInfo_prof[7:9, ]
+
+rawData_prof <- importRawData(sampleInfo = sampleInfo_prof,
+                              rtFilter = c(13, 17),
+                              timeUnit = "min",
+                              centroidedData = FALSE,
+                              removeEmptySpectra = TRUE,
+                              save = F)
+
+p1 <- plotTargetCentroids(rawData, fileIndex = 4,
+                          mz = 242.1434, ppm = 90,
+                          rt = 14.65, rtWindow = 0.5,
+                          rtUnit = "min", plotTargetMark = TRUE)
+
+p2 <- plotTargetCentroids(rawData_prof, fileIndex = 1,
+                          mz = 242.1434, ppm = 90,
+                          rt = 14.65, rtWindow = 0.5,
+                          rtUnit = "min", plotTargetMark = TRUE)
+
+subplot(list(p1, p2), nrows = 1, margin = 0.04)
+```
+
+A tentative to improve the centroiding can be achieved by `centroidProfileData` as shown in the example below. The centroids for Terbutryn by applying a refinement of the *m/z* values during centroiding of the profile data could be improved. The centroids for Terbutryn are now within the +/- 5 ppm deviation from the expected *m/z* value (red square). As a consequent, the downstream peak finding will yield a much more accurate *m/z* for the feature correspondent to Terbutryn, as later demonstrated in section 4.1 while inspecting peaks. Note that the specific parameters used in `centroidProfileData` should be optimized for each MS data using preferably reference standards and/or peaks. See `?centroidProfileData` for more details.
+
+```{r plotRefined, cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE, results='markup', out.width = "70%", fig.cap="Mass refinement. Centroided data via MSconvert from ProteoWizard (left) and refined centroided data using functionalities of the MSnbase package via the centroidProfileData function (right)."}
+rawData_prof2 <- centroidProfileData(filterFile(rawData_prof, 1),
+                                     halfwindow = 3,
+                                     SNR = 0,
+                                     noiseMethod = "MAD",
+                                     methodRefineMz = "kNeighbors",
+                                     k = 1,
+                                     smoothing = TRUE,
+                                     save = FALSE)
+
+p1 <- plotTargetCentroids(rawData, fileIndex = 4,
+                          mz = 242.1434, ppm = 30,
+                          rt = 14.65, rtWindow = 0.5,
+                          rtUnit = "min",
+                          plotTargetMark = TRUE)
+
+p2 <- plotTargetCentroids(rawData_prof2, fileIndex = 1,
+                          mz = 242.1434, ppm = 30,
+                          rt = 14.65, rtWindow = 0.5,
+                          rtUnit = "min",
+                          plotTargetMark = TRUE)
+
+subplot(list(p1, p2), nrows = 1, margin = 0.04)
+```
+
+# Peak Picking
+
+With centroided data, peak picking can more efficiently be preformed. The function `peakPicking` from `ntsIUTA` uses the `r Biocpkg("xcms")` package, where the available methods can be used via the `param` argument to find MS1 level peaks. MS2 data is retrived via the `r Biocpkg("mzR")` package further demonstrated in this document. In the example below we used the `CentWave` method from the `r Biocpkg("xcms")` package. Note that setting the `verboseColumns` to `TRUE`, usefull parameters, such as the gaussian fitting, will be included in the returned `XCMSnExp` object. The parameters for peak picking should be optimized for each MS data type (i.e. instrumentation used, sample matrix, etc.), using reference standards or well known peaks.
+
+The `peakPicking` function returns not directly an `XCMSnExp` object but a list of `XCMSnExp` objects grouped according to the defined replicate groups in the `sampleInfo` used in `importRawData`. The list facilitates the use of `XCMSnExp` objects accross projects avoiding the need for re-running peak picking. In `ntsIUTA`, worflows for cross project processing uses existing lists to load name specific replicate sample groups for given project folders.
+
+```{r peakPicking, cache=TRUE, message=FALSE, warning=FALSE, results='hide'}
+param <- xcms::CentWaveParam(ppm = 15, peakwidth = c(6, 60),
+                             snthresh = 5, prefilter = c(6, 300),
+                             mzCenterFun = "mean", integrate = 2,
+                             mzdiff = -0.0001, fitgauss = TRUE,
+                             noise = 0, verboseColumns = TRUE,
+                             firstBaselineCheck = FALSE,
+                             extendLengthMSW = TRUE)
+
+peaksData <- peakPicking(rawData,
+                         param = param,
+                         save = FALSE)
+```
+
+```{r showPeakPickingObj, warning=FALSE}
+peaksData[[2]]
+```
+
+## Inspecting peaks
+
+Individual peaks can be accessed via the existing function `chromPeaks` from the `r Biocpkg("xcms")` package. By specifying `mz` and `rt` a specific peak can be found. As `verboseColumns` was `TRUE` during peak picking, useful information is stored for each peak as shown below for the corresponding peak of diuron (*[M+H]+*). See `?chromPeaks` for more information about the arguments possible and the actual meaning of each peak parameter.
+
+```{r chromPeaks,  cache=TRUE, message=FALSE, warning=FALSE}
+mz <- 233.0243
+rt <- 15.7 * 60
+d_ppm <- 10
+d_rt <- 120
+xcms::chromPeaks(peaksData[[2]],
+                 mz = c(mz - ((d_ppm / 1E6) * mz),
+                        mz + ((d_ppm / 1E6) * mz)),
+                 rt = c(rt - d_rt, rt + d_rt),
+                 type = c("any"))
+```
+
+As above mentioned, using the raw peaks parameters the mass deviation from the expected for Terbutryn can be calculated as shown below. Without refinement of the profile data during centroiding a mass deviation above 5 ppm is obtained for Terbutryn while when refinement is applied, the deviation is only 2.4. For identification, high mass accuracy is nedded and refinement can support potential deviations. 
+
+```{r PeakPickingProf, cache=TRUE, message=FALSE, warning=FALSE, results='hide'}
+peaksData_prof2 <- peakPicking(rawData_prof2,
+                               param = param,
+                               save = FALSE)
+```
+
+```{r betterPPM, cache=TRUE, message=FALSE, warning=FALSE}
+mz <- 242.1434
+rt <- 14.65 * 60
+d_ppm <- 10
+d_rt <- 10
+mz_ppm <- xcms::chromPeaks(peaksData[[2]],
+                           mz = c(mz - ((d_ppm / 1E6) * mz),
+                                  mz + ((d_ppm / 1E6) * mz)),
+                           rt = c(rt - d_rt, rt + d_rt),
+                           type = c("any"))
+
+mz_ppm_prof2 <- xcms::chromPeaks(peaksData_prof2[[1]],
+                                 mz = c(mz - ((d_ppm / 1E6) * mz),
+                                        mz + ((d_ppm / 1E6) * mz)),
+                                 rt = c(rt - d_rt, rt + d_rt),
+                                 type = c("any"))
+
+#Deviation in ppm for MSconvert centroided data
+mz_ppm <- base::abs(mz_ppm[, "mz"] - 242.1434) / 242.1434 * 1E6
+mz_ppm
+
+#Deviation in ppm for MSnbase refined centroided data
+mz_ppm_prof2 <- base::abs(mz_ppm_prof2[, "mz"] - 242.1434) / 242.1434 * 1E6
+mz_ppm_prof2
+```
+
+# Alignment and grouping
+
+Often several samples, including replicates, are used during MS data processing. Therefore, grouping and alignment of peaks across samples is implemented within the `ntsIUTA` workflow. Again, the base functions are from the `r Biocpkg("xcms")` package as it provides robustness and easy access to the grouping and aliment results. A straight forward function `makeFeatures` was built, including both grouping and aliment as well as recursive integration of missing peaks via the `fillChromPeaks` function of the `r Biocpkg("xcms")` package.
+Below the example for alignment and grouping the samples in `peaksData` produced above is shown. As for peak picking, the actual parameters for both aligment and grouping should be optimized for each set of files. Also, other methods are available via the `r Biocpkg("xcms")` package. See [adjustRtime](https://rdrr.io/bioc/xcms/man/adjustRtime.html) and [groupChromPeaks](https://rdrr.io/bioc/xcms/man/groupChromPeaks.html) for more information. 
+
+```{r makeFeatures, cache=TRUE, message=FALSE, warning=FALSE}
+
+#Parameters for preGrouping
+#Only necessary if method for alignment is via PeaksGroups
+param1 <- xcms::PeakDensityParam(sampleGroups = "holder",
+                                bw = 5,
+                                minFraction = 0.5,
+                                minSamples = 1,
+                                binSize = 0.008,
+                                maxFeatures = 100)
+
+#Parameters for alignment of retention time across samples
+#Not used if only one samples is given in peaksData
+param2 <- xcms::PeakGroupsParam(minFraction = 1,
+                               extraPeaks = 0,
+                               smooth = "loess",
+                               span = 0.2,
+                               family = "gaussian")
+
+#Parameters for final grouping of peaks across samples
+param3 <- xcms::PeakDensityParam(sampleGroups = "holder",
+                                 bw = 3,
+                                 minFraction = 0.5,
+                                 minSamples = 1,
+                                 binSize = 0.008,
+                                 maxFeatures = 100)
+
+featData <- ntsIUTA::makeFeatures(peaksData = peaksData,
+                                  paramPreGrouping = param1,
+                                  paramAlignment = param2,
+                                  paramGrouping = param3,
+                                  save = FALSE)
+
+featData
+
+```
+
+## Inspecting alignment
+
+The results from the retention time alignment can be checked via the function `plotAlignment` as shown below for the `XCMSnExp` object previously obtained from `makeFeatures`.
+
+```{r plotAlignment, cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE, results='markup', out.width = "70%", fig.cap="Alignment results. Retention time adjustment results for each sample as the difference in seconds before and after alignment."}
+ntsIUTA::plotAlignment(featData)
+```
+
+## Inspecting grouping
+
+The grouping step creates features. A feature consist of grouped corresponding peaks across samples. Ideally, a feature is composed of one peak per sample. The grouping can be inspected via the `featureDefinitions` function from the `r Biocpkg("xcms")` package as shown below for diuron. See `?featureDefinitions` for more information and the meaning of each column.
+
+```{r}
+FT_diuron <- xcms::featureDefinitions(featData,
+                                      mz = 233.0243, ppm = 5,
+                                      rt = c(15.7*60-10,15.7*60+10),
+                                      type = "within", msLevel = 1)
+FT_diuron
+```
+
+Using the column `peakidx` and the function `chromPeaks` from the `r Biocpkg("xcms")` package earlier introduced, the details for each peak in a feature can be obtained. In the example below the peaks for the feature corresponding to diuron can be extracted. Note that the blank replicate samples (1, 2 and 3) have NA for the `sn` and `egauss` among other columns. The latter indicates that the peaks were not integrated during peak picking but the intensity was obtained by the recursive integration after grouping using `makeFeatures`. The function `buildFeatureList` from `ntsIUTA` later presented in this document will use this information to make a final feature list, including all details for easy access.
+
+```{r chromPeaksInFeat, }
+xcms::chromPeaks(featData, isFilledColumn = TRUE)[base::unlist(FT_diuron[ ,"peakidx"]), ]
+```
+
+Visual inspection can be done with `plotFeaturePeaks` as shown below, again for diuron. Hovering with the mouse pointer through the data points, additional information can be visualized for each peak in each sample. Data points without filling in the lower plot indicate filled peaks or peaks obtained via the recursive workflow in the corresponding sample. In this case, the blank replicates will represent the noise intensity for the matching region in the chromatogram, which is usefull information to evaluate false positives or false negatives.
+
+```{r featGrouping1, cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE, results='markup', out.width = "70%", fig.cap="Grouping inspection. Evaluation of the feature correspondent to diuron. Dots without fill color represent peaks obtained via recursive integration. Hover with the mouse throught the points to see more information."}
+ntsIUTA::plotFeaturePeaks(featData, fileIndex = NULL, 
+                          features = NULL,
+                          mz = 233.0243, ppm = 3,
+                          rt = 15.7, rtWindow = 0.8,
+                          rtUnit = "min")
+```
+
+In the example below we evaluate the grouping for two features (*FT0055* and *FT0147*) using the identifier obtained with `featureDefinitions` function. The features correspond to two internal standards isoproturon-d6 (*m/z* 213.1869) and diuron-d3 (*m/z* 239.0628), respectively, which are in all the samples as expected.
+
+```{r featGrouping2, cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE, results='markup', out.width = "70%", fig.cap="Multiple features. Approach for visualization of multiple features in one plot by specifiying the feature ID in the plotFeaturePeaks function."}
+ntsIUTA::plotFeaturePeaks(featData, fileIndex = NULL, 
+                          features = c("FT0055", "FT0147"),
+                          mz = NULL, ppm = NULL,
+                          rt = NULL, rtWindow = NULL,
+                          rtUnit = "min")
+```
+
+## Optimize grouping
+
+To add.
+
+## Applying alignment
+
+Before proceeding, the alignment can permanentely be applied to the object containing grouped peaks (features). For this the function `applyAdjustedRtime` from the `r Biocpkg("xcms")` package can be used as shown below.
+
+```{r applyAlignment,cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+featData <- xcms::applyAdjustedRtime(featData)
+```
+
+# Features annotation
+
+Especially for high-resolution MS data, annotation is crucial to decrease the number of relevant features and to obtained relevent relationships between features for downstream NTS workflows. The annotation consists of identification of isotopic peaks and adducts, which are in principle part of a single molecular ion (i.e. analyte) but present as several features. For the annotation, `ntsIUTA` has the function `makeFeatureComponents`, which is based on the package `r Biocpkg("CAMERA")`. Modifications were made to the actual functions for compatibility and the information is extracted for further integration in a final feature list, using the function `buildFeatureList` later presented in this document. A relevant aspect of `makeFeatureComponents` is that screening for isotopes and adducts is done per replicate group, avoiding the risk of false negatives related to unexpected intensity and mass deviations across not replicate samples. The intensity and signal-to-noise (SN) of each feature is retrived as median from each replicate group. Thus, including distinct samples can lead to false negatives. The returning object is a list with an `xsAnnotate` object for each replicate group. If `excludeBlanks` is set to `TRUE` (the default) the blank replicate group will not have an `xsAnnotate` object as frequently is subtracted during the filtering process.
+
+```{r makeAnnotation, cache=TRUE, eval=TRUE, echo=TRUE, include=TRUE, results='hide', message=FALSE, warning=FALSE}
+featComp <- ntsIUTA::makeFeatureComponents(
+                       featData =  featData,
+                       polarity = "positive",
+                       sigma = 5, perfwhm = 0.45,
+                       cor_eic_th = 0.85,
+                       cor_exp_th = 0.85,
+                       pval = 0.05,
+                       calcCaS = TRUE,
+                       calcIso = TRUE,
+                       validateIsotopePatterns = TRUE,
+                       ppmIsotopes = 50, mzabs = 0.01,
+                       searchAdducts = TRUE,
+                       ppmAdducts = 5, extendedList = FALSE,
+                       excludeBlanks = TRUE,
+                       blankGroups = "Blank",
+                       save = FALSE)
+```
+
+```{r}
+featComp
+```
+
+## Inspecting annotation
+
+The annotation of a component/s or the features related to a specific molecular ion can be inspected via a `data.frame` using `checkComponents` has shown below. Additionally, the same data can be graphically evaluated via `plotComponentSpectrum`, where the component spectra is plotted as shown below.
+
+```{r checkComponents}
+ntsIUTA::checkComponents(xA = featComp, replicateGroups = 1,
+                         features = NULL, featData = NULL,
+                         mz = 233.0243, ppm = 5,
+                         rt = 15.7, rtWindow = 0.8,
+                         rtUnit = "min",
+                         onlyRelated = TRUE)
+```
+
+```{r plotSpectra,  cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE, results='markup', out.width = "80%", fig.cap="Spectra of diuron. Spectra of relevant features (i.e. isotopes and adducts) for diuron in the second replicate group as defined in the sampleInfo."}
+ntsIUTA::plotComponentSpectrum(xA = featComp, replicateGroups = 1,
+                               features = NULL, featData = NULL,
+                               mz = 233.0243, ppm = 5,
+                               mzWindowPlot = c(230,265),
+                               rt = 15.7, rtWindow = 0.8, rtUnit = "min",
+                               onlyRelated = TRUE, log = TRUE)
+```
+
+# Build Feature List
+
+After annotation, the information for each feature is gathered is a comprehensive `data.frame` to facilitate dowstream processing and filtering. The information is spread over `XCMSnExp` and `xsAnnotate` objects, which are usefull for utilization of native functions of both `r Biocpkg("xcms")` and `r Biocpkg("CAMERA")` packages. However, the access to the data is not straight forward as the structure of the mentioned objects is complex, which is good for reliability but not flexible. Thus, the function `buildFeatureList` was implemented in `ntsIUTA` to integrate both feature details and annotation (isotopes and adducts) into a simple `data.frame` from the `base` package. The `data.frame` will be the main input for further downstream processing, especially to quickly subset and obtain features of interest. Before building the feature list, the `featData` can be converted to a `featureGroupsXCMS3` object from `patRoon`. This is recommended as the features ID from patRoon will be added as `patFT` column to the produced `data.frame`, facilitating further data processing dependent on patRoon functionalities. The `featureGroupsXCMS3` object can be obtained by `getPatData` as shown below.
+
+```{r covertToPat, }
+patData <- ntsIUTA::getPatData(featData,
+                               setup,
+                               save = FALSE)
+```
+
+Having all objects (i.e. `featData`, `featComp` and `patData`) in the environment, the function `buildFeatureList` can be used as shown below. The produced `data.frame` containes detailed information for each feature.
+
+```{r makeFl,cache=TRUE, eval=TRUE, echo=TRUE, include=TRUE, results='hide', message=FALSE, warning=FALSE}
+fl <- ntsIUTA::buildFeatureList(x = featData,
+                                xA = featComp,
+                                xPat = patData,
+                                save = FALSE)
+```
+
+## Inspecting Features
+
+The function transpose (`t`) from the base package can be used to obtain the details of features of interest, where each row name correspond to a column name in the original `fl`. For instance, below the details for the feature correspondent to the molecular ion of Diuron is shown.
+
+```{r seeFl}
+base::t(fl[fl$FT == "FT0107",])
+```
+
+## Feature parameters
+
+A major advantage of `ntsIUTA` over other options is the easy access to detailed information for each feature, including access not only to features of isotologes and adducts but also features that share the same mass and background intensity profiles for each mass bin (i.e. max *m/z* - min *m/z* of a feature). The latter showed to be a great asset to find false positives, which can significantly affect prioritization workflows. A description of each entry (i.e. column) of the data frame produced by `buildFeatureList` is presented below.
+
+* `FT`, feature identifier to be used within native functions of `r Biocpkg("xcms")`;
+* `patFT`, feature identifier to be used within native functions of `r Githubpkg("rickhelmus/patRoon")`;
+* `mz`, average *m/z* of the feature across samples
+* `rt`, average retention time of the feature across samples
+* `npeaks`, number of chromatographic peaks obtained by peak picking associated with the feature (ideally one peak per samples);
+* `peakidx`, peak indices of the matrix obtained by the function `chromPeaks` from the `r Biocpkg("xcms")` package;
+* `Sample groups (...)`, average intensity of the chromatographic peaks for each sample group as defined in the `sampleInfo`;
+* `Sample groups sd (...)`, intensity standard deviation of the chromatographic peaks for each sample group as defined in the `sampleInfo`;
+* `mzmin`, minimum *m/z* border of the peaks associated with the feature;
+* `mzmax`, maximum *m/z* border of the peaks associated with the feature;
+* `rtmin`, minimum retention time border of the peaks associated with the feature;
+* `rtmax`, maximum retention time border of the peaks associated with the feature;
+* `hasFilled`, `TRUE` value means that the feature received peaks from the recursive integration after alignment and grouping; 
+* `sn`, average signal-to-noise ratio calculated for each sample with the 25% quantile background intensity of centroids within +/- 240s and `mzmin` <= x >= `mzmax` (centroids of integrated peaks are removed according to their width, as defined by `rtmin` and `rtmax`);
+* `sn_max`, maximum signal-to-noise ratio observed;
+* `sn_sd`, standard deviation of the signal-to-noise ratio across samples;
+* `noise`, the average noise level for each feature across samples; 
+* `noise_sd`, the standard deviation of the noise level for each feature across samples; 
+* `egauss`, the average root-mean-square error (RMSE) of the gaussian fit for feature peaks;
+* `egauss_sd`, the standard deviation of the root-mean-square error (RMSE) of the gaussian fit for feature peaks;
+* `egauss_min`, the minimum root-mean-square error (RMSE) of the gaussian fit for feature peaks (i.e. the peak with the highest gaussian fitting);
+* `dppm`, the average mass deviation (in ppm) of peaks associated with the features (filled peaks not included); 
+* `dppm_sd`, the standard deviation of the mass deviation (in ppm) of peaks associated with the features (filled peaks not included); 
+* `dppm_max`, the maximum mass deviation (in ppm) of peaks associated with the features (filled peaks not included);
+* `others_N`, the number of peaks found within the same *m/z* bin, defined as x, where x is `mzmin` <= x >= `mzmax`;
+* `others`, the identifier (`FT`) of the other peaks found;
+* `others_R`, the resolution value (calculated as R=(rt2-rt1)/((w1+w2)/2), where rt is the retention time and w is the peak width at baseline) between the feature and each peak found within the same *m/z* bin;
+* `bg25` ... `bg100`, 15% quantile of the intensity from centroids within the same *m/z* bin, as 25, 50, 75 and 100% quantiles of the running time; 
+* `nCent`, number of centroids used to calculate the background noise level;
+* `comp`, component number where the feature is included as obtained by `makeFeatureComponents`;
+* `Mion`, *m/z* of the molecular ion associated with the feature;
+* `iso`, isotope category/ies associated with the feature; 
+* `isoGroup`, the isotope group number for each sample replicate group;
+* `adduct`, the adduct category/ies associated with the feature;
+* `adductMions`, the *m/z* of molecular ions associated with the feature;
+
+# Workflows
+
+## Suspect Screening
+
+
+```{r}
+
+```
+
+
+
+# QC check
+
+A quality check can be useful for both to evaluate the performance of the instrumentation used during data acquisition and to optimize the parameters for peak picking, alignment and grouping, according to known reference standards. The latter is rather crucial for optimization using data from different instruments or with different matrix. For this purpose, the function `checkQC` is implemented in `ntsIUTA`. `checkQC` is a comprehensive wrapper function that allows a fast evaluation of features from known substances. The details of reference substances are given to `checkQC` by the path of a simple `.csv`, as shown below, to the argument screeningList. Retention time and MS2 data can be added to the screeningList via the suspect screening workflow presented earlier in this document.
+
+```{r prepQC}
+#screeningList of the reference standards present in the sample
+sl_qc <- base::paste0(system.file(package = "ntsIUTA", dir = "extdata"),"/QC_ScreeningList_ntsIUTA_MS2_pos.csv")
+utils::head(utils::read.csv(sl_qc), n = 2)
+```
+
+A template of the screeningList can be obtained using the following code, which pastes a template.csv of the screeningList into the project folder.
+
+```{r screeningListtemplate, eval=FALSE, cache=FALSE}
+ntsIUTA::getScreeningListTemplate()
+```
+
+The QC samples can be selected from the `rawData` [OnDiskMSnExp](https://rdrr.io/bioc/MSnbase/man/OnDiskMSnExp-class.html) object using the `filterFile` function of the `r Biocpkg("MSnbase")` package as shown below. The new object is then used for the `rawQC` argument in `chackQC` as demostrated below. The parameters `param` and `param1` to `param3` for peak picking, alignment and grouping, respectively, are here re-used but can and should be used directly for checking QC samples and optimized accordingly before proceeding to the experimental samples. See `?checkQC` for more information. Below we used samples 4 to 6 as QC examples.
+
+```{r checkQC, cache=TRUE, eval=TRUE, echo=TRUE, include=TRUE, results='hide', message=FALSE, warning=FALSE}
+#Using the samples 4 to 6 as QC set for demonstration
+rawQC <- MSnbase::filterFile(rawData, file = 4:6)
+
+QC <- ntsIUTA::checkQC(rawQC = rawQC,
+                       sampleInfo = setup,
+                       screeningList = sl_qc,
+                       paramPeaks = param,
+                       paramPreGrouping = param1,
+                       paramAlignment = param2,
+                       paramGrouping = param3,
+                       ppmForFillingGroups = 5,
+                       rtWindow = 30,
+                       ppmWindow = 15,
+                       polarity = "positive",
+                       plot = TRUE,
+                       save = FALSE)
+```
+
+A `list` with the summary data frame and the evaluation and features plot is returned from `checkQC` as shown below. Setting `save` to `TRUE`, the plot and data frame are saved in the project folder for further use.
+
+```{r QCdf}
+utils::head(QC$df, n = 2)
+```
+
+```{r evalPlot, cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE, results='markup', out.width = "130%", fig.cap="Evaluation Plot. Retention time and mass deviations as well as quality of expected MS2 data for each QC reference standard."}
+plot(QC$evalPlot)
+```
+
+```{r featPlot, cache=TRUE, echo=TRUE, message=FALSE, warning=FALSE, results='markup', out.width = "80%", fig.cap="QC Features. Details of each feature referent to each QC standard."}
+plotly::layout(QC$featPlot)
+```
+
+## Quality stability
+
+To add.
+
+
+
+
+
+...

@@ -13,8 +13,8 @@
 #' A time interval can be given with a length 2 vector, defining the minimum and maximum retention time.
 #' @param rtUnit Possible entries are \code{min} or \code{sec}. The default is \code{min}.
 #' @param title The title for the plot, optional.
-#' @param groupBy The grouping for the plot. Possible are "samples" for ploting individual samples or "relpicates" to merge the replicate samples.
-#' The default is "samples".
+#' @param plotBy The grouping for the plot. Possible are "samples", "replicates" and "features"
+#' for ploting by individual samples, relpicate samples or features, respectively. The default is "samples".
 #'
 #' @return An iterative plot.
 #' 
@@ -22,7 +22,7 @@
 #' 
 #' @import magrittr
 #' @importFrom xcms filterFile featureDefinitions featureChromatograms chromPeaks
-#' @importFrom MSnbase rtime
+#' @importMethodsFrom MSnbase rtime
 #' @importFrom BiocGenerics as.data.frame
 #' @importFrom patRoon as.data.table
 #' @importFrom plotly toRGB plot_ly add_trace layout
@@ -36,21 +36,21 @@ plotFeatures <- function(x = patData, fileIndex = NULL,
                          mz = NULL, ppm = 5,
                          rt = NULL, rtWindow = 1,
                          rtUnit = "min",
-                         title = NULL, groupBy = c("samples")) {
+                         title = NULL, plotBy = c("samples")) {
   
   #Examples
   # plotFeatures(ntsIUTA::patDataExample, features = "M233_R941_36")
   
-  # y = ntsIUTA::featDataExample
-  # x = ntsIUTA::patDataExample
+  # y = featData
+  # x = patData
   # fileIndex = NULL
-  # features = c("M233_R941_36")
+  # features = "M233_R941_107"
   # mz <- NULL
   # rt <- NULL
   # rtUnit = "min"
-  # ppm <- 5
-  # rtWindow = 1
-  # groupBy = "samples"
+  # ppm <- NULL
+  # rtWindow = 2
+  # plotBy = "features"
   # title = NULL
   
   #library(magrittr)
@@ -118,62 +118,90 @@ plotFeatures <- function(x = patData, fileIndex = NULL,
     }
   }
   
-  colors <- ntsIUTA::getColors(y, "samples")
+  #colors <- ntsIUTA::getColors(y, "samples")
   
-  if (base::is.null(title)) title <- ""
+  if (base::is.null(title)) title <- if (plotBy == "features") base::ifelse(base::length(FT) == 1, features, "")
   
   title <- base::list(text = title, x = 0.1, y = 0.98, font = base::list(size = 14, color = "black"))
   
   xaxis <- base::list(linecolor = plotly::toRGB("black"), linewidth = 2, title = "Retention Time (sec.)",
                       titlefont = base::list(size = 12, color = "black"),
-                      range = c(base::min(df$rtime), base::max(df$rtime)), autotick = T, ticks = "outside")
+                      range = c(rtr[1], rtr[2]), autotick = T, ticks = "outside")
   
   yaxis = base::list(linecolor = plotly::toRGB("black"), linewidth = 2, title = "Intensity",
                      titlefont = list(size = 12, color = "black"))
   
-  if (groupBy == "replicates") legG <- y$sample_group
-  if (groupBy == "samples") legG <- y$sample_name
   
-  #By feature the eic followed by the integrated are, legend grouped as function input groupBy
+  if (plotBy == "samples") {
+    colors <- ntsIUTA::getColors(y, "samples")
+    legG <- y$sample_name
+  } else {
+    if (plotBy == "features") {
+      colors <- ntsIUTA::getColors(base::length(features))
+      legG <- features
+    } else {
+      colors = ntsIUTA::getColors(y, "groups")
+      legG <- y$sample_name
+    }
+  }
+  
+  
+  # if (plotBy == "replicates") legG <- y$sample_group
+  # if (plotBy == "samples") legG <- y$sample_name
+  
+  #By feature the eic followed by the integrated are, legend grouped as function input plotBy
   plot <- plotly::plot_ly(df)
+  showlegend = base::rep(0,base::length(features))
   for (s in 1:base::ncol(chrom)) { #base::ncol(feat)
-    for (f in 1:base::nrow(chrom)) { #base::nrow(feat)
+    for (f in 1:base::length(FT)) { #base::nrow(feat)
+      showlegend[f] = 1 + showlegend[f]
       plot <- plot %>% plotly::add_trace(df,
                                          x = df[df$FT == FT[f] & df$sample ==  y$sample_name[s], "rtime"],
                                          y = df[df$FT == FT[f] & df$sample ==  y$sample_name[s], "intensity"],
                                          type = "scatter", mode = "lines",
-                                         line = base::list(width = 0.5, color = base::unname(colors[s])), connectgaps = TRUE,
-                                         name = legG[s], legendgroup = legG[s], showlegend = base::ifelse(f == 1, T, F))
+                                         line = base::list(width = 0.5, color = base::unname(colors[base::ifelse(plotBy == "features", f, s)])),
+                                         connectgaps = TRUE,
+                                         name = legG[base::ifelse(plotBy == "features", f, s)],
+                                         legendgroup = legG[base::ifelse(plotBy == "features", f, s)],
+                                         showlegend = base::ifelse(plotBy == "samples", base::ifelse(f == 1, T, F),
+                                                                   base::ifelse(plotBy == "features", base::ifelse(showlegend[f] == 1, T, F),
+                                                                                base::ifelse(f == 1, T, F))))
       
       rtFT <- base::as.data.frame(xcms::chromPeaks(y)[base::unlist(defFT[base::row.names(defFT) %in% FT[f] ,"peakidx"]), ])
       if(unique(TRUE %in% (rtFT$sample == s))) {
-        rtFT <- rtFT[rtFT$sample == s, c("rtmin","rtmax"), drop = T]
+        rtFT <- rtFT[rtFT$sample == s, c("rtmin","rtmax")]
         plot <- plot %>%  plotly::add_trace(df,
-                                            x = df[df$FT == FT[f] & df$sample ==  y$sample_name[s] & df$rtime >= rtFT[1] & df$rtime <= rtFT[2], "rtime"],
-                                            y = df[df$FT == FT[f] & df$sample ==  y$sample_name[s] & df$rtime >= rtFT[1] & df$rtime <= rtFT[2],"intensity"],
-                                            type = "scatter", mode = "lines", fill = 'tozeroy', connectgaps = TRUE, fillcolor = paste(color = base::unname(colors[s]),50, sep = ""),
-                                            line = list(width = 0.1, color = base::unname(colors[s])),
-                                            name = legG[s], legendgroup = legG[s], showlegend = F)
+                                            x = df[df$FT == FT[f] & df$sample ==  y$sample_name[s] & df$rtime >= rtFT[1,1] & df$rtime <= rtFT[1,2], "rtime"],
+                                            y = df[df$FT == FT[f] & df$sample ==  y$sample_name[s] & df$rtime >= rtFT[1,1] & df$rtime <= rtFT[1,2],"intensity"],
+                                            type = "scatter", mode =  "lines+markers", fill = 'tozeroy', connectgaps = TRUE,
+                                            fillcolor = base::paste(color = base::unname(colors[base::ifelse(plotBy == "features", f, s)]),50, sep = ""),
+                                            line = base::list(width = 0.1, color = base::unname(colors[base::ifelse(plotBy == "features", f, s)])),
+                                            marker = base::list(size = 3, color = base::unname(colors[base::ifelse(plotBy == "features", f, s)])),
+                                            name = legG[base::ifelse(plotBy == "features", f, s)],
+                                            legendgroup = legG[base::ifelse(plotBy == "features", f, s)],
+                                            showlegend = F,
+                                            hoverinfo = 'text', text = base::paste('</br> feature: ', features[f],
+                                                                                   '</br> sample: ', y$sample_name[s]))
       }
     }
   }
-  showlegend = 0
-  for (s in 1:base::ncol(chrom)) { #base::ncol(feat)
-    for (f in 1:base::nrow(chrom)) { #base::nrow(feat)
-      rtFT <- base::as.data.frame(xcms::chromPeaks(y)[base::unlist(defFT[base::row.names(defFT) %in% FT[f] ,"peakidx"]), ])
-      if(base::unique(TRUE %in% (rtFT$sample == s))) {
-        showlegend <- 1 + showlegend
-        rtFT <- rtFT[rtFT$sample == s, c("rtmin","rtmax"), drop = T]
-        plot <- plot %>%  plotly::add_trace(df,
-                                            x = df[df$FT == FT[f] & df$sample ==  y$sample_name[s] & df$rtime >= rtFT[1] & df$rtime <= rtFT[2], "rtime"],
-                                            y = df[df$FT == FT[f] & df$sample ==  y$sample_name[s] & df$rtime >= rtFT[1] & df$rtime <= rtFT[2],"intensity"],
-                                            type = "scatter", mode = "lines+markers", fill = 'tozeroy', connectgaps = TRUE, fillcolor = paste(color = base::unname(colors[s]),50, sep = ""),
-                                            line = base::list(width = 0.1, color = base::unname(colors[s])),
-                                            marker = base::list(size = 3, color = base::unname(colors[s])),
-                                            name = features[f], legendgroup = FT[f], showlegend = base::ifelse(showlegend == 1, T, F))
-      }
-    }
-  }
+  # showlegend = 0
+  # for (s in 1:base::ncol(chrom)) { #base::ncol(feat)
+  #   for (f in 1:base::nrow(chrom)) { #base::nrow(feat)
+  #     rtFT <- base::as.data.frame(xcms::chromPeaks(y)[base::unlist(defFT[base::row.names(defFT) %in% FT[f] ,"peakidx"]), ])
+  #     if(base::unique(TRUE %in% (rtFT$sample == s))) {
+  #       showlegend <- 1 + showlegend
+  #       rtFT <- rtFT[rtFT$sample == s, c("rtmin","rtmax")]
+  #       plot <- plot %>%  plotly::add_trace(df,
+  #                                           x = df[df$FT == FT[f] & df$sample ==  y$sample_name[s] & df$rtime >= rtFT[1,1] & df$rtime <= rtFT[1,2], "rtime"],
+  #                                           y = df[df$FT == FT[f] & df$sample ==  y$sample_name[s] & df$rtime >= rtFT[1,1] & df$rtime <= rtFT[1,2],"intensity"],
+  #                                           type = "scatter", mode = "lines+markers", fill = 'tozeroy', connectgaps = TRUE, fillcolor = paste(color = base::unname(colors[s]),50, sep = ""),
+  #                                           line = base::list(width = 0.1, color = base::unname(colors[s])),
+  #                                           marker = base::list(size = 3, color = base::unname(colors[s])),
+  #                                           name = features[f], legendgroup = FT[f], showlegend = base::ifelse(showlegend == 1, T, F))
+  #     }
+  #   }
+  # }
   
   plot <- plot %>% plotly::layout(xaxis = xaxis,yaxis = yaxis, title = title) #legend = list(title = list(text='<b> Sample: </b>'))
   

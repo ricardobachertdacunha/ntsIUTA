@@ -3,7 +3,7 @@
 
 #' @title peakPicking
 #' @description Extracts chromatographic peaks from centroided \linkS4class{OnDiskMSnExp} and returns a \code{list} of \linkS4class{XCMSnExp}
-#' objects for each replicate sample group as defined in the \code{\link{makeSetup}} function.
+#' objects for each replicate sample group as defined in the \code{\link{setupProject}} function.
 #' The \linkS4class{XCMSnExp} objects can be conconated via \code{c()} function of the \pkg{xcms} package.
 #' We separate the peaks from each replicate group to facilitate workflows that include multi-project cross-analysis.
 #' The peak picking uses the function \code{\link[xcms]{chromatographic-peak-detection}} from the \pkg{xcms} package.
@@ -42,20 +42,22 @@
 #' @importFrom parallel detectCores
 #' @importFrom utils txtProgressBar setTxtProgressBar
 #' @importFrom xcms findChromPeaks MergeNeighboringPeaksParam refineChromPeaks CleanPeaksParam
-#' @importFrom MSnbase filterFile
+#' @importMethodsFrom MSnbase filterFile
 #' 
 #'
 #' @examples
 #' 
 #' 
 #' 
-peakPicking <- function(rawData = rawData, param = instParam$PP, removeQC = TRUE,
+peakPicking <- function(rawData = rawData, param = NULL, removeQC = TRUE,
                         refinePeaks = FALSE, expandRt = 1, minProp = 0.9, expandMz = 0, ppm = 0,
                         maxPeakwidth = NULL,
                         save = TRUE, projPath = setup$projPath, maxMultiProcess = TRUE) {
   
+  library(xcms)
+  
   #Examples
-  #setup <- ntsIUTA::makeSetup(projPath = system.file(package = "ntsIUTA", dir = "extdata"), save = FALSE)
+  #setup <- ntsIUTA::setupProject(projPath = system.file(package = "ntsIUTA", dir = "extdata"), save = FALSE)
   # rawDataExample <- ntsIUTA::importRawData(setup$sampleInfo[1:3,], save = FALSE, centroidedData = TRUE)
   # 
   # #Obtained by the function MassifquantParam from the xcms packeage, but other options for param are possible.
@@ -93,8 +95,8 @@ peakPicking <- function(rawData = rawData, param = instParam$PP, removeQC = TRUE
     
     sampleidxs <- base::which(rawData$sample_group == groups[rgidx])
     
-    #TODO add possibility to rund patRoon peakpicking functions and convert to XCMSnExp object
-    #Other methods for peak picking with xcms possible by chnaging param
+    #TODO add possibility to run patRoon peakpicking functions and convert to XCMSnExp object
+    #Other methods for peak picking with xcms possible by changing param
     peaksData[[groups[rgidx]]] <- xcms::findChromPeaks(MSnbase::filterFile(rawData, sampleidxs),
                                                        return.type = "XCMSnExp",
                                                        msLevel = 1, BPPARAM = BiocParallel::bpparam("SnowParam"),

@@ -14,7 +14,7 @@ plotFeatures(
   rtWindow = 1,
   rtUnit = "min",
   title = NULL,
-  groupBy = c("samples")
+  plotBy = c("samples")
 )
 }
 \arguments{
@@ -37,8 +37,8 @@ A time interval can be given with a length 2 vector, defining the minimum and ma
 
 \item{title}{The title for the plot, optional.}
 
-\item{groupBy}{The grouping for the plot. Possible are "samples" for ploting individual samples or "relpicates" to merge the replicate samples.
-The default is "samples".}
+\item{plotBy}{The grouping for the plot. Possible are "samples", "replicates" and "features"
+for ploting by individual samples, relpicate samples or features, respectively. The default is "samples".}
 }
 \value{
 An iterative plot.

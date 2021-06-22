@@ -9,7 +9,7 @@ getPatData(featData, sampleInfo, save = FALSE, projPath = setup$projPath)
 \arguments{
 \item{featData}{A \linkS4class{XCMSnExp} object with feature data to be converted.}
 
-\item{sampleInfo}{The \code{sampleInfo} obtained by the \code{\link{makeSetup}} function, matching the \code{featData}.}
+\item{sampleInfo}{The \code{sampleInfo} obtained by the \code{\link{setupProject}} function, matching the \code{featData}.}
 
 \item{save}{Logical, set to \code{TRUE} to save the generated \linkS4class{featureGroups} object in the disk.}
 
@@ -22,7 +22,5 @@ A \linkS4class{featureGroups} object corresponding matching the given \linkS4cla
 getPatData
 }
 \examples{
-
-
 
 }

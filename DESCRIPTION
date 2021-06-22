@@ -60,4 +60,5 @@ Suggests:
     kableExtra
 VignetteBuilder: knitr
 Depends: 
-    R (>= 4.0)
+    R (>= 4.0),
+    ProtGenerics

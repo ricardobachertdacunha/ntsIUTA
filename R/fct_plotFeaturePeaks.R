@@ -23,7 +23,7 @@
 #' 
 #' @import magrittr
 #' @importFrom xcms filterFile hasFeatures featureDefinitions featureChromatograms chromPeaks
-#' @importFrom MSnbase rtime
+#' @importMethodsFrom MSnbase rtime
 #' @importFrom BiocGenerics as.data.frame
 #' @importFrom patRoon as.data.table
 #' @importFrom plotly plot_ly add_trace layout hide_colorbar subplot toRGB
@@ -49,7 +49,7 @@ plotFeaturePeaks <- function(x = featData, fileIndex = NULL,
   # rtWindow = NULL
   # rtUnit = "min"
   # plotBy = "features"
-  # names = c("x","y","z")
+  # names = qcdf$name
   
   #library(magrittr)
   
@@ -159,10 +159,10 @@ plotFeaturePeaks <- function(x = featData, fileIndex = NULL,
         
         
         
-        rtFT <- rtFT[rtFT$sample == s, c("rtmin","rtmax"), drop = T]
+        rtFT <- rtFT[rtFT$sample == s, c("rtmin","rtmax")]
         p1 <- p1 %>%  plotly::add_trace(df,
-                                        x = df[df$FT == FT[f] & df$sample ==  y$sample_name[s] & df$rtime >= rtFT[1] & df$rtime <= rtFT[2], "rtime"],
-                                        y = df[df$FT == FT[f] & df$sample ==  y$sample_name[s] & df$rtime >= rtFT[1] & df$rtime <= rtFT[2],"intensity"],
+                                        x = df[df$FT == FT[f] & df$sample ==  y$sample_name[s] & df$rtime >= rtFT[1,1] & df$rtime <= rtFT[1,2], "rtime"],
+                                        y = df[df$FT == FT[f] & df$sample ==  y$sample_name[s] & df$rtime >= rtFT[1,1] & df$rtime <= rtFT[1,2],"intensity"],
                                         type = "scatter", mode = "lines", fill = 'tozeroy', connectgaps = TRUE,
                                         fillcolor = ifelse(plotBy == "samples",paste(color = base::unname(colors[s]),50, sep = ""),
                                                            ifelse(plotBy == "features", paste(color = base::unname(colors[f]),50, sep = ""),

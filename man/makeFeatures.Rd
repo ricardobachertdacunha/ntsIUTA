@@ -23,12 +23,12 @@ sample replicate group represented by each \linkS4class{XCMSnExp} object as obta
 a pre-grouping of peaks is required for alignment. The \code{paramPreGrouping} is the parameters obtained by the selected grouping method.
 See documentation of \code{\link[xcms]{groupChromPeaks}} for more information.}
 
-\item{paramAlignment}{The parameters for the choosen alignment method. See documentation of \code{\link[xcms]{adjustRtime}} for more information.}
+\item{paramAlignment}{The parameters for the chosen alignment method. See documentation of \code{\link[xcms]{adjustRtime}} for more information.}
 
-\item{paramGrouping}{The parameters for the choosen grouping method.
+\item{paramGrouping}{The parameters for the chosen grouping method.
 See documentation of \code{\link[xcms]{groupChromPeaks}} for more information.}
 
-\item{ppmForFillingGroups}{The mass (in ppm) to expand the \emph{mz} for filling missing peaks in imcomplete features.
+\item{ppmForFillingGroups}{The mass (in ppm) to expand the \emph{mz} for filling missing peaks in incomplete features.
 See \code{\link[xcms]{fillChromPeaks}} for more information.}
 
 \item{save}{Logical, set to \code{TRUE} to save the generated \code{XCMSnExp} object in the disk.}
@@ -38,7 +38,7 @@ See \code{\link[xcms]{fillChromPeaks}} for more information.}
 \item{maxMultiProcess}{Logical, set to \code{TRUE} to enable max parallel processing. Changes the number of workers to the maximum available.}
 }
 \value{
-An \linkS4class{XCMSnExp} containing features which are grouped and aligned peaks acroos samples.
+An \linkS4class{XCMSnExp} containing features which are grouped and aligned peaks across samples.
 
  @references
 \insertRef{xcms1}{ntsIUTA}
@@ -46,7 +46,7 @@ An \linkS4class{XCMSnExp} containing features which are grouped and aligned peak
 \insertRef{xcms3}{ntsIUTA}
 }
 \description{
-The \code{makeFeatures} consists of aligment and grouping of chromatographic peaks across samples.
+The \code{makeFeatures} consists of alignment and grouping of chromatographic peaks across samples.
 The function uses methods from the package \pkg{xcms}, specifically \code{\link[xcms]{adjustRtime}} and \code{\link[xcms]{groupChromPeaks}}
 methods. The input is a \linkS4class{XCMSnExp} object or a \code{list} of \linkS4class{XCMSnExp} objects
 named with the given sample replicate group during the \code{setup}. If the input is a \code{list}, \linkS4class{XCMSnExp} objects

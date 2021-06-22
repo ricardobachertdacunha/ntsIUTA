@@ -12,7 +12,7 @@
 #'
 #' @import magrittr
 #' @importFrom xcms hasAdjustedRtime
-#' @importFrom MSnbase rtime 
+#' @importMethodsFrom MSnbase rtime
 #' @importFrom plotly toRGB plot_ly add_trace layout
 #'
 #' @examples

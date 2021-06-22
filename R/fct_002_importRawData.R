@@ -1,20 +1,19 @@
 
 
-
 #' @title importRawData
-#' @description Function to import MS data from the mzML files listed in \code{sampleInfo} from the \code{makeSetup} object.
+#' @description Function to import MS data from the mzML files listed in \code{sampleInfo} from the \code{setupProject} object.
 #' Files should contain centroided spectra.
 #' The function uses the function \code{\link[MSnbase]{readMSData}} from the \code{MSnbase} package to read the mzML files.
-#' 
-#' @param sampleInfo The sample \code{data.table} obtained by the \code{\link{makeSetup}} function.
-#' Note that the \code{sampleInfo} can be filtered beforehand to exclude unwanted mzML files or to redefine the name of relpicate sample groups.
+#'
+#' @param sampleInfo The sample \code{data.table} obtained by the \code{\link{setupProject}} function.
+#' Note that the \code{sampleInfo} can be filtered beforehand to exclude unwanted mzML files or to redefine the name of replicate sample groups.
 #' @param rtFilter A numeric vector with length 2 defining the minimum and maximum chromatographic retention time for the listed files respectively.
-#' If the files have different time dimentions, \code{rtFilter} should be \code{NULL}.
+#' If the files have different time dimensions, \code{rtFilter} should be \code{NULL}.
 #' @param timeUnit If \code{rtFilter} is given in minutes please keep the default value \code{min} otherwise change to \code{sec} for seconds.
-#' @param msLevel The MS dimentions for the rtFilter to be applied. Default is for both MS1 and MS2 with \code{c(1,2)}.
+#' @param msLevel The MS dimensions for the rtFilter to be applied. Default is for both MS1 and MS2 with \code{c(1,2)}.
 #' @param centroidedData Logical, set to \code{TRUE} for mzML files with centroided data or \code{FALSE} for profile data.
 #' \code{NA} will collect all the data from the mzML file.
-#' @param removeEmptySpectra Logical, set to TRUE if empty spectra shuld be removed.
+#' @param removeEmptySpectra Logical, set to TRUE if empty spectra should be removed.
 #' It is recommended to remove empty spectra as it may cause issues during creation of features.
 #' @param save Logical, set to \code{TRUE} to save the object rawData in the \strong{rData} folder.
 #' If \strong{rData} folder does not exist in given \code{projPath} from \code{setup}, the folder will be created.
@@ -23,136 +22,146 @@
 #'
 #' @return The output is a standard \linkS4class{OnDiskMSnExp} object,
 #' which can be used within the workflow of \pkg{ntsIUTA} but also within \pkg{Bioconductor} packages, such as \pkg{xcms}.
-#' 
+#'
 #' @references
 #' \insertRef{MSnbase1}{ntsIUTA}
 #' \insertRef{MSnbase2}{ntsIUTA}
-#' 
+#'
 #' @export
-#' 
-#' @importFrom MSnbase readMSData filterRt filterEmptySpectra
-#' 
+#'
+#' @importClassesFrom MSnbase OnDiskMSnExp
+#' @importFrom MSnbase readMSData
+#' @importMethodsFrom MSnbase filterRt filterEmptySpectra
+#' @importFrom methods new
 #'
 #' @examples
-#' 
-#' 
-#' 
-importRawData <- function(sampleInfo = setup$sampleInfo, rtFilter = NULL, timeUnit = "min",
-                          msLevel = c(1,2), centroidedData = TRUE, removeEmptySpectra = TRUE, save = TRUE, projPath = setup$projPath) {
-  
-  #Examples
-  # setup <- ntsIUTA::makeSetup(projPath = system.file(package = "ntsIUTA", dir = "extdata"), save = FALSE)
-  # rawDataExample <- ntsIUTA::importRawData(setup$sampleInfo[1:3,], save = FALSE, centroidedData = TRUE)
-  # rawDataExample
-  
-  rawData <- base::suppressWarnings(MSnbase::readMSData(sampleInfo$filePath[drop = TRUE],
-                                                        pdata = methods::new("NAnnotatedDataFrame",
-                                                                             base::data.frame(sample_name = sampleInfo$sample,
-                                                                                              sample_group = sampleInfo$group)),
-                                                        mode = "onDisk",
-                                                        centroided. = centroidedData,
-                                                        smoothed. = FALSE))
-  
-  if(!base::is.null(rtFilter))
-  {
-    if(timeUnit == "min") rtFilter = rtFilter*60
-    rawData <- MSnbase::filterRt(rawData, rt = rtFilter, msLevel. = msLevel)
+#' sampleInfo <- ntsIUTA::setupProject(projPath = system.file(package = "ntsIUTA", dir = "extdata"), save = FALSE)
+#' rawData <- ntsIUTA::importRawData(sampleInfo[1,], save = FALSE, centroidedData = TRUE)
+#' rawData
+#'
+importRawData <- function(sampleInfo = sampleInfo,
+                          rtFilter = NULL,
+                          timeUnit = "min",
+                          msLevel = c(1, 2),
+                          centroidedData = TRUE,
+                          removeEmptySpectra = TRUE,
+                          save = FALSE,
+                          projPath = getwd()) {
+
+  rawData <- suppressWarnings(
+    readMSData(sampleInfo$filePath[drop = TRUE],
+               pdata = new("NAnnotatedDataFrame",
+                data.frame(sample_name = sampleInfo$sample,
+                           sample_group = sampleInfo$group)),
+               mode = "onDisk",
+               centroided. = centroidedData,
+               smoothed. = FALSE)
+  )
+
+  if (!is.null(rtFilter)) {
+    if (timeUnit == "min") rtFilter <- rtFilter * 60
+    rawData <- filterRt(rawData, rt = rtFilter, msLevel. = msLevel)
   }
-  
-  if(removeEmptySpectra) rawData <- base::suppressWarnings(MSnbase::filterEmptySpectra(rawData))
-  
-  
-  if (save)
-  {
-    rData <- base::paste0(projPath,"\\rData")
-    if (!base::dir.exists(rData)) base::dir.create(rData)
-    base::saveRDS(rawData, file = base::paste0(rData,"\\rawData.rds"))
+
+  if (removeEmptySpectra) rawData <- filterEmptySpectra(rawData)
+
+  polarity <- unique(sampleInfo$polarity)
+  polarity <- ifelse("positive" %in% polarity, "positive", "negative")
+
+  if (save) {
+    saveObject(projPath = projPath,
+               polarity = polarity,
+               rawData = rawData)
   }
-  
+
   return(rawData)
-  
-  
-  #Options to save information from raw data
-  #raw[["rawchrom"]] <- chromatogram(rawData, aggregationFun = "max")
-  #raw[["emptyspec"]] <- length(which(MSnbase::peaksCount(rawData) == 0))
-  
-  #TODO For examples afterwards
-  # file <- dir(system.file(package = "MSnbase", dir = "extdata"),
-  #             full.name = TRUE,
-  #             pattern = "mzXML$")
-  
-  #TODO Para verificar se of ficheiros tem centroided MS data ou nao. Pode sugerir para fazer centroiding
-  #TestDataTypeCent <- table(MSnbase::isCentroided(MSnbase::filterFile(rawData_cent, 1)), useNA = "always")
-  #TestDataTypeCent <- table(MSnbase::isCentroidedFromFile(MSnbase::filterFile(rawData_cent, 1)), useNA = "always")
-  
-  
+
 }
 
 
 
-#TODO To add better descriptions
-
 #' @title centroidProfileData
-#' @description Centroid profile MS data with additional smoothing and refinement of the m/z.
-#' 
-#' @param rawData The \linkS4class{OnDiskMSnExp} object with profile data for centroiding.
-#' @param smoothing Logical, set to \code{TRUE} for applying smothing to the profile data.
-#' @param refineMZ Logical, set to \code{TRUE} for applying \emph{m/z} refinement before centroiding.
-#' @param methodSmoothing Method for smoothing. 
-#' @param halfWindowSize The window size of the filter.
-#' @param polynomialOrder Polynomial order for smothing, default is 4.
-#' @param methodRefineMz Method for refinement.
-#' @param k Number of closest signals to the centroid.
-#' @param signalPercentage Minimum signal percentage of centroids to refine \emph{m/z}.
-#' @param stopAtTwo Logical, set to \code{TRUE} for allowed two consecutive equal or higher signals.
-#' \code{FALSE} will stop when one equal or higher centroid is found.
-#' @param save Logical, set to \code{TRUE} to save the object rawData in the \strong{rData} folder.
-#' Note, that the profile files will be replaced by the produced centroided files.
-#' @param projPath If save is \code{TRUE}, the saving location or project path should be given.
-#' The default is the \code{projPath} in the object \code{setup}.
+#' @description Centroiding of profile data with additional possibility for data smoothing before centroiding and \emph{m/z} refinement.
+#' The \code{centroidProfileData} function combines functions \code{smooth} and \code{pickPeaks}
+#' from the \code{MSnbase} package, see references.
 #'
-#' @return Centroiding of profile data from mzML and mzXML files in an \linkS4class{OnDiskMSnExp} object.
-#' 
+#' @param raw A \linkS4class{OnDiskMSnExp} object with profile data for centroiding.
+#' @param halfwindow Sets the window size for centroiding as \code{2 * halfwindow + 1}.
+#' The \code{halfwindow} should be slightly larger than the full width at half maximum of the profile peak.
+#' @param SNR The signal-to-noise ratio to consider a local maximum as peak.
+#' @param noiseMethod The method to estimate the noise level. Possible methods are "MAD" (the default) and "SuperSmoother".
+#' See \code{?MSnbase::pickPeaks} for more information.
+#' @param smoothing Logical, set to \code{TRUE} for applying smothing to the profile data before centroiding. The default is FALSE.
+#' @param methodSmoothing Method for data smoothing. The possible methods are "SavitzkyGolay" (the default) and "MovingAverage".
+#' See \code{?MSnbase::smooth} for more information and arguments, which are passed by \code{...}.
+#' @param ... Arguments for selected smoothing method. See \code{?MSnbase::smooth} for possible arguments for each method.
+#' @param methodRefineMz Method for refinement. Possible methods are "none" (the default, for not applying \emph{m/z} refinement), "kNeighbors" and "descendPeak".
+#' See \code{?MSnbase::pickPeaks} for more information.
+#' @param k When refine method is "kNeighbors", \code{k} is number of closest signals to the centroid.
+#' @param signalPercentage When refine method is "descendPeak", \code{signalPercentage} is the minimum signal percentage of centroids to refine \emph{m/z}.
+#' @param stopAtTwo Logical, when refine method is "descendPeak", set to \code{TRUE} for allowing two consecutive equal or higher signals.
+#' \code{FALSE} will stop when one equal or higher centroid is found.
+#' @param save Logical, set to \code{TRUE} to replace the original files by the centroided files in disk.
+#' The location is taken from the originbal file paths.
+#'
+#' @return Centroided \linkS4class{OnDiskMSnExp} object.
+#' When \code{save} is set to TRUE, the profile data in the original mzML or mzXML files are replaced by the centroided data.
+#'
+#' @references
+#' \insertRef{MSnbase2}{ntsIUTA}
+#'
 #' @export
 #'
-#' @import magrittr
-#' @importFrom MSnbase smooth pickPeaks fileNames writeMSData
+#' @importClassesFrom MSnbase OnDiskMSnExp
+#' @importMethodsFrom MSnbase fileNames smooth pickPeaks writeMSData
 #'
 #' @examples
-#' 
-#' 
-#' 
-centroidProfileData <- function(rawData, smoothing = TRUE, refineMZ = TRUE,
-                                methodSmoothing = "SavitzkyGolay", halfWindowSize = 5, polynomialOrder = 4,
-                                methodRefineMz = "kNeighbors", k = 2, signalPercentage = 10, stopAtTwo = TRUE,
-                                save = TRUE, projPath = setup$projPath) {
-  
-  #require(magrittr)
-  
-  if (smoothing)
-  {
-    rawData <- rawData %>% MSnbase::smooth(method = methodSmoothing,
-                                           halfWindowSize = halfWindowSize,
-                                           polynomialOrder = polynomialOrder)
+#'
+centroidProfileData <- function(raw,
+                                halfwindow = 2,
+                                SNR = 0,
+                                noiseMethod = "MAD",
+                                smoothing = FALSE,
+                                methodSmoothing = "SavitzkyGolay",
+                                methodRefineMz = "kNeighbors",
+                                k = 1,
+                                signalPercentage = 10, stopAtTwo = TRUE,
+                                save = FALSE, ...) {
+
+  if (smoothing) {
+    raw <- raw %>% MSnbase::smooth(method = methodSmoothing, ...)
   }
-  
-  if (refineMZ)
-  {
-    if (methodRefineMz == "kNeighbors") {
-      rawData <- MSnbase::pickPeaks(rawData, refineMz = methodRefineMz, k = k) }
-    
+
+  if (methodRefineMz == "kNeighbors") {
+    raw <- pickPeaks(raw,
+                     halfWindowSize = halfwindow,
+                     SNR = SNR,
+                     noiseMethod = noiseMethod,
+                     refineMz = methodRefineMz,
+                     k = k)
+  } else {
     if (methodRefineMz == "descendPeak") {
-      rawData <- MSnbase::pickPeaks(rawData, refineMz = methodRefineMz, signalPercentage = 0.1, stopAtTwo = TRUE) }
+      raw <- pickPeaks(raw,
+                       halfWindowSize = halfwindow,
+                       SNR = SNR,
+                       noiseMethod = noiseMethod,
+                       refineMz = methodRefineMz,
+                       signalPercentage = 0.1,
+                       stopAtTwo = TRUE)
+    } else {
+      raw <- pickPeaks(raw,
+                       halfWindowSize = halfwindow,
+                       SNR = SNR,
+                       noiseMethod = noiseMethod,
+                       refineMz = "none")
+    }
   }
-  
-  #Save centroided files in disk
+
   if (save) {
-    fls_new <- MSnbase::fileNames(rawData)
-    MSnbase::writeMSData(data_cent, file = fls_new)
-    
+    fls_new <- fileNames(raw)
+    writeMSData(raw, file = fls_new)
   }
-  
-  #TODO Finish function to centroid data
-  return(rawData)
-  
+
+  return(raw)
+
 }
