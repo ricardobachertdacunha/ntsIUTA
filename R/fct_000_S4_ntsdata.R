@@ -88,6 +88,8 @@ setClass("ntsData",
 )
 
 
+
+
 #' @describeIn ntsData Informative printing.
 #' @export
 #' @importFrom dplyr count
@@ -156,9 +158,13 @@ setMethod("show", "ntsData", function(object) {
 })
 
 
+
+
 #' @describeIn ntsData Getter for samples.
 #' @export
 setMethod("samples", "ntsData", function(object) object@samples$sample)
+
+
 
 
 #' @describeIn ntsData Getter for sample replicate groups.
@@ -172,6 +178,8 @@ setMethod("sampleGroups<-", "ntsData", function(object, value) {
   object@samples$group <- value
   return(object)
 })
+
+
 
 
 #' @describeIn ntsData Getter for blank replicate groups.
@@ -188,6 +196,28 @@ setMethod("blanks<-", "ntsData", function(object, value) {
   object@samples$blank <- value
   return(object)
 })
+
+
+
+#' @describeIn ntsData Getter for QC replicate sample groups.
+#' @export
+setMethod("QC", "ntsData", function(object) object@QC$samples$sample)
+
+
+#' @describeIn ntsData Setter for QC replicate sample groups.
+#' @export
+setMethod("QC<-", "ntsData", function(object, value) {
+  if (FALSE %in% unique(value %in% object@samples$group)) {
+    cat("Sample replicate group/s not found in the sample groups.")
+  } else {
+    object@QC$samples <- object@samples[object@samples$group %in% value,]
+    object@samples <- object@samples[!(object@samples$group %in% value),]
+  }
+  return(object)
+})
+
+
+
 
 #' @describeIn ntsData Subset on samples.
 #' @param \dots Ignored.
@@ -226,20 +256,8 @@ setMethod("[", c("ntsData", "ANY", "missing", "missing"), function(x, i, ...) {
   
 })
 
+# TODO add method Peaks to see peaks from peaks table
 
-#' @describeIn ntsData Getter for QC replicate sample groups.
-#' @export
-setMethod("QC", "ntsData", function(object) object@QC$samples$sample)
+# TODO add method Features to extract features from features table
 
-
-#' @describeIn ntsData Setter for QC replicate sample groups.
-#' @export
-setMethod("QC<-", "ntsData", function(object, value) {
-  if (FALSE %in% unique(value %in% object@samples$group)) {
-    cat("Sample replicate group/s not found in the sample groups.")
-  } else {
-    object@QC$samples <- object@samples[object@samples$group %in% value,]
-    object@samples <- object@samples[!(object@samples$group %in% value),]
-  }
-  return(object)
-})
+# TODO make filter function/method and create filtering parameters slot

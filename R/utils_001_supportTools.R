@@ -1,5 +1,52 @@
 
 
+#' @title saveObject
+#' @description Saves project objects as RDS in the rdata folder (the default)
+#' or as other formats in the results folder, when specified.
+#' If not present, the folders are created.
+#'
+#' @param ... An object to save.
+#' @param format The saving format. The default is \code{rds},
+#' which is saved in rdata folder.
+#' Other formats are saved in the results folder.
+#' @param filename A character string with the desired RDS file name.
+#' @param path The project path to save the \code{obj}.
+#' The default is the working directory as obtained by \code{getwd()}.
+#' Not needed if \code{obj} is of class \linkS4class{ntsData}
+#' since the path is taken from the slot \code{path}.
+#'
+#' @export
+#'
+saveObject <- function(format = "rds",
+                       filename = NULL,
+                       path = getwd(), ...) {
+  
+  dots <- list(...)
+  
+  if (class(dots[[1]]) == "ntsData") path <- dots[[1]]@path
+  
+  if (format == "rds") {
+    rdata <- paste0(path, "\\rdata")
+    if (!dir.exists(rdata)) dir.create(rdata)
+    
+    if (is.null(filename)) {
+      if (class(dots[[1]]) == "ntsData") {
+        filename <- "ntsData"
+      } else {
+        filename <- as.character(names(dots[[1]]))
+      }
+    }
+    
+    saveRDS(dots[[1]], file = paste0(rdata, "\\", filename, ".rds"))
+    
+  }
+  
+  # TODO Implement saving for other file types, ex. plots and tables
+  
+}
+
+
+
 #' @title getScreeningListTemplate
 #'
 #' @param projPath The project folder location. Default is \code{setup$projPath}.
