@@ -1,8 +1,243 @@
 
 
 #' @title plotFeatures
+#' @description Plot features from a \linkS4class{featureGroups}.
+#'
+#' @param features A \linkS4class{featureGroups} object with one or more files and grouped peaks (i.e., features).
+#' @param fileIndex The index of the file/s to extract the centroids or profile data.
+#' @param ID The identifier of the features of interest. When not \code{NULL}, overwrites any given \code{mz} and \code{rt} value.
+#' @param mz Optional target \emph{m/z} to find features using the mass deviation specified by the \code{ppm} parameter.
+#' @param ppm The mass deviation to extract the features when \code{mz} is specified.
+#' @param rt The retention time in minutes or seconds, depending on the defined \code{rtUnit}, see below. Only used when \code{mz} is specified.
+#' @param rtWindow The time deviation to collect features. The time unit is the defined by \code{rtUnit}.
+#' A time interval can be given with a length 2 vector, defining the minimum and maximum retention time.
+#' @param rtUnit Possible entries are \code{min} or \code{sec}. The default is \code{min}.
+#' @param title The title for the plot, optional.
+#' @param plotBy The grouping for the plot. Possible are "samples", "replicates" and "features"
+#' for plotting by individual samples, replicate samples or features, respectively. The default is "features".
+#'
+#' @return A plot produced through pkg{gglpot2}.
+#'
+#' @note If \code{ID} and \code{mz} are \code{NULL} all the features in the \linkS4class{featureGroups} object are plotted.
+#'
+#' @export
+#'
+#' @importClassesFrom patRoon featureGroups
+#' @importClassesFrom xcms XCMSnExp
+#' @importMethodsFrom patRoon algorithm analyses
+#' @importMethodsFrom xcms featureDefinitions chromPeaks
+#' @importFrom xcms featureChromatograms
+#' @importFrom BiocGenerics as.data.frame
+#' @importFrom plotly toRGB plot_ly add_trace layout
+#'
+#' @examples
+#'
+plotFeatures <- function(features = features,
+                         fileIndex = NULL,
+                         ID = NULL,
+                         mz = NULL, ppm = 5,
+                         rt = NULL, rtWindow = 1,
+                         rtUnit = "min",
+                         title = NULL, plotBy = "features") {
+
+  fileIndex <- NULL
+  ID <- NULL #"M748_R891_1274"
+  mz <- 748.4842
+  rt <- 14.9
+  rtUnit <- "min"
+  ppm <- NULL
+  rtWindow <- NULL
+  plotBy <- "features"
+  title <- NULL
+
+  x <- featuresOpenms
+
+  if (!is.null(fileIndex)) x <- x[fileIndex, ]
+
+  if (!is.null(ID)) {
+    x <- x[, ID]
+  } else {
+    if (!is.null(mz)) {
+      mzr <- mzrBuilder(mz = mz, ppm = ppm)
+      rtr <- rtrBuilder(rt = rt, rtWindow = rtWindow, rtUnit = rtUnit)
+      x <- patRoon::filter(obj = x, retentionRange = rtr, mzRange = mzr)
+    }
+  }
+
+  ft <- names(x)
+
+  sInfo <- analyses(x)
+
+  pks <- patRoon::as.data.frame(x,
+    average = FALSE,
+    areas = FALSE,
+    features = TRUE,
+    regression = FALSE
+  )
+
+  EICs <- list()
+
+  for (i in seq_len(nrow(pks))) {
+    flidx <- which(sInfo == pks$analysis[i])
+    EICs[[rownames(pks)[i]]] <- extractEIC(x, fileIndex = flidx,
+               mz = c(pks$mzmin[i], pks$mzmax[i]),
+               rtWindow = c(pks$retmin[i], pks$retmax[i]),
+               rtUnit = "sec")
+  }
+
+
+
+
+
+
+  if (algorithm(x) == "openms") {
+    x <- getXCMSnExp(x)
+    y <- temp
+    sn <- matrix(rep(0, nrow(chromPeaks(y))), ncol = 1)
+    colnames(sn) <- "sn"
+    chromPeaks(y) <- cbind(chromPeaks(y), sn)
+    featureDefinitions(y) <- featureDefinitions(temp)
+  }
+  
+  
+
+  def <- xcms::featureDefinitions(y, type = "within", msLevel = 1)
+
+  chrom <- xcms::featureChromatograms(y, aggregationFun = "sum", expandRt = 60, include = "feature_only", filled = TRUE, missing = 0)
+
+head(xcms::chromPeaks(y, isFilledColumn = TRUE))$sn <- 0
+
+sn <- matrix(rep(0, nrow(xcms::chromPeaks(y))), ncol = 1)
+colnames(sn) <- "sn"
+
+head(sn)
+
+xcms::chromPeaks(y) <- cbind(xcms::chromPeaks(y), sn)
+
+xcms::featureDefinitions(y) <- xcms::featureDefinitions(x@xdata)
+
+
+
+  features <- base::character()
+  for (f in 1:base::length(FT)) {
+    features <- c(features, paste("M", base::round(defFT$mzmed[base::row.names(defFT) %in% FT[f],drop = T], digits = 0),
+                                  "_R", base::round(defFT$rtmed[base::row.names(defFT) %in% FT[f],drop = T], digits = 0),
+                                  "_", FT[f],sep=""))
+  }
+  
+  # temp_rtFT <- as.data.frame(xcms::chromPeaks(y)[base::unlist(defFT[base::row.names(defFT) %in% FT[f] ,"peakidx"]), ])
+  # chrom <- MSnbase::chromatogram(y, aggregationFun = "sum", rt = rtr, msLevel = 1, missing = 0,
+  #                                mz = c(base::min(temp_rtFT$mzmin-(ppm/1E6*temp_rtFT$mzmin), na.rm = T),
+  #                                       base::max(temp_rtFT$mzmax+(ppm/1E6*temp_rtFT$mzmax), na.rm = T)))
+  chrom <- xcms::featureChromatograms(y, features = FT, aggregationFun = "sum", expandRt = 60, include = "any", filled = TRUE, missing = 0)
+  
+  df <- base::data.frame(rtime = base::as.numeric(), intensity = base::as.numeric(), sample = base::as.character(), FT = base::as.character())
+  for (f in 1:base::nrow(def)) {
+    for (s in 1:base::ncol(chrom)) {
+      temp <- chrom[f, s]
+      temp <- BiocGenerics::as.data.frame(temp)
+      temp$sample <- y$sample_name[s]
+      temp$ft <- ft[f]
+      df <- base::rbind(df,temp)
+    }
+  }
+  
+  #colors <- ntsIUTA::getColors(y, "samples")
+  
+  if (base::is.null(title)) title <- if (plotBy == "features") base::ifelse(base::length(FT) == 1, features, "")
+  
+  title <- base::list(text = title, x = 0.1, y = 0.98, font = base::list(size = 14, color = "black"))
+  
+  xaxis <- base::list(linecolor = plotly::toRGB("black"), linewidth = 2, title = "Retention Time (sec.)",
+                      titlefont = base::list(size = 12, color = "black"),
+                      range = c(rtr[1], rtr[2]), autotick = T, ticks = "outside")
+  
+  yaxis = base::list(linecolor = plotly::toRGB("black"), linewidth = 2, title = "Intensity",
+                     titlefont = list(size = 12, color = "black"))
+  
+  
+  if (plotBy == "samples") {
+    colors <- ntsIUTA::getColors(y, "samples")
+    legG <- y$sample_name
+  } else {
+    if (plotBy == "features") {
+      colors <- ntsIUTA::getColors(base::length(features))
+      legG <- features
+    } else {
+      colors = ntsIUTA::getColors(y, "groups")
+      legG <- y$sample_name
+    }
+  }
+  
+  
+  # if (plotBy == "replicates") legG <- y$sample_group
+  # if (plotBy == "samples") legG <- y$sample_name
+  
+  #By feature the eic followed by the integrated are, legend grouped as function input plotBy
+  plot <- plotly::plot_ly(df)
+  showlegend = base::rep(0,base::length(features))
+  for (s in 1:base::ncol(chrom)) { #base::ncol(feat)
+    for (f in 1:base::length(FT)) { #base::nrow(feat)
+      showlegend[f] = 1 + showlegend[f]
+      plot <- plot %>% plotly::add_trace(df,
+                                         x = df[df$FT == FT[f] & df$sample ==  y$sample_name[s], "rtime"],
+                                         y = df[df$FT == FT[f] & df$sample ==  y$sample_name[s], "intensity"],
+                                         type = "scatter", mode = "lines",
+                                         line = base::list(width = 0.5, color = base::unname(colors[base::ifelse(plotBy == "features", f, s)])),
+                                         connectgaps = TRUE,
+                                         name = legG[base::ifelse(plotBy == "features", f, s)],
+                                         legendgroup = legG[base::ifelse(plotBy == "features", f, s)],
+                                         showlegend = base::ifelse(plotBy == "samples", base::ifelse(f == 1, T, F),
+                                                                   base::ifelse(plotBy == "features", base::ifelse(showlegend[f] == 1, T, F),
+                                                                                base::ifelse(f == 1, T, F))))
+      
+      rtFT <- base::as.data.frame(xcms::chromPeaks(y)[base::unlist(defFT[base::row.names(defFT) %in% FT[f] ,"peakidx"]), ])
+      if(unique(TRUE %in% (rtFT$sample == s))) {
+        rtFT <- rtFT[rtFT$sample == s, c("rtmin","rtmax")]
+        plot <- plot %>%  plotly::add_trace(df,
+                                            x = df[df$FT == FT[f] & df$sample ==  y$sample_name[s] & df$rtime >= rtFT[1,1] & df$rtime <= rtFT[1,2], "rtime"],
+                                            y = df[df$FT == FT[f] & df$sample ==  y$sample_name[s] & df$rtime >= rtFT[1,1] & df$rtime <= rtFT[1,2],"intensity"],
+                                            type = "scatter", mode =  "lines+markers", fill = 'tozeroy', connectgaps = TRUE,
+                                            fillcolor = base::paste(color = base::unname(colors[base::ifelse(plotBy == "features", f, s)]),50, sep = ""),
+                                            line = base::list(width = 0.1, color = base::unname(colors[base::ifelse(plotBy == "features", f, s)])),
+                                            marker = base::list(size = 3, color = base::unname(colors[base::ifelse(plotBy == "features", f, s)])),
+                                            name = legG[base::ifelse(plotBy == "features", f, s)],
+                                            legendgroup = legG[base::ifelse(plotBy == "features", f, s)],
+                                            showlegend = F,
+                                            hoverinfo = 'text', text = base::paste('</br> feature: ', features[f],
+                                                                                   '</br> sample: ', y$sample_name[s]))
+      }
+    }
+  }
+  # showlegend = 0
+  # for (s in 1:base::ncol(chrom)) { #base::ncol(feat)
+  #   for (f in 1:base::nrow(chrom)) { #base::nrow(feat)
+  #     rtFT <- base::as.data.frame(xcms::chromPeaks(y)[base::unlist(defFT[base::row.names(defFT) %in% FT[f] ,"peakidx"]), ])
+  #     if(base::unique(TRUE %in% (rtFT$sample == s))) {
+  #       showlegend <- 1 + showlegend
+  #       rtFT <- rtFT[rtFT$sample == s, c("rtmin","rtmax")]
+  #       plot <- plot %>%  plotly::add_trace(df,
+  #                                           x = df[df$FT == FT[f] & df$sample ==  y$sample_name[s] & df$rtime >= rtFT[1,1] & df$rtime <= rtFT[1,2], "rtime"],
+  #                                           y = df[df$FT == FT[f] & df$sample ==  y$sample_name[s] & df$rtime >= rtFT[1,1] & df$rtime <= rtFT[1,2],"intensity"],
+  #                                           type = "scatter", mode = "lines+markers", fill = 'tozeroy', connectgaps = TRUE, fillcolor = paste(color = base::unname(colors[s]),50, sep = ""),
+  #                                           line = base::list(width = 0.1, color = base::unname(colors[s])),
+  #                                           marker = base::list(size = 3, color = base::unname(colors[s])),
+  #                                           name = features[f], legendgroup = FT[f], showlegend = base::ifelse(showlegend == 1, T, F))
+  #     }
+  #   }
+  # }
+  
+  plot <- plot %>% plotly::layout(xaxis = xaxis,yaxis = yaxis, title = title) #legend = list(title = list(text='<b> Sample: </b>'))
+  
+  return(plot)
+  
+}
+
+
+
+#' @title plotlyFeatures
 #' @description Iterative plot for features from an \linkS4class{XCMSnExp} or \linkS4class{featureGroups} containing grouped peaks.
-#' 
+#'
 #' @param x An \linkS4class{XCMSnExp} or \linkS4class{featureGroups} object with one or more files and grouped peaks.
 #' @param fileIndex The index of the file/s to extract the centroids or profile data.
 #' @param features The identifier of the features of interest.
@@ -17,9 +252,9 @@
 #' for ploting by individual samples, relpicate samples or features, respectively. The default is "samples".
 #'
 #' @return An iterative plot.
-#' 
+#'
 #' @export
-#' 
+#'
 #' @import magrittr
 #' @importFrom xcms filterFile featureDefinitions featureChromatograms chromPeaks
 #' @importMethodsFrom MSnbase rtime
@@ -28,10 +263,8 @@
 #' @importFrom plotly toRGB plot_ly add_trace layout
 #'
 #' @examples
-#' 
-#' 
-#' 
-plotFeatures <- function(x = patData, fileIndex = NULL, 
+#'
+plotFeatures <- function(x = patData, fileIndex = NULL,
                          features = NULL,
                          mz = NULL, ppm = 5,
                          rt = NULL, rtWindow = 1,
@@ -208,7 +441,4 @@ plotFeatures <- function(x = patData, fileIndex = NULL,
   return(plot)
   
 }
-
-
-
 

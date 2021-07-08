@@ -5,7 +5,7 @@
 \title{extractEIC}
 \usage{
 extractEIC(
-  raw = rawData,
+  obj = NULL,
   fileIndex = NULL,
   mz = NULL,
   ppm = NULL,
@@ -17,7 +17,7 @@ extractEIC(
 )
 }
 \arguments{
-\item{raw}{An \linkS4class{OnDiskMSnExp} object with one or more files.}
+\item{obj}{An \linkS4class{ntsData} object with one or more files.}
 
 \item{fileIndex}{The index of the file/s to extract the centroids or profile data.}
 
@@ -42,7 +42,7 @@ A \code{data.frame} with the columns \code{file}, \code{rt}, \code{mz} and \code
 representing the mzML file index, the retention time, the \emph{m/z} and the intensity, respectively.
 }
 \description{
-Extracts the extracted ion chromatogram (EIC) from \code{rawData} of a specified \emph{m/z}.
+Extracts an ion chromatogram (EIC) from raw data of a specified \emph{m/z}.
 }
 \examples{
 

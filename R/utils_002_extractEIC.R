@@ -1,9 +1,9 @@
 
 
 #' @title extractEIC
-#' @description Extracts the extracted ion chromatogram (EIC) from \code{rawData} of a specified \emph{m/z}.
+#' @description Extracts an ion chromatogram (EIC) from raw data of a specified \emph{m/z}.
 #'
-#' @param raw An \linkS4class{OnDiskMSnExp} object with one or more files.
+#' @param obj An \linkS4class{ntsData} object with one or more files.
 #' @param fileIndex The index of the file/s to extract the centroids or profile data.
 #' @param mz Target \emph{m/z} to the EIC.
 #' @param ppm The mass deviation to extract the data for the EIC in \code{ppm}.
@@ -23,21 +23,18 @@
 #' @importClassesFrom MSnbase OnDiskMSnExp
 #' @importClassesFrom ProtGenerics ProcessingStep
 #' @importFrom ProtGenerics ProcessingStep executeProcessingStep
-#' @importMethodsFrom ProtGenerics filterMz
+#' @importMethodsFrom ProtGenerics filterMz rtime
 #' @importMethodsFrom MSnbase filterFile filterRt filterMz filterMsLevel rtime
 #' @importFrom methods as
 #' @importFrom data.table rbindlist
 #'
 #' @examples
 #'
-extractEIC <- function(raw = rawData, fileIndex = NULL,
+extractEIC <- function(obj = NULL, fileIndex = NULL,
                        mz = NULL, ppm = NULL,
                        rt = NULL, rtWindow = NULL,
                        rtUnit = "sec", msLevel = 1,
                        normIntensity = FALSE) {
-
-  #Examples
-  # extractEIC(ntsIUTA::rawDataExample, fileIndex = 1, mz = 233.0243, ppm = 20)
 
   # raw <- rawData
   # fileIndex <- 4:5
@@ -47,53 +44,35 @@ extractEIC <- function(raw = rawData, fileIndex = NULL,
   # ppm <- 20
   # rtWindow <- NULL
   # msLevel <- 1
+  
 
-  if (rtUnit == "min") if (!is.null(rt)) rt <- rt * 60
-  if (rtUnit == "min") if (!is.null(rtWindow)) rtWindow <- rtWindow * 60
-
-  if (!is.null(fileIndex)) {
-    raw <- filterFile(raw, fileIndex)
-  }
+  if (!is.null(fileIndex)) obj <- obj[fileIndex]
 
   mzr <- NULL
 
-  if (!is.null(mz)) {
-    if (length(mz) == 1) {
-      if (is.null(ppm)) ppm <- 20
-      mzr <- c(mz - ((ppm / 1E6) * mz), mz + ((ppm / 1E6) * mz))
-    }
-    if (length(mz) == 2) {
-      mzr <- c(mz[1], mz[2])
-    }
+  if (!is.null(mz)) mzr <- mzrBuilder(mz = mz, ppm = ppm)
+
+  rtr <- rtrBuilder(rt = rt, rtWindow = rtWindow, rtUnit = rtUnit)
+
+  if (is.null(rtr)) {
+    tt <- rtime(obj@MSnExp)
+    rtr <- c(min(tt), max(tt))
   }
 
-  rtr <- c(min(rtime(raw)), max(rtime(raw)))
-
-  if (!is.null(rt)) {
-    rtr <- c((rt) - ifelse(!is.null(rtWindow), rtWindow, 60),
-             (rt) + ifelse(!is.null(rtWindow), rtWindow, 60))
-  }
-
-  if (is.null(rt)) if (unique(!is.null(rtWindow))) if (length(rtWindow) == 2) {
-    rtr <- c(rtWindow[1], rtWindow[2])
-  }
-
-  raw <- filterRt(object = raw, rt = rtr, msLevel. = c(1, 2))
+  raw <- filterRt(object = obj@MSnExp, rt = rtr)
 
   raw <- filterMsLevel(raw, msLevel. = msLevel)
 
-  if (!is.null(mzr)) {
-    raw <- base::suppressWarnings(filterMz(raw, mz = mzr, msLevel. = msLevel))
-  }
+  if (!is.null(mzr)) raw <- suppressWarnings(filterMz(raw, mz = mzr))
 
-  raw <- base::suppressWarnings(methods::as(raw, "data.frame"))
+  raw <- suppressWarnings(methods::as(raw, "data.frame"))
 
   if (normIntensity) {
     raw <- split(raw, raw$file)
     for (j in seq_len(length(raw))) {
       raw[[j]]$i <- (raw[[j]]$i - min(raw[[j]]$i)) / (max(raw[[j]]$i) - min(raw[[j]]$i))
     }
-    raw <- data.table::rbindlist(lapply(raw, function(x) as.data.frame.list(x)), fill = TRUE)
+    raw <- rbindlist(lapply(raw, function(x) as.data.frame.list(x)), fill = TRUE)
   }
 
   return(raw)

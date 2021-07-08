@@ -15,8 +15,3 @@ Pastes a template .csv file of the screeningList into the projPath.
 \description{
 getScreeningListTemplate
 }
-\examples{
-
-
-
-}

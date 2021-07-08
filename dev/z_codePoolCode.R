@@ -1,23 +1,21 @@
 
 
-library(ntsIUTA)
+# library(ntsIUTA)
 
-projPath <- system.file(package = "ntsIUTA", dir = "extdata")
-sampleInfo <- setupProject(projPath, save = FALSE, makeNewProject = FALSE)
-sampleInfo <- sampleInfo[1:6, ]
+# projPath <- system.file(package = "ntsIUTA", dir = "extdata")
+# sampleInfo <- setupProject(projPath, save = FALSE, makeNewProject = FALSE)
+# sampleInfo <- sampleInfo[1:6, ]
 
-rawData <- importRawData(sampleInfo,
-                         rtFilter = c(13, 17),
-                         timeUnit = "min",
-                         centroidedData = NA,
-                         removeEmptySpectra = TRUE,
-                         save = FALSE)
+# rawData <- importRawData(sampleInfo,
+#                          rtFilter = c(13, 17),
+#                          timeUnit = "min",
+#                          centroidedData = NA,
+#                          removeEmptySpectra = TRUE,
+#                          save = FALSE)
 
-EIC_diuron <- ntsIUTA::extractEIC(rawData, fileIndex = 4, mz = 233.0243, ppm = 20)
+# EIC_diuron <- ntsIUTA::extractEIC(rawData, fileIndex = 4, mz = 233.0243, ppm = 20)
 
-plotRawChrom(rawData, fileIndex = 4, type = "tic", mz = 233.0243, ppm = 20, rt = 15, rtWindow = 2, rtUnit = "min")
-
-
+# plotRawChrom(rawData, fileIndex = 4, type = "tic", mz = 233.0243, ppm = 20, rt = 15, rtWindow = 2, rtUnit = "min")
 
 # projPath <- system.file(package = "ntsIUTA", dir = "extdata")
 
@@ -104,6 +102,12 @@ plotRawChrom(rawData, fileIndex = 4, type = "tic", mz = 233.0243, ppm = 20, rt =
 
 ### Code -----
 
+#' For \pkg{patRoon} the rawData should be the \code{sampleInfo} returning the respectives    and returns a \code{list} of \linkS4class{XCMSnExp}
+#' objects for each replicate sample group as defined in the \code{\link{setupProject}} function.
+#' The \linkS4class{XCMSnExp} objects can be conconated via \code{c()} function of the \pkg{xcms} package.
+#' We separate the peaks from each replicate group to facilitate workflows that include multi-project cross-analysis.
+#' The peak picking uses the function \code{\link[xcms]{chromatographic-peak-detection}} from the \pkg{xcms} package.
+#' Different methods for peak picking can be used. For more information, see documentation of \code{\link[xcms]{chromatographic-peak-detection}}.
 
 # sampleInfo <- ntsIUTA::setupProject(save = FALSE)
 # View(sampleInfo)

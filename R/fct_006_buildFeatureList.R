@@ -40,13 +40,14 @@ buildFeatureList <-  function(x = featData, xA = featComp, xPat = patData,
                               save = TRUE, projPath = setup$projPath){
   
   maxMultiProcess = TRUE
-  if (maxMultiProcess)
-  {
-    snow <- BiocParallel::registered("SnowParam")
-    if (snow$workers < parallel::detectCores())
-    {
-      snow <- BiocParallel::SnowParam(workers = parallel::detectCores()-1, type = "SOCK", exportglobals = FALSE, progressbar = TRUE)
-      BiocParallel::register(snow, default = TRUE)
+  if (maxMultiProcess) {
+    snow <- registered("SnowParam")
+    if (snow$workers < detectCores()) {
+      snow <- SnowParam(workers = detectCores() - 1,
+                        type = "SOCK",
+                        exportglobals = FALSE,
+                        progressbar = TRUE)
+      register(snow, default = TRUE)
     }
   }
   

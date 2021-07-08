@@ -5,52 +5,56 @@
 \title{importRawData}
 \usage{
 importRawData(
-  sampleInfo = sampleInfo,
+  obj = NULL,
   rtFilter = NULL,
   timeUnit = "min",
   msLevel = c(1, 2),
   centroidedData = TRUE,
   removeEmptySpectra = TRUE,
-  save = FALSE,
-  projPath = getwd()
+  save = FALSE
 )
 }
 \arguments{
-\item{sampleInfo}{The sample \code{data.table} obtained by the \code{\link{setupProject}} function.
-Note that the \code{sampleInfo} can be filtered beforehand to exclude unwanted mzML files or to redefine the name of replicate sample groups.}
+\item{obj}{An \linkS4class{ntsData} object.}
 
-\item{rtFilter}{A numeric vector with length 2 defining the minimum and maximum chromatographic retention time for the listed files respectively.
-If the files have different time dimensions, \code{rtFilter} should be \code{NULL}.}
+\item{rtFilter}{A numeric vector with length 2 defining the minimum
+and maximum chromatographic retention time for the listed MS files.}
 
-\item{timeUnit}{If \code{rtFilter} is given in minutes please keep the default value \code{min} otherwise change to \code{sec} for seconds.}
+\item{timeUnit}{The unit of the \code{rtFilter}.
+Possible values are \code{min} (the default) and \code{sec}.}
 
-\item{msLevel}{The MS dimensions for the rtFilter to be applied. Default is for both MS1 and MS2 with \code{c(1,2)}.}
+\item{msLevel}{The MS dimensions for the rtFilter to be applied.
+The default is both MS1 and MS2 using \code{c(1,2)}.}
 
-\item{centroidedData}{Logical, set to \code{TRUE} for mzML files with centroided data or \code{FALSE} for profile data.
-\code{NA} will collect all the data from the mzML file.}
+\item{centroidedData}{Logical, set to \code{TRUE} for MS files
+with centroided data or \code{FALSE} for profile data.
+\code{NA} will collect all the data from the MS files.}
 
 \item{removeEmptySpectra}{Logical, set to TRUE if empty spectra should be removed.
 It is recommended to remove empty spectra as it may cause issues during creation of features.}
 
-\item{save}{Logical, set to \code{TRUE} to save the object rawData in the \strong{rData} folder.
-If \strong{rData} folder does not exist in given \code{projPath} from \code{setup}, the folder will be created.}
-
-\item{projPath}{If save is \code{TRUE}, the saving location or project path should be given.
-The default is the \code{projPath} in the object \code{setup}.}
+\item{save}{Logical, set to \code{TRUE} to save updated
+\linkS4class{ntsData} object in the \strong{rdata} folder.
+Note that \code{TRUE} overwrites the existing \linkS4class{ntsData} object.
+Optionally, a character string can be given instead of \code{TRUE}
+to be used as file name, avoiding overwriting.}
 }
 \value{
-The output is a standard \linkS4class{OnDiskMSnExp} object,
-which can be used within the workflow of \pkg{ntsIUTA} but also within \pkg{Bioconductor} packages, such as \pkg{xcms}.
+The \linkS4class{ntsData} object including a standard
+\linkS4class{OnDiskMSnExp} object in the MSnExp slot. Note, that
+the \linkS4class{OnDiskMSnExp} object can also be used within
+the workflow of \pkg{Bioconductor} packages.
 }
 \description{
-Function to import MS data from the mzML files listed in \code{sampleInfo} from the \code{setupProject} object.
-Files should contain centroided spectra.
-The function uses the function \code{\link[MSnbase]{readMSData}} from the \code{MSnbase} package to read the mzML files.
+Function to import MS data from the MS files listed in
+the \linkS4class{ntsData} object. Files should contain centroided spectra.
+The function \code{\link[MSnbase]{readMSData}} from the
+\code{MSnbase} package is used to read the MS files.
 }
 \examples{
-sampleInfo <- ntsIUTA::setupProject(projPath = system.file(package = "ntsIUTA", dir = "extdata"), save = FALSE)
-rawData <- ntsIUTA::importRawData(sampleInfo[1,], save = FALSE, centroidedData = TRUE)
-rawData
+path <- system.file(package = "ntsIUTA", dir = "extdata")
+dt <- setupProject(path = path, save = FALSE)
+dt <- importRawData(obj[1], save = FALSE, centroidedData = TRUE)
 
 }
 \references{

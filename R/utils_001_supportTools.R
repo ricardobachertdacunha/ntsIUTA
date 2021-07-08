@@ -5,15 +5,11 @@
 #' @param projPath The project folder location. Default is \code{setup$projPath}.
 #'
 #' @return Pastes a template .csv file of the screeningList into the projPath.
-#' 
+#'
 #' @export
 #'
-#' @examples
-#' 
-#' 
-#' 
 getScreeningListTemplate <- function(projPath = setup$projPath) {
-  base::file.copy(from = base::paste0(base::system.file(package = "ntsIUTA", dir = "extdata"),"/screeningList_template.csv"),
+  base::file.copy(from = base::paste0(base::system.file(package = "ntsIUTA", dir = "extdata"), "/screeningList_template.csv"),
                   to = setup$projPath,
                   overwrite = FALSE)
 }
@@ -23,26 +19,19 @@ getScreeningListTemplate <- function(projPath = setup$projPath) {
 #' @title getColors
 #'
 #' @param x An \linkS4class{OnDiskMSnExp} object with one or more files or the number of colors to be produced.
-#' @param which Possible entries are \code{groups} and \code{samples} for getting group or samples colors, respectively.
+#' @param which Possible entries are \code{groups}, \code{samples} and \code{perSample} for getting
+#' group, sample group or individual sample colors, respectively.
 #'
 #' @return A vector of colors names according to the given \linkS4class{OnDiskMSnExp} object.
-#' 
+#'
 #' @export
 #'
 #' @importFrom RColorBrewer brewer.pal
 #' @importFrom grDevices colorRampPalette
 #' @importFrom dplyr count
 #'
-#' @examples
-#' 
-#' 
-#' 
-getColors <- function(x, which = c("groups","samples")) {
-  
-  #Examples
-  # getColors(ntsIUTA::rawDataExample, "groups")
-  
-  
+getColors <- function(x, which = c("samples", "samplegroups", "groups")) {
+
   colors <- c(RColorBrewer::brewer.pal(8, "Greys")[6],
               RColorBrewer::brewer.pal(8, "Greens")[6],
               RColorBrewer::brewer.pal(8, "Blues")[6],
@@ -54,38 +43,99 @@ getColors <- function(x, which = c("groups","samples")) {
               RColorBrewer::brewer.pal(8, "GnBu")[6],
               RColorBrewer::brewer.pal(8, "BuPu")[6],
               RColorBrewer::brewer.pal(8, "Dark2"))
-  
-  if (!base::class(x) == "numeric" & !base::class(x) == "integer")
-  {
-    numberOfGroups <- base::length(base::unique(x$sample_group))
+
+  if (!class(x) == "numeric" & !class(x) == "integer") {
+
+    if (which != "samples") nameOfcolors <- unique(sampleGroups(x))
+    if (which == "samples") nameOfcolors <- samples(x)
+
+    numberOfGroups <- length(nameOfcolors)
     
-    if (numberOfGroups > 18)
-    {
-      require(grDevices)
+    if (numberOfGroups > 18) {
       colors <- grDevices::colorRampPalette(colors)(numberOfGroups)
     }
-    group_colors <- colors[1:numberOfGroups]
-    base::names(group_colors) <- base::unique(x$sample_group)
-    count <- dplyr::count(x@phenoData@data, sample_group)
-    sample_group_colors <- base::rep(group_colors, times = count[,"n"])
-    base::names(sample_group_colors) <- base::unique(x$sample_name)
-    
-    if (which == "groups") return(group_colors)
-    if (which == "samples") return(sample_group_colors)
-    
+
+    vec_colors <- colors[1:numberOfGroups]
+
+    if (which == "groups") {
+      names(vec_colors) <- nameOfcolors
+      return(vec_colors)
+    }
+
+    if (which == "samplegroups") {
+      count <- count(x@MSnExp@phenoData@data, sample_group)
+      vec_colors <- rep(vec_colors, times = count[, "n"])
+      names(vec_colors) <- samples(x)
+      return(vec_colors)
+    }
+
+    if (which == "samples") {
+      names(vec_colors) <- samples(x)
+      return(vec_colors)
+    }
+
   } else {
+
     numberOfGroups <- x
-    
-    if (numberOfGroups > 18)
-    {
-      require(grDevices)
+
+    if (numberOfGroups > 18) {
       colors <- grDevices::colorRampPalette(colors)(numberOfGroups)
     }
-    colors <- colors[1:numberOfGroups]
-    
-    return(colors)
-    
+
+    vec_colors <- colors[1:numberOfGroups]
+
+    return(vec_colors)
   }
-  
+
 }
 
+
+
+#' @title mzrBuilder
+#'
+#' @param mz The target \emph{m/z} to calculate range.
+#' @param ppm The mass deviation in ppm to calculate the \emph{m/z} range.
+#'
+mzrBuilder <- function(mz = NULL, ppm = NULL) {
+
+  mzr <- NULL
+
+  if (length(mz) == 1 && !is.null(mz)) {
+    if (is.null(ppm)) ppm <- 20
+    mzr <- c(mz - ((ppm / 1E6) * mz), mz + ((ppm / 1E6) * mz))
+  }
+
+  if (length(mz) == 2) mzr <- c(mz[1], mz[2])
+
+  return(mzr)
+
+}
+
+
+
+#' @title rtrBuilder
+#'
+#' @param rt The target retention time to calculate range.
+#' @param rtWindow The retention time window to calculate the range.
+#' Can be length 1 (default to 1 minute), for a fixed deviation of the given \code{rt} or  length 2.
+#' When length 2, it overwrites a given \code{rt} and uses the two values to calculate the range.
+#'
+rtrBuilder <- function(rt = NULL, rtWindow = NULL, rtUnit = "sec") {
+
+  rtr <- NULL
+
+  if (rtUnit == "min") if (!is.null(rt)) rt <- rt * 60
+  if (rtUnit == "min") if (!is.null(rtWindow)) rtWindow <- rtWindow * 60
+
+  if (!is.null(rt)) {
+    rtr <- c((rt) - ifelse(!is.null(rtWindow), rtWindow, 60),
+            (rt) + ifelse(!is.null(rtWindow), rtWindow, 60))
+  }
+
+  if (unique(!is.null(rtWindow))) if (length(rtWindow) == 2) {
+    rtr <- c(rtWindow[1], rtWindow[2])
+  }
+
+  return(rtr)
+
+}

@@ -5,8 +5,8 @@
 \title{plotTargetCentroids}
 \usage{
 plotTargetCentroids(
-  raw = rawData,
-  fileIndex = 1,
+  obj = NULL,
+  fileIndex = NULL,
   mz = NULL,
   ppm = 20,
   rt = NULL,
@@ -17,30 +17,38 @@ plotTargetCentroids(
 )
 }
 \arguments{
-\item{raw}{An \linkS4class{OnDiskMSnExp} object with one or more MS files.}
+\item{obj}{An \linkS4class{ntsData} object with one or more MS files.}
 
 \item{fileIndex}{The index of the file/s to extract the centroids or profile data.}
 
-\item{mz}{The target \emph{m/z}. Note that \code{m/z} is not the expected monoisotopic mass but the expected adduct (\emph{i.e.} \code{[M+H]+}).}
+\item{mz}{The target \emph{m/z}. Note that \code{m/z} is not the expected
+monoisotopic mass but the expected adduct (\emph{i.e.} \code{[M+H]+}).}
 
-\item{ppm}{The mass deviation to extract centroids in \code{ppm}. The default is set to 20 ppm.}
+\item{ppm}{The mass deviation to extract centroids in \code{ppm}.
+The default is set to 20 ppm.}
 
-\item{rt}{The expected retention time in minutes or seconds, depending on the defined \code{rtUnit}, see below.}
+\item{rt}{The expected retention time in minutes or seconds,
+depending on the defined \code{rtUnit}, see below.}
 
-\item{rtWindow}{The time deviation to collect centroids or profile data. The time unit is the defined by \code{rtUnit}.
+\item{rtWindow}{The time deviation to collect centroids or profile data.
+The time unit is the defined by \code{rtUnit}.
 It is recommended a minimum of 1 minute.}
 
-\item{rtUnit}{Possible entries are \code{min} or \code{sec}. The default is \code{sec}.}
+\item{rtUnit}{Possible entries are \code{min} or \code{sec}.
+The default is \code{sec}.}
 
 \item{title}{Optional title for the plot/s.}
 
-\item{plotTargetMark}{Logical, set to TRUE, the defaulft, to plot a target mark with +/- 5 ppm and +/- 10 seconds deviation.}
+\item{plotTargetMark}{Logical, set to TRUE, the defaulft, to plot a
+target mark with +/- 5 ppm and +/- 10 seconds deviation.}
 }
 \value{
-An iterative plot of the centroids for the requested target based on given \code{mz}.
+An iterative plot of the centroids for the requested
+target based on given \code{mz}.
 }
 \description{
-Plot centroids or profile data for a target compound using expected \emph{m/z}, retention time and respective deviations.
+Plot centroids or profile data for a target compound
+using expected \emph{m/z}, retention time and respective deviations.
 }
 \examples{
 

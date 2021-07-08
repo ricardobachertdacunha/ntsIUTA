@@ -7,10 +7,11 @@
 removeDuplicateNames(newJoint)
 }
 \arguments{
-\item{newJoint}{Original and new sampleInfo \code{data.frame} objects collated by \code{rbind}}
+\item{newJoint}{Original and new samples \code{data.frame} objects collated by \code{rbind}.}
 }
 \value{
-Returns the same \code{data.frame} but with duplicate sample names edited as duplicate sample names are not allowed.
+Returns the same \code{data.frame} but with duplicate sample names
+edited as duplicate sample names are not allowed.
 }
 \description{
 Removes duplicate sample names to avoid problems during further analysis.

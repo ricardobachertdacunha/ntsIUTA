@@ -1,6 +1,6 @@
 Package: ntsIUTA
 Title: Non-target Screening IUTA
-Version: 0.0.1
+Version: 0.0.2
 Authors@R: person('Ricardo', 'Cunha', email = 'cunha@iuta.de', role = c('cre', 'aut'))
 Maintainer: Ricardo Cunha <cunha@iuta.de>
 Description: The ntsIUTA package is a tool for processing chromatographically separated mass spectral (MS) data, focusing on promoting routine application of Non-target Screening workflows.

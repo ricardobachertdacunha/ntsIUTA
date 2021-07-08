@@ -16,6 +16,19 @@ plotFeatures(
   title = NULL,
   plotBy = c("samples")
 )
+
+plotFeatures(
+  x = patData,
+  fileIndex = NULL,
+  features = NULL,
+  mz = NULL,
+  ppm = 5,
+  rt = NULL,
+  rtWindow = 1,
+  rtUnit = "min",
+  title = NULL,
+  plotBy = c("samples")
+)
 }
 \arguments{
 \item{x}{An \linkS4class{XCMSnExp} or \linkS4class{featureGroups} object with one or more files and grouped peaks.}
@@ -39,15 +52,23 @@ A time interval can be given with a length 2 vector, defining the minimum and ma
 
 \item{plotBy}{The grouping for the plot. Possible are "samples", "replicates" and "features"
 for ploting by individual samples, relpicate samples or features, respectively. The default is "samples".}
+
+\item{ID}{The identifier of the features of interest. When not \code{NULL}, overwrites any given \code{mz} and \code{rt} value.}
 }
 \value{
+A plot produced through pkg{gglpot2}.
+
 An iterative plot.
 }
 \description{
+Plot features from a \linkS4class{featureGroups}.
+
 Iterative plot for features from an \linkS4class{XCMSnExp} or \linkS4class{featureGroups} containing grouped peaks.
 }
+\note{
+If \code{ID} and \code{mz} are \code{NULL} all the features in the \linkS4class{featureGroups} object are plotted.
+}
 \examples{
-
 
 
 }

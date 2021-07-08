@@ -4,21 +4,17 @@
 \alias{getColors}
 \title{getColors}
 \usage{
-getColors(x, which = c("groups", "samples"))
+getColors(x, which = c("samples", "samplegroups", "groups"))
 }
 \arguments{
 \item{x}{An \linkS4class{OnDiskMSnExp} object with one or more files or the number of colors to be produced.}
 
-\item{which}{Possible entries are \code{groups} and \code{samples} for getting group or samples colors, respectively.}
+\item{which}{Possible entries are \code{groups}, \code{samples} and \code{perSample} for getting
+group, sample group or individual sample colors, respectively.}
 }
 \value{
 A vector of colors names according to the given \linkS4class{OnDiskMSnExp} object.
 }
 \description{
 getColors
-}
-\examples{
-
-
-
 }

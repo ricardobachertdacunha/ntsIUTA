@@ -5,56 +5,72 @@
 \title{makeFeatures}
 \usage{
 makeFeatures(
-  peaksData = peaksData,
-  paramPreGrouping = instParam$preGrouping,
-  paramAlignment = instParam$alignment,
-  paramGrouping = instParam$grouping,
-  ppmForFillingGroups = 5,
-  save = TRUE,
-  projPath = setup$projPath,
-  maxMultiProcess = TRUE
+  obj = NULL,
+  algorithm = "xcms3",
+  rtAlignment = TRUE,
+  paramAlignment = NULL,
+  paramGrouping = NULL,
+  recursive = TRUE,
+  paramFill = NULL,
+  save = TRUE
 )
 }
 \arguments{
-\item{peaksData}{A \linkS4class{XCMSnExp} object or a \code{list} of \linkS4class{XCMSnExp} objects named according to the 
-sample replicate group represented by each \linkS4class{XCMSnExp} object as obtained by \code{\link{peakPicking}}.}
+\item{obj}{A \linkS4class{ntsData} object containing peaks
+for one or more samples.}
 
-\item{paramPreGrouping}{If \code{\link[xcms]{adjustRtime}} is preformed with the method \code{PeakGroups},
-a pre-grouping of peaks is required for alignment. The \code{paramPreGrouping} is the parameters obtained by the selected grouping method.
-See documentation of \code{\link[xcms]{groupChromPeaks}} for more information.}
+\item{algorithm}{The algorithm to use for peak alignment and grouping.
+One of "xcms3" (the default) or "openms".
+When "openms" the \pkg{patRoon} package is used.}
 
-\item{paramAlignment}{The parameters for the chosen alignment method. See documentation of \code{\link[xcms]{adjustRtime}} for more information.}
+\item{rtAlignment}{Logical, set to \code{TRUE} (the default) to preform
+retention time aligment besides peak grouping.}
+
+\item{paramAlignment}{Applicable for algorithm "xcms3" only,
+the parameters for the chosen retention time alignment method.
+See documentation of \code{\link[xcms]{adjustRtime}} for more information.
+For alignment with the method \code{PeakGroups}, a list of length two
+should be given, where the first element
+is the pre-grouping parameters using \code{\link[xcms]{groupChromPeaks}}
+and the second element the actual alignment parameters.}
 
 \item{paramGrouping}{The parameters for the chosen grouping method.
-See documentation of \code{\link[xcms]{groupChromPeaks}} for more information.}
+See documentation of \code{\link[xcms]{groupChromPeaks}} or
+\code{\link[patRoon]{groupFeatures}} for more information.}
 
-\item{ppmForFillingGroups}{The mass (in ppm) to expand the \emph{mz} for filling missing peaks in incomplete features.
-See \code{\link[xcms]{fillChromPeaks}} for more information.}
+\item{paramFill}{An object of class \code{FillChromPeaksParam}
+or \code{ChromPeakAreaParam} containing the parameters
+to apply the recursive integration.
+#' See \code{?\link[xcms]{fillChromPeaks}} for more information.}
 
-\item{save}{Logical, set to \code{TRUE} to save the generated \code{XCMSnExp} object in the disk.}
+\item{save}{Logical, set to \code{TRUE} to save updated
+\linkS4class{ntsData} object in the \strong{rdata} folder.
+Note that \code{TRUE} overwrites the existing \linkS4class{ntsData} object.
+Optionally, a character string can be given instead of \code{TRUE}
+to be used as file name, avoiding overwriting.}
 
-\item{projPath}{The \code{projPath} directory as defined in the \code{setup} object.}
-
-\item{maxMultiProcess}{Logical, set to \code{TRUE} to enable max parallel processing. Changes the number of workers to the maximum available.}
+\item{recurvive}{Logical, set to \code{TRUE} for applying recursive
+integration for samples with missing peaks.}
 }
 \value{
-An \linkS4class{XCMSnExp} containing features which are grouped and aligned peaks across samples.
+An \linkS4class{ntsData} object
+containing peaks aligned and grouped as features across samples accessible
+in the slot \code{features}.
 
  @references
+\insertRef{Helmus2021}{ntsIUTA}
 \insertRef{xcms1}{ntsIUTA}
 \insertRef{xcms2}{ntsIUTA}
 \insertRef{xcms3}{ntsIUTA}
 }
 \description{
-The \code{makeFeatures} consists of alignment and grouping of chromatographic peaks across samples.
-The function uses methods from the package \pkg{xcms}, specifically \code{\link[xcms]{adjustRtime}} and \code{\link[xcms]{groupChromPeaks}}
-methods. The input is a \linkS4class{XCMSnExp} object or a \code{list} of \linkS4class{XCMSnExp} objects
-named with the given sample replicate group during the \code{setup}. If the input is a \code{list}, \linkS4class{XCMSnExp} objects
-are concatenated to produce a merged \linkS4class{XCMSnExp} object,
-containing features (\emph{i.e.} grouped chromatographic peaks across samples).
+The \code{makeFeatures} consists of alignment and grouping of
+chromatographic peaks across samples. The function uses algorithms
+from the package \pkg{xcms} or from \pkg{patRoon} based on "openms".
+Additionally, a recursive integration for samples with missing peaks
+can be applied using the function \code{\link[xcms]{fillChromPeaks}}
+from the \pkg{xcms} package.
 }
 \examples{
-
-
 
 }
