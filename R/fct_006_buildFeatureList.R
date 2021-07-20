@@ -1,4 +1,5 @@
 
+# TODO improve buildFeatureList function
 
 buildFeatureList2 <- function(obj) {
   
@@ -35,7 +36,11 @@ buildFeatureList2 <- function(obj) {
   }
   fidx <-  as.list(fidx)
   
-  feat <- feat[!sapply(feat[, rg] == 0, function(x) sum(x) == length(rg)), ]
+  evalZeros <- feat[, rg] == 0
+  
+  if (TRUE %in% evalZeros) {
+    feat <- feat[!apply(evalZeros, MARGIN = 1, function(x) sum(x) == length(rg)), ]
+  }
   
   fidx <- fidx[names(fidx) %in% feat$ID]
   
@@ -72,7 +77,7 @@ buildFeatureList2 <- function(obj) {
 
 #' @title buildFeatureList
 #' @description Function to create a \code{data.frame} with detailed information for each feature in the given a \linkS4class{XCMSnExp} object object.
-#' Optionally, a list of \linkS4class{xsAnnotate} objects per replicate group as obtained by \code{\link{makeFeatureComponents}} can be given.
+#' Optionally, a list of \linkS4class{xsAnnotate} objects per replicate group as obtained by \code{makeFeatureComponents} can be given.
 #' The information from annotated isotopes and adducts for each component will be added to the \code{data.frame}.
 #' 
 #' @param x A \linkS4class{XCMSnExp} object.

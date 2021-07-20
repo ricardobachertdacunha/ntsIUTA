@@ -17,26 +17,45 @@ dtall <- setupProject(path, save = FALSE, makeNewProject = FALSE)
 
 #### Class Methods ------------------------------------------------------------------------------------------
 
-sampleGroups(dtall) <- c(rep("Blank", 3),
-                         rep("IN", 3),
-                         rep("OZ", 3),
-                         rep("UV", 3),
-                         rep("AC", 3),
-                         rep("Centroid", 3),
-                         rep("Profile", 3))
+##### Sample Groups -----
 
+#Assign/Correct sample replicate groups
+pushSamplegroups(dtall) <- c(rep("Blank", 3),
+                             rep("IN", 3),
+                             rep("OZ", 3),
+                             rep("UV", 3),
+                             rep("AC", 3),
+                             rep("Centroid", 3),
+                             rep("Profile", 3))
+
+#See sample replicate groups
+pullSamplegroups(dtall)
 #see the samples (files)
-samples(dtall) #no setter
+pullSamples(dtall) #no setter
+
+##### Blanks -----
 
 #Assign the blank replicate sample group/s
-blanks(dtall) <- "Blank"
+pushBlanks(dtall) <- "Blank"
+
+#see the blank replicate group/s
+pullBlanks(dtall)
+
+##### QC -----
 
 #When needed, assigning the QC sample group after naming sample replicate groups
 #Automatic detection of samples with QC in the name
-#QC(dt) <- "QC"
+#pushQC(dtall) <- "QC"
+
+#see the QC samples
+pullQC(dtall)
+
+##### show ntsData -----
 
 #show method
 dtall
+
+##### sub-setting -----
 
 #sub-setting by samples
 dtcent <- dtall[16:18]
@@ -45,6 +64,135 @@ dtprof <- dtall[19:21]
 # TODO show the addFiles function
 
 # TODO show the convert files function
+
+
+
+
+### Workflow Parameters -------------------------------------------------------------------------------------
+
+#### Algorithms -------------------
+
+algorithmXCMS <- "xcms3"
+
+algorithmOpenms <- "openms"
+
+algorithmAnnotation <- "alteredcamera"
+
+#### for Peak Picking -------------
+
+paramXCMS <- xcms::CentWaveParam(
+  ppm = 15, peakwidth = c(6, 60),
+  snthresh = 5, prefilter = c(6, 300),
+  mzCenterFun = "mean", integrate = 2,
+  mzdiff = -0.0001, fitgauss = TRUE,
+  noise = 0, verboseColumns = TRUE,
+  firstBaselineCheck = FALSE,
+  extendLengthMSW = TRUE
+)
+
+paramOpenms <- list(
+  noiseThrInt = 250,
+  chromSNR = 3,
+  chromFWHM = 5,
+  mzPPM = 15,
+  reEstimateMTSD = TRUE,
+  traceTermCriterion = "sample_rate",
+  traceTermOutliers = 5,
+  minSampleRate = 1,
+  minTraceLength = 3,
+  maxTraceLength = -1,
+  widthFiltering = "fixed",
+  minFWHM = 5,
+  maxFWHM = 60,
+  traceSNRFiltering = FALSE,
+  localRTRange = 10,
+  localMZRange = 6.5,
+  isotopeFilteringModel = "metabolites (5% RMS)",
+  MZScoring13C = FALSE,
+  useSmoothedInts = TRUE,
+  extraOpts = NULL,
+  intSearchRTWindow = 3)
+
+
+
+
+#### for Alignment and Grouping -----------------------------------------------------------------------------
+
+
+##### Alignment ---------------------------------------------------------------------------------------------
+#Not used if only one sample is given in peaks and when grouping is performed with openms
+
+#Param preGrouping
+#Only necessary if method for alignment is via PeaksGroups
+param1 <- xcms::PeakDensityParam(
+  sampleGroups = "holder",
+  bw = 5,
+  minFraction = 0.5,
+  minSamples = 1,
+  binSize = 0.008,
+  maxFeatures = 100
+)
+
+#Parameters for alignment of retention time across samples
+param2 <- xcms::PeakGroupsParam(
+  minFraction = 1,
+  extraPeaks = 0,
+  smooth = "loess",
+  span = 0.3,
+  family = "gaussian"
+)
+
+paramAlignment <- list(param1, param2)
+
+
+##### Grouping ----------------------------------------------------------------------------------------------
+#Parameters for final grouping of peaks across samples
+
+#With xcms3
+paramGroupingxcms <- xcms::PeakDensityParam(
+  sampleGroups = "holder",
+  bw = 3,
+  minFraction = 0.5,
+  minSamples = 1,
+  binSize = 0.008,
+  maxFeatures = 100
+)
+
+#With openms
+paramGroupingOpenms <- list(
+  rtalign = TRUE,
+  QT = FALSE,
+  maxAlignRT = 5,
+  maxAlignMZ = 0.008,
+  maxGroupRT = 3,
+  maxGroupMZ = 0.008,
+  extraOptsRT = NULL,
+  extraOptsGroup = NULL
+)
+
+
+
+
+#### for Filling ------------------------------------------------------------------------------------------
+#Parameters for recursive integration
+
+#Option 1
+paramFill <- xcms::FillChromPeaksParam(
+  expandMz = 0,
+  expandRt = 0,
+  ppm = 0,
+  fixedMz = 0,
+  fixedRt = 0
+)
+#Option 2
+paramFill2 <- xcms::ChromPeakAreaParam(
+  mzmin = function(z) quantile(z, probs = 0.25),
+  mzmax = function(z) quantile(z, probs = 0.75),
+  rtmin = function(z) quantile(z, probs = 0.25),
+  rtmax = function(z) quantile(z, probs = 0.75)
+)
+
+
 
 
 ### Import Data ---------------------------------------------------------------------------------------------
@@ -56,27 +204,40 @@ dtcent <- importRawData(dtcent,
                         removeEmptySpectra = TRUE,
                         save = FALSE)
 
-#get centroids
+
+
+
+#### TIC, BPC and EIC ---------------------------------------------------------------------------------------
+
 exEIC <- extractEIC(dtcent, fileIndex = NULL,
                     mz = 242.1434, ppm = 20,
                     rt = 14.8, rtWindow = 0.5,
                     rtUnit = "min")
 
-#plot functions for TIC, BPC or EIC
 
-#static
+
+
+#### Inspecting Raw Data ------------------------------------------------------------------------------------
+
 plotRawChrom(dtcent, fileIndex = NULL,
              type = "tic",
              mz = 242.1434, ppm = 20,
              rt = 14.8, rtWindow = 0.5,
-             rtUnit = "min")
+             colorBy = "samples",
+             rtUnit = "min",
+             interactive = FALSE)
 
 #iterative
-plotlyRawChrom(dtcent, fileIndex = NULL,
-               type = "tic",
-               mz = 242.1434, ppm = 20,
-               rt = 14.8, rtWindow = 0.5,
-               rtUnit = "min")
+plotRawChrom(dtcent, fileIndex = NULL,
+             type = "tic",
+             mz = 242.1434, ppm = 20,
+             rt = 14.8, rtWindow = 0.5,
+             rtUnit = "min",
+             colorBy = "samples",
+             interactive = TRUE)
+
+#plot correlation of replicate sample groups
+plotCorReplicates(dtcent)
 
 
 
@@ -113,9 +274,6 @@ plotly::subplot(list(p1, p2), nrows = 1, margin = 0.04)
 
 ### Centroiding Data -------------------------------------------------------------------------------------------
 
-# TODO add storage/drop method for processing steps
-#dtprof@MSnExp@spectraProcessingQueue <- list()
-
 dtprof <- centroidProfileData(obj = dtprof,
                               halfwindow = 3,
                               SNR = 3,
@@ -146,41 +304,44 @@ plotly::subplot(list(p1, p2), nrows = 1, margin = 0.04)
 dt <- dtall[1:6]
 
 dt <- importRawData(dt,
-                    rtFilter = c(13, 17),
+                    rtFilter = NULL,
                     timeUnit = "min",
                     centroidedData = NA,
                     removeEmptySpectra = TRUE,
                     save = FALSE)
 
-
+# TODO when applying rtFilter for import raw data reuse when peak picking with patRoon
 
 
 #### xcms3 --------------------------------------------------------------------------------------------------
+
 dtxcms <- dt
 
-param <- xcms::CentWaveParam(
+dtxcms@algorithms$peakPicking <- "xcms3"
+
+paramXCMS <- xcms::CentWaveParam(
   ppm = 15, peakwidth = c(6, 60),
   snthresh = 5, prefilter = c(6, 300),
   mzCenterFun = "mean", integrate = 2,
   mzdiff = -0.0001, fitgauss = TRUE,
   noise = 0, verboseColumns = TRUE,
   firstBaselineCheck = FALSE,
-  extendLengthMSW = TRUE
-)
+  extendLengthMSW = TRUE)
 
-dtxcms@parameters$peakPicking <- param
+dtxcms@parameters$peakPicking <- paramXCMS
 
-dtxcms <- peakPicking(obj = dtxcms, algorithm = "xcms3", save = FALSE)
-
-dtxcms@patdata[1]
+dtxcms <- peakPicking(obj = dtxcms, save = FALSE)
 
 
 
 
 #### openms -------------------------------------------------------------------------------------------------
+
 dtopenms <- dt
 
-param2 <- list(
+dtopenms@algorithms$peakPicking <- "openms"
+
+paramOpenms <- list(
   noiseThrInt = 250,
   chromSNR = 3,
   chromFWHM = 5,
@@ -203,21 +364,22 @@ param2 <- list(
   extraOpts = NULL,
   intSearchRTWindow = 3)
 
-dtopenms@parameters$peakPicking <- param2
+dtopenms@parameters$peakPicking <- paramOpenms
 
-dtopenms <- peakPicking(obj = dtopenms, algorithm = "openms", save = FALSE)
+dtopenms <- peakPicking(obj = dtopenms, save = FALSE)
 
 
 
 
 #### Inspecting Peaks ---------------------------------------------------------------------------------------
 
-dtxcms@peaks[[1]][1,]
-dtopenms@peaks[[1]][1,]
+#Option 1
+dtxcms@peaks[1,]
+dtopenms@peaks[1,]
 
-# TODO Adapt to ntsData, but integrate with features
-filterPeaks(peaks, fileIndex = 4:5, mz = 748.4842, ppm = 10, rt = 14.9, rtUnit = "min")
-filterPeaks(peaksOpenms, fileIndex = 1:2, mz = 748.4842, ppm = 10, rt = 14.9, rtUnit = "min")
+#Option 2, using the S4 method
+pullPeaks(dtxcms, fileIndex = NULL, mz = 748.4842, ppm = 10, rt = 14.9, rtUnit = "min")
+
 
 
 
@@ -225,106 +387,42 @@ filterPeaks(peaksOpenms, fileIndex = 1:2, mz = 748.4842, ppm = 10, rt = 14.9, rt
 ### Alignment and Grouping ----------------------------------------------------------------------------------
 
 
-#### Param Alignment ----------------------------------------------------------------------------------------
-#Not used if only one sample is given in peaks and when grouping is performed with openms
-
-#Param preGrouping
-#Only necessary if method for alignment is via PeaksGroups
-param1 <- xcms::PeakDensityParam(
-  sampleGroups = "holder",
-  bw = 5,
-  minFraction = 0.5,
-  minSamples = 1,
-  binSize = 0.008,
-  maxFeatures = 100
-)
-
-#Parameters for alignment of retention time across samples
-param2 <- xcms::PeakGroupsParam(
-  minFraction = 1,
-  extraPeaks = 0,
-  smooth = "loess",
-  span = 0.3,
-  family = "gaussian"
-)
-
-paramAlignment <- list(param1, param2)
-
-
-
-
-#### Param Grouping -----------------------------------------------------------------------------------------
-#Parameters for final grouping of peaks across samples
-
-#With xcms
-paramGroupingxcms <- xcms::PeakDensityParam(
-  sampleGroups = "holder",
-  bw = 3,
-  minFraction = 0.5,
-  minSamples = 1,
-  binSize = 0.008,
-  maxFeatures = 100
-)
-
-#With openms
-paramGroupingOpenms <- list(
-  QT = FALSE,
-  maxAlignRT = 5,
-  maxAlignMZ = 0.008,
-  maxGroupRT = 3,
-  maxGroupMZ = 0.008,
-  extraOptsRT = NULL,
-  extraOptsGroup = NULL
-)
-
-
-
-
-#### Param Filling ------------------------------------------------------------------------------------------
-#Parameters for recursive integration
-
-#Option 1
-paramFill <- xcms::FillChromPeaksParam(
-  expandMz = 0,
-  expandRt = 0,
-  ppm = 0,
-  fixedMz = 0,
-  fixedRt = 0
-)
-#Option 2
-paramFill2 <- xcms::ChromPeakAreaParam(
-  mzmin = function(z) quantile(z, probs = 0.25),
-  mzmax = function(z) quantile(z, probs = 0.75),
-  rtmin = function(z) quantile(z, probs = 0.25),
-  rtmax = function(z) quantile(z, probs = 0.75)
-)
-
-
-
-
 #### xcms3 --------------------------------------------------------------------------------------------------
-dtxcms <- makeFeatures(obj = dtxcms,
-                       algorithm = "xcms3",
+
+dtxcms@algorithms$makeFeatures <- "xcms3"
+
+dtxcms@parameters$peakAlignment <- paramAlignment
+
+dtxcms@parameters$peakGrouping <- paramGroupingxcms
+
+dtxcms@parameters$fillMissing <- paramFill
+
+dtxcms2 <- makeFeatures(obj = dtxcms,
+                       algorithm = NULL,
                        rtAlignment = TRUE,
-                       paramAlignment = paramAlignment,
-                       paramGrouping = paramGrouping,
+                       paramAlignment = NULL,
+                       paramGrouping = NULL,
                        recursive = TRUE,
-                       paramFill = paramFill,
+                       paramFill = NULL,
                        save = FALSE)
 
 
 
 
 #### openms -------------------------------------------------------------------------------------------------
-dtopenms <- makeFeatures(obj = dtopenms,
-                         algorithm = "openms",
-                         rtAlignment = TRUE,
-                         paramGrouping = paramGroupingOpenms,
+
+dtxcms@algorithms$makeFeatures <- "openms"
+
+dtxcms@parameters$peakGrouping <- paramGroupingOpenms
+
+dtopenms2 <- makeFeatures(obj = dtopenms,
+                         algorithm = NULL,
+                         paramGrouping = NULL,
                          recursive = FALSE,
                          paramFill = NULL,
                          save = FALSE)
 
-# TODO improve buildFeatureList function
+
 
 
 #### Ploting Alignment --------------------------------------------------------------------------------------
@@ -336,9 +434,152 @@ plotAlignment(features)
 
 #### Inspecting Features ------------------------------------------------------------------------------------
 
-patRoon::plotChroms(features[, 1:2], col = "none")
 
-# TODO static and iterative plot for peaks and features
-plotFeatures(features, features = "M201_R784_1")
+##### table -----
+
+#Option 1
+dtxcms2@features[1,]
+
+#Option 2, using the S4 method
+pullFeatures(dtxcms2, fileIndex = NULL, mz = 748.4842, ppm = 10, rt = 14.9, rtUnit = "min")
+
+
+##### plot -----
+
+#Interactive feature/s plot
+plotFeatures(obj = dtxcms2,
+             fileIndex = 3:4,
+             ID = c("M275_R622_2158" , "M210_R586_836"),
+             mz = 213.1869,
+             rt = 15.47,
+             rtUnit = "min",
+             ppm = NULL,
+             rtWindow = NULL,
+             colorBy = "features",
+             interactive = TRUE)
+
+#Static feature/s plot
+plotFeatures(obj = dtxcms2,
+             fileIndex = NULL,
+             ID = c("M275_R622_2158" , "M210_R586_836"),
+             mz = 213.1869,
+             rt = 15.47,
+             rtUnit = "min",
+             ppm = NULL,
+             rtWindow = NULL,
+             colorBy = "features",
+             interactive = FALSE)
+
+#patRoon option
+patRoon::plotChroms(dtxcms2@patdata[, c("M275_R622_2158" , "M210_R586_836")])
+
+# TODO change the feature details plot, including all info in overlay. Wait for S/N function.
+
+
+
+
+### QC check ------------------------------------------------------------------------------------------------
+# Wrapping function for fast QC check using the workflow parameters.
+
+
+
+QC <- ntsIUTA::checkQC(rawQC = rawQC,
+                       sampleInfo = setup,
+                       screeningList = sl_qc,
+                       paramPeaks = param,
+                       paramPreGrouping = param1,
+                       paramAlignment = param2,
+                       paramGrouping = param3,
+                       ppmForFillingGroups = 5,
+                       rtWindow = 30,
+                       ppmWindow = 15,
+                       polarity = "positive",
+                       plot = TRUE,
+                       save = FALSE)
+
+
+
+
+
+### Annotation ----------------------------------------------------------------------------------------------
+
+dtxcms2@algorithms$annotation <- "alteredcamera"
+
+dtxcms2@parameters$annotation <- AlteredCameraParam()
+
+dtxcms2 <- annotateFeatures(dtxcms2, save = FALSE)
+
+
+#### Inspection ---------------------------------------------------------------------------------------------
+
+checkAnnotation(obj = dtxcms2,
+                samples = 4:5,
+                ID = NULL,
+                mz = 748.4842, ppm = 20,
+                rt = 14.9, rtWindow = 2, rtUnit = "min",
+                comp = NULL,
+                entireComponents = TRUE,
+                onlyAnnotated = TRUE,
+                onlyRelated = TRUE)
+
+plotAnnotation(obj = dtxcms2,
+               samples = 4:5,
+               ID = NULL,
+               mz = 748.4842, ppm = 20,
+               rt = 14.9, rtWindow = 2, rtUnit = "min",
+               comp = NULL,
+               entireComponents = TRUE,
+               onlyAnnotated = TRUE,
+               onlyRelated = TRUE,
+               log = FALSE,
+               colorBy = "groups")
+
+
+# TODO Add sub-setting for annotation
+# TODO prepare the history with info for rerun the code
+# TODO add storage/drop method for processing steps
+#dtprof@MSnExp@spectraProcessingQueue <- list()
+
+
+
+
+### Filter features -----------------------------------------------------------------------------------------
+
+# TODO Adapt to ntsData, but integrate with features (main filter method)
+filterPeaks(peaks, fileIndex = 4:5, mz = 748.4842, ppm = 10, rt = 14.9, rtUnit = "min")
+filterPeaks(peaksOpenms, fileIndex = 1:2, mz = 748.4842, ppm = 10, rt = 14.9, rtUnit = "min")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

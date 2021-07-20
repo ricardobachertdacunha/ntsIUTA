@@ -33,7 +33,7 @@ A time interval can be given with a length 2 vector, defining the minimum and ma
 
 \item{rtUnit}{Possible entries are \code{min} or \code{sec}. The default is \code{sec}.}
 
-\item{msLevel}{The MS level to extract the data. For the momment, only 1 is possible.}
+\item{msLevel}{The MS level to extract the data. For the moment, only 1 is possible.}
 
 \item{normIntensity}{Logical, set to \code{TRUE} for normalizing the intensity values between 1 and 0 for each file in the given \code{raw} object.}
 }

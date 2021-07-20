@@ -5,8 +5,8 @@
 \title{FindIsotopesWithValidationAltered}
 \usage{
 FindIsotopesWithValidationAltered(
-  object,
-  featData = featData,
+  xA = xA,
+  obj = obj,
   sampleidxs = sampleidxs,
   maxcharge = 3,
   ppm = 50,
@@ -17,9 +17,9 @@ FindIsotopesWithValidationAltered(
 )
 }
 \arguments{
-\item{object}{An \linkS4class{xsAnnotate} object.}
+\item{xA}{An \linkS4class{xsAnnotate} object.}
 
-\item{featData}{An \linkS4class{XCMSnExp} object containing features.}
+\item{obj}{An \linkS4class{ntsData} object containing features.}
 
 \item{sampleidxs}{The index of samples for the replicate groups of interest.}
 
@@ -40,11 +40,6 @@ An \linkS4class{xsAnnotate} object with annotated isotopes.
 }
 \description{
 Altered version of the \code{findIsotopesWithValidation} function from \code{CAMERA} package.
-}
-\examples{
-
-
-
 }
 \references{
 \insertRef{CAMERA}{ntsIUTA}

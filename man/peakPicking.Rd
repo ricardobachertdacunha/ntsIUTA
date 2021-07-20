@@ -4,7 +4,7 @@
 \alias{peakPicking}
 \title{peakPicking}
 \usage{
-peakPicking(obj = NULL, algorithm = "xcms3", param = NULL, save = TRUE)
+peakPicking(obj = NULL, algorithm = NULL, param = NULL, save = TRUE)
 }
 \arguments{
 \item{obj}{An \linkS4class{ntsData} object.}

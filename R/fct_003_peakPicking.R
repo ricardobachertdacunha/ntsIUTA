@@ -44,12 +44,14 @@
 #' @examples
 #'
 peakPicking <- function(obj = NULL,
-                        algorithm = "xcms3",
+                        algorithm = NULL,
                         param = NULL,
                         save = TRUE) {
-
-  checkmate::checkChoice(algorithm, c("openms", "xcms", "xcms3", "envipick"))
-
+  
+  if (is.null(algorithm)) algorithm <- obj@algorithms$peakPicking
+  
+  checkmate::checkChoice(algorithm, c("xcms3", "xcms", "openms", "envipick"))
+  
   if (is.null(param)) param <- obj@parameters$peakPicking
   
   if (length(param) == 0) return(print("Peak picking parameters not found or not given."))
@@ -85,6 +87,8 @@ peakPicking <- function(obj = NULL,
   }
   
   obj@peaks <- peaks
+  
+  obj@algorithms$peakPicking <- algorithm
   
   obj@parameters$peakPicking <- param
   

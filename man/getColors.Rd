@@ -7,13 +7,13 @@
 getColors(x, which = c("samples", "samplegroups", "groups"))
 }
 \arguments{
-\item{x}{An \linkS4class{OnDiskMSnExp} object with one or more files or the number of colors to be produced.}
+\item{x}{An \linkS4class{ntsData} object with one or more files or the number of colours to be produced.}
 
-\item{which}{Possible entries are \code{groups}, \code{samples} and \code{perSample} for getting
-group, sample group or individual sample colors, respectively.}
+\item{which}{Possible entries are \code{samples}, \code{samplegroups} and \code{groups} for getting
+individual sample, sample replicate group and individual group colours, respectively.}
 }
 \value{
-A vector of colors names according to the given \linkS4class{OnDiskMSnExp} object.
+A vector of colours, named according to a \linkS4class{ntsData} object if given.
 }
 \description{
 getColors

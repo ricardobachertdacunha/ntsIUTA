@@ -14,7 +14,7 @@
 #' One of "xcms3" (the default) or "openms".
 #' When "openms" the \pkg{patRoon} package is used.
 #' @param rtAlignment Logical, set to \code{TRUE} (the default) to preform
-#' retention time aligment besides peak grouping.
+#' retention time alignment besides peak grouping.
 #' @param paramAlignment Applicable for algorithm "xcms3" only,
 #' the parameters for the chosen retention time alignment method.
 #' See documentation of \code{\link[xcms]{adjustRtime}} for more information.
@@ -51,7 +51,8 @@
 #'
 #' @importClassesFrom patRoon featureGroups
 #' @importClassesFrom xcms XCMSnExp
-#' @importFrom patRoon groupFeatures getXCMSnExp importFeaturesXCMS3 as.data.table as.data.frame groupFeatIndex
+#' @importFrom patRoon groupFeatures getXCMSnExp importFeaturesXCMS3 groupFeatIndex
+#' @importMethodsFrom patRoon as.data.table as.data.frame
 #' @importMethodsFrom xcms groupChromPeaks adjustRtime fillChromPeaks featureDefinitions
 #' @importFrom dplyr select rename everything
 #' @importFrom data.table rbindlist
@@ -59,7 +60,7 @@
 #' @examples
 #'
 makeFeatures <- function(obj = NULL,
-                         algorithm = "xcms3",
+                         algorithm = NULL,
                          rtAlignment = TRUE,
                          paramAlignment = NULL,
                          paramGrouping = NULL,
@@ -68,6 +69,10 @@ makeFeatures <- function(obj = NULL,
                          save = TRUE) {
 
   x <- obj@patdata
+  
+  if (is.null(algorithm)) algorithm <- obj@algorithms$makeFeatures
+  
+  checkmate::checkChoice(algorithm, c("xcms3", "xcms", "openms"))
   
   if (is.null(paramAlignment)) paramAlignment <- obj@parameters$peakAlignment
   
@@ -92,7 +97,7 @@ makeFeatures <- function(obj = NULL,
     x <- groupChromPeaks(x, param = paramGrouping)
 
   } else {
-    ag <- list(feat = x, rtalign = rtAlignment, algorithm = algorithm)
+    ag <- list(feat = x, algorithm = algorithm)
     x <- do.call(groupFeatures, c(ag, paramGrouping, verbose = TRUE))
   }
 
@@ -103,6 +108,8 @@ makeFeatures <- function(obj = NULL,
     x <- recursiveIntegration(XCMSfeatures = x, paramFill = paramFill)
   }
 
+  obj@algorithms$makeFeatures <- algorithm
+  
   obj@parameters$peakAlignment <- paramAlignment
   
   obj@parameters$peakGrouping <- paramGrouping

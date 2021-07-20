@@ -6,7 +6,7 @@
 \usage{
 makeFeatures(
   obj = NULL,
-  algorithm = "xcms3",
+  algorithm = NULL,
   rtAlignment = TRUE,
   paramAlignment = NULL,
   paramGrouping = NULL,
@@ -24,7 +24,7 @@ One of "xcms3" (the default) or "openms".
 When "openms" the \pkg{patRoon} package is used.}
 
 \item{rtAlignment}{Logical, set to \code{TRUE} (the default) to preform
-retention time aligment besides peak grouping.}
+retention time alignment besides peak grouping.}
 
 \item{paramAlignment}{Applicable for algorithm "xcms3" only,
 the parameters for the chosen retention time alignment method.

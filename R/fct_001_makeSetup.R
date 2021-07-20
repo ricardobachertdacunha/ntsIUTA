@@ -247,7 +247,7 @@ addFiles <- function(newFiles = utils::choose.files(),
 
     obj@samples <- newJoint
     
-    if ("QC" %in% obj@samples$group) QC(obj) <- "QC"
+    if ("QC" %in% obj@samples$group) pushQC(obj) <- "QC"
     
     return(obj)
 

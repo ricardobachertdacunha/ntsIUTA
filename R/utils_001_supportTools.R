@@ -65,11 +65,11 @@ getScreeningListTemplate <- function(projPath = setup$projPath) {
 
 #' @title getColors
 #'
-#' @param x An \linkS4class{OnDiskMSnExp} object with one or more files or the number of colors to be produced.
-#' @param which Possible entries are \code{groups}, \code{samples} and \code{perSample} for getting
-#' group, sample group or individual sample colors, respectively.
+#' @param x An \linkS4class{ntsData} object with one or more files or the number of colours to be produced.
+#' @param which Possible entries are \code{samples}, \code{samplegroups} and \code{groups} for getting
+#' individual sample, sample replicate group and individual group colours, respectively.
 #'
-#' @return A vector of colors names according to the given \linkS4class{OnDiskMSnExp} object.
+#' @return A vector of colours, named according to a \linkS4class{ntsData} object if given.
 #'
 #' @export
 #'
@@ -93,8 +93,8 @@ getColors <- function(x, which = c("samples", "samplegroups", "groups")) {
 
   if (!class(x) == "numeric" & !class(x) == "integer") {
 
-    if (which != "samples") nameOfcolors <- unique(sampleGroups(x))
-    if (which == "samples") nameOfcolors <- samples(x)
+    if (which != "samples") nameOfcolors <- unique(pullSamplegroups(x))
+    if (which == "samples") nameOfcolors <- pullSamples(x)
 
     numberOfGroups <- length(nameOfcolors)
     
@@ -110,7 +110,7 @@ getColors <- function(x, which = c("samples", "samplegroups", "groups")) {
     }
 
     if (which == "samplegroups") {
-      count <- count(x@MSnExp@phenoData@data, sample_group)
+      count <- count(x@samples[,c("sample","group")], group)
       vec_colors <- rep(vec_colors, times = count[, "n"])
       names(vec_colors) <- samples(x)
       return(vec_colors)
@@ -184,5 +184,48 @@ rtrBuilder <- function(rt = NULL, rtWindow = NULL, rtUnit = "sec") {
   }
 
   return(rtr)
+
+}
+
+
+
+#' @title filterFileFaster
+#' @description Filter files (i.e., samples) but it does not redo feature list.
+#' Useful for plotting data or extracting EICs from certain samples. 
+#'
+#' @param x An \linkS4class{OnDiskMSnExp} object.
+#' @param i The indices or names of the samples to keep.
+#'
+#' @return The sub-setted \linkS4class{OnDiskMSnExp} object.
+#'
+#' @importMethodsFrom MSnbase filterFile
+#'
+filterFileFaster <- function(x, i) {
+  
+  if (!is.character(i)) {
+    sn <- x@samples$sample[i]
+    sidx <- which(x@samples$sample %in% sn)
+  } else {
+    sn <- i
+    sidx <- which(x@samples$sample %in% sn)
+  }
+  
+  rgr <- unique(x@samples$group[!(x@samples$group %in% unique(x@samples$group[sidx]))])
+  
+  x@samples <- x@samples[x@samples$sample %in% sn, , drop = FALSE]
+  
+  x@metadata <- x@metadata[x@metadata$sample %in% sn, , drop = FALSE]
+  
+  x@MSnExp <- filterFile(x@MSnExp, file = sidx)
+  
+  if (nrow(x@peaks) > 0) x@peaks <- x@peaks[x@peaks$sample %in% sn, , drop = FALSE]
+  
+  if (nrow(x@features) > 0) {
+    rg <- unique(x@samples$group)
+    x@features <- x@features[, !(colnames(x@features) %in% rgr)]
+    x@features <- x@features[!sapply(x@features[, rg] == 0, function(x) sum(x) == length(rg)), ]
+  }
+  
+  return(x)
 
 }

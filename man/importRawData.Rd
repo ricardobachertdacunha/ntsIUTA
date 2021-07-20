@@ -54,7 +54,7 @@ The function \code{\link[MSnbase]{readMSData}} from the
 \examples{
 path <- system.file(package = "ntsIUTA", dir = "extdata")
 dt <- setupProject(path = path, save = FALSE)
-dt <- importRawData(obj[1], save = FALSE, centroidedData = TRUE)
+dt <- importRawData(dt[1], save = FALSE, centroidedData = TRUE)
 
 }
 \references{

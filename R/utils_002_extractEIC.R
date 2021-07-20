@@ -12,7 +12,7 @@
 #' @param rtWindow The time deviation to collect centroids or profile data. The time unit is the defined by \code{rtUnit}.
 #' A time interval can be given with a length 2 vector, defining the minimum and maximum retention time.
 #' @param rtUnit Possible entries are \code{min} or \code{sec}. The default is \code{sec}.
-#' @param msLevel The MS level to extract the data. For the momment, only 1 is possible.
+#' @param msLevel The MS level to extract the data. For the moment, only 1 is possible.
 #' @param normIntensity Logical, set to \code{TRUE} for normalizing the intensity values between 1 and 0 for each file in the given \code{raw} object.
 #'
 #' @return A \code{data.frame} with the columns \code{file}, \code{rt}, \code{mz} and \code{i}
@@ -45,8 +45,9 @@ extractEIC <- function(obj = NULL, fileIndex = NULL,
   # rtWindow <- NULL
   # msLevel <- 1
   
-
-  if (!is.null(fileIndex)) obj <- obj[fileIndex]
+  # TODO add message to import raw data before extracting EIC
+  
+  if (!is.null(fileIndex)) obj <- filterFileFaster(obj, fileIndex)
 
   mzr <- NULL
 
@@ -66,7 +67,7 @@ extractEIC <- function(obj = NULL, fileIndex = NULL,
   if (!is.null(mzr)) raw <- suppressWarnings(filterMz(raw, mz = mzr))
 
   raw <- suppressWarnings(methods::as(raw, "data.frame"))
-
+  
   if (normIntensity) {
     raw <- split(raw, raw$file)
     for (j in seq_len(length(raw))) {
