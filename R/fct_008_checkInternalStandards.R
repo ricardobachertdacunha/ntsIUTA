@@ -47,6 +47,8 @@ checkIS <- function(x = NULL,
                     plot = TRUE,
                     save = TRUE, projPath = setup$projPath) {
   
+  # TODO Adapt to ntsData framework
+  
   # x = featDataSample
   # xPat = patDataRef
   # polarity = "positive"
@@ -85,7 +87,7 @@ checkIS <- function(x = NULL,
   
   isID <- patRoon::screenSuspects(xPat, sl, rtWindow = rtWindow, mzWindow = 0.01, adduct = adduct, onlyHits = TRUE)
   isdf <- dplyr::arrange(patRoon::as.data.table(isID, average = TRUE), group)
-  isdf <- dplyr::left_join(isdf, sl[,base::c("name", "formula", "int10", "hasMS2", "mzMS2", "intMS2", "preMS2")], by = "name")
+  isdf <- dplyr::left_join(isdf, sl[,base::c("name", "int10", "hasMS2", "mzMS2", "intMS2", "preMS2")], by = "name")
   isdf  <- dplyr::left_join(isdf, dplyr::select(dplyr::arrange(patRoon::screenInfo(isID), group), group, d_mz, d_rt), by = "group")
   isdf$av_into <- base::rowMeans(dplyr::select(isdf, base::unique(patRoon::analysisInfo(xPat)$group)))
   isdf <- isdf %>% dplyr::mutate(sd_into = base::apply(dplyr::select(., base::unique(patRoon::analysisInfo(xPat)$group)), 1, sd))
@@ -183,107 +185,107 @@ checkIS <- function(x = NULL,
   IS <- base::list()
   IS[["df"]] <- dplyr::select(isdf, -hasMS2, -mzMS2, -intMS2, -preMS2)
 
-  if(plot) {
-  
-    evalPlot <- base::list()
-    
-    evalPlot[[1]] <- ggplot2::ggplot(isdf) +
-      ggplot2::theme_bw() +
-      ggplot2::geom_rect(ggplot2::aes(ymin = -10, ymax = 10, xmin = -Inf, xmax = Inf), fill = "ForestGreen", alpha = 0.05) +
-      ggplot2::geom_rect(ggplot2::aes(ymin = -15, ymax = -10, xmin = -Inf, xmax = Inf), fill = "PaleGreen", alpha = 0.05) +
-      ggplot2::geom_rect(ggplot2::aes(ymin = 10, ymax = 15, xmin = -Inf, xmax = Inf), fill = "PaleGreen", alpha = 0.05) +
-      ggplot2::geom_rect(ggplot2::aes(ymin = -Inf, ymax = -15, xmin = -Inf, xmax = Inf), fill = "white", alpha = 0.01) +
-      ggplot2::geom_rect(ggplot2::aes(ymin = 15, ymax = Inf, xmin = -Inf, xmax = Inf), fill = "white", alpha = 0.01) +
-      ggplot2::geom_point(stat = "identity",
-                          ggplot2::aes(x = name,
-                                       y = d_rt)) +
-      ggplot2::theme(axis.title.y = ggplot2::element_blank(),
-                     axis.text.y = ggplot2::element_text(size = 7),
-                     axis.text.x = ggplot2::element_text(size = 7),
-                     axis.title.x = ggplot2::element_text(size = 7),
-                     plot.title = ggplot2::element_text(hjust = 0.5, size = 9)) +
-      ggplot2::labs(title = paste("")) +
-      ggplot2::ylab("RT diff (sec)") +
-      ggplot2::ylim(-rtWindow,rtWindow) +
-      ggplot2::coord_flip()
-      
-    evalPlot[[2]] <- ggplot2::ggplot(isdf) +
-      ggplot2::theme_bw() +
-      ggplot2::geom_rect(ggplot2::aes(ymin = -Inf, ymax = 5, xmin = -Inf, xmax = Inf), fill = "ForestGreen", alpha = 0.05) +
-      ggplot2::geom_rect(ggplot2::aes(ymin = 5, ymax = 10, xmin = -Inf, xmax = Inf), fill = "PaleGreen", alpha = 0.05) +
-      ggplot2::geom_rect(ggplot2::aes(ymin = 10, ymax = Inf, xmin = -Inf, xmax = Inf), fill = "white", alpha = 0.01) +
-      ggplot2::geom_point(stat = "identity",
-                          ggplot2::aes(x = name,
-                                       y = d_ppm)) +
-      ggplot2::theme(axis.text.y = ggplot2::element_blank(),
-                     axis.title.y = ggplot2::element_blank(),
-                     axis.text.x = ggplot2::element_text(size = 7),
-                     axis.title.x = ggplot2::element_text(size = 7),
-                     plot.title = ggplot2::element_text(hjust = 0.5, size = 9)) +
-      ggplot2::labs(title = paste("")) +
-      ggplot2::ylab("m/z diff (ppm)") +
-      ggplot2::ylim(0,ppmWindow) +
-      ggplot2::coord_flip()
-    
-    samplesInt <- base::as.data.frame(patRoon::as.data.table(isID[,isdf$group], average = F))
-    rGroups <- base::unique(patRoon::analysisInfo(xPat)$group)
-    
-    for (i in 1:base::length(rGroups)) {
-      sNames <- patRoon::analyses(isID)[patRoon::analysisInfo(xPat)$group == rGroups[i]]
-      tempdf <- base::data.frame(A = isdf$name,
-                                 B = base::apply(samplesInt[,base::colnames(samplesInt) %in% sNames], 1, function(x) base::mean(x, na.rm = T)),
-                                 C = base::apply(samplesInt[,base::colnames(samplesInt) %in% sNames], 1, function(x) stats::sd(x, na.rm = T)),
-                                 D = isdf$int10)
-      evalPlot[[2 + i]] <- ggplot2::ggplot(data = tempdf) +
-        ggplot2::theme_bw() +
-        ggplot2::geom_rect(ggplot2::aes(ymin = 50, ymax = 150, xmin = -Inf, xmax = Inf), fill = "ForestGreen", alpha = 0.05) +
-        ggplot2::geom_rect(ggplot2::aes(ymin = 10, ymax = 50, xmin = -Inf, xmax = Inf), fill = "PaleGreen", alpha = 0.05) +
-        ggplot2::geom_rect(ggplot2::aes(ymin = 150, ymax = 190, xmin = -Inf, xmax = Inf), fill = "PaleGreen", alpha = 0.05) +
-        ggplot2::geom_rect(ggplot2::aes(ymin = -Inf, ymax = 10, xmin = -Inf, xmax = Inf), fill = "white", alpha = 0.01) +
-        ggplot2::geom_rect(ggplot2::aes(ymin = 190, ymax = Inf, xmin = -Inf, xmax = Inf), fill = "white", alpha = 0.01) +
-        ggplot2::geom_errorbar(ggplot2::aes(x = A,
-                                            ymin = base::ifelse((B/D*100) == 0, 0, base::ifelse(B/D*100 > 200, 200, B/D*100) - (base::ifelse(B/D*100 > 200, 200, B/D*100)*C/B)),
-                                            ymax = base::ifelse((B/D*100) == 0, 0, base::ifelse(B/D*100 > 200, 200, B/D*100) + (base::ifelse(B/D*100 > 200, 200, B/D*100)*C/B))),
-                                            width = 0.2, position = ggplot2::position_dodge(0.9),
-                                            colour = "gray45") +
-        ggplot2::geom_point(stat = "identity", ggplot2::aes(x = A, y = base::ifelse(B/D*100 > 200, 200, B/D*100)), size = 2) +
-        ggplot2::theme(axis.title.y = ggplot2::element_blank(),
-              axis.text.y = ggplot2::element_blank(),
-              axis.text.x = ggplot2::element_text(size = 7),
-              axis.title.x = ggplot2::element_text(size = 7),
-              plot.title = ggplot2::element_text(hjust = 0.5, size = 9),
-              panel.grid.minor.x = ggplot2::element_blank()) +
-        ggplot2::labs(title = paste(rGroups[i])) +
-        ggplot2::ylab("Recovery (%)") +
-        ggplot2::scale_y_continuous(limits = c(0, 210), breaks = base::seq(0, 200, by = 50)) +
-        ggplot2::coord_flip()
-    }
-    
-    widths <- c(8,5, base::rep(5, base::length(rGroups)))
-    
-    evalPlot <- gridExtra::grid.arrange(grobs = evalPlot, nrow = 1, heights = 10, widths = widths)
-    
-    featPlot <- ntsIUTA::plotFeaturePeaks(xPat, fileIndex = NULL,
-                                          features = isdf$group,
-                                          mz = NULL, ppm = NULL,
-                                          rt = NULL, rtWindow = NULL,
-                                          rtUnit = "min",
-                                          plotBy = "features",
-                                          names = isdf$name)
-    
-    if (save) {
-      results <- base::paste0(projPath,"\\results")
-      if (!base::dir.exists(results)) base::dir.create(results)
-      ggplot2::ggsave(base::paste0(projPath,"/results/IS_Deviations.tiff"),
-                      plot = evalPlot, device = "tiff", path = NULL, scale = 1,
-                      width = base::sum(widths), height = 10, units = "cm", dpi = 300, limitsize = TRUE)
-      htmlwidgets::saveWidget(plotly::partial_bundle(featPlot), file = base::paste0(projPath,"/results/IS_Features.html"))
-    }
-    
-    IS[["featPlot"]] <- featPlot
-    IS[["evalPlot"]] <- evalPlot
-    
-  }
+  # if(plot) {
+  # 
+  #   evalPlot <- base::list()
+  # 
+  #   evalPlot[[1]] <- ggplot2::ggplot(isdf) +
+  #     ggplot2::theme_bw() +
+  #     ggplot2::geom_rect(ggplot2::aes(ymin = -10, ymax = 10, xmin = -Inf, xmax = Inf), fill = "ForestGreen", alpha = 0.05) +
+  #     ggplot2::geom_rect(ggplot2::aes(ymin = -15, ymax = -10, xmin = -Inf, xmax = Inf), fill = "PaleGreen", alpha = 0.05) +
+  #     ggplot2::geom_rect(ggplot2::aes(ymin = 10, ymax = 15, xmin = -Inf, xmax = Inf), fill = "PaleGreen", alpha = 0.05) +
+  #     ggplot2::geom_rect(ggplot2::aes(ymin = -Inf, ymax = -15, xmin = -Inf, xmax = Inf), fill = "white", alpha = 0.01) +
+  #     ggplot2::geom_rect(ggplot2::aes(ymin = 15, ymax = Inf, xmin = -Inf, xmax = Inf), fill = "white", alpha = 0.01) +
+  #     ggplot2::geom_point(stat = "identity",
+  #                         ggplot2::aes(x = name,
+  #                                      y = d_rt)) +
+  #     ggplot2::theme(axis.title.y = ggplot2::element_blank(),
+  #                    axis.text.y = ggplot2::element_text(size = 7),
+  #                    axis.text.x = ggplot2::element_text(size = 7),
+  #                    axis.title.x = ggplot2::element_text(size = 7),
+  #                    plot.title = ggplot2::element_text(hjust = 0.5, size = 9)) +
+  #     ggplot2::labs(title = paste("")) +
+  #     ggplot2::ylab("RT diff (sec)") +
+  #     ggplot2::ylim(-rtWindow,rtWindow) +
+  #     ggplot2::coord_flip()
+  # 
+  #   evalPlot[[2]] <- ggplot2::ggplot(isdf) +
+  #     ggplot2::theme_bw() +
+  #     ggplot2::geom_rect(ggplot2::aes(ymin = -Inf, ymax = 5, xmin = -Inf, xmax = Inf), fill = "ForestGreen", alpha = 0.05) +
+  #     ggplot2::geom_rect(ggplot2::aes(ymin = 5, ymax = 10, xmin = -Inf, xmax = Inf), fill = "PaleGreen", alpha = 0.05) +
+  #     ggplot2::geom_rect(ggplot2::aes(ymin = 10, ymax = Inf, xmin = -Inf, xmax = Inf), fill = "white", alpha = 0.01) +
+  #     ggplot2::geom_point(stat = "identity",
+  #                         ggplot2::aes(x = name,
+  #                                      y = d_ppm)) +
+  #     ggplot2::theme(axis.text.y = ggplot2::element_blank(),
+  #                    axis.title.y = ggplot2::element_blank(),
+  #                    axis.text.x = ggplot2::element_text(size = 7),
+  #                    axis.title.x = ggplot2::element_text(size = 7),
+  #                    plot.title = ggplot2::element_text(hjust = 0.5, size = 9)) +
+  #     ggplot2::labs(title = paste("")) +
+  #     ggplot2::ylab("m/z diff (ppm)") +
+  #     ggplot2::ylim(0,ppmWindow) +
+  #     ggplot2::coord_flip()
+  # 
+  #   samplesInt <- base::as.data.frame(patRoon::as.data.table(isID[,isdf$group], average = F))
+  #   rGroups <- base::unique(patRoon::analysisInfo(xPat)$group)
+  # 
+  #   for (i in 1:base::length(rGroups)) {
+  #     sNames <- patRoon::analyses(isID)[patRoon::analysisInfo(xPat)$group == rGroups[i]]
+  #     tempdf <- base::data.frame(A = isdf$name,
+  #                                B = base::apply(samplesInt[,base::colnames(samplesInt) %in% sNames], 1, function(x) base::mean(x, na.rm = T)),
+  #                                C = base::apply(samplesInt[,base::colnames(samplesInt) %in% sNames], 1, function(x) stats::sd(x, na.rm = T)),
+  #                                D = isdf$int10)
+  #     evalPlot[[2 + i]] <- ggplot2::ggplot(data = tempdf) +
+  #       ggplot2::theme_bw() +
+  #       ggplot2::geom_rect(ggplot2::aes(ymin = 50, ymax = 150, xmin = -Inf, xmax = Inf), fill = "ForestGreen", alpha = 0.05) +
+  #       ggplot2::geom_rect(ggplot2::aes(ymin = 10, ymax = 50, xmin = -Inf, xmax = Inf), fill = "PaleGreen", alpha = 0.05) +
+  #       ggplot2::geom_rect(ggplot2::aes(ymin = 150, ymax = 190, xmin = -Inf, xmax = Inf), fill = "PaleGreen", alpha = 0.05) +
+  #       ggplot2::geom_rect(ggplot2::aes(ymin = -Inf, ymax = 10, xmin = -Inf, xmax = Inf), fill = "white", alpha = 0.01) +
+  #       ggplot2::geom_rect(ggplot2::aes(ymin = 190, ymax = Inf, xmin = -Inf, xmax = Inf), fill = "white", alpha = 0.01) +
+  #       ggplot2::geom_errorbar(ggplot2::aes(x = A,
+  #                                           ymin = base::ifelse((B/D*100) == 0, 0, base::ifelse(B/D*100 > 200, 200, B/D*100) - (base::ifelse(B/D*100 > 200, 200, B/D*100)*C/B)),
+  #                                           ymax = base::ifelse((B/D*100) == 0, 0, base::ifelse(B/D*100 > 200, 200, B/D*100) + (base::ifelse(B/D*100 > 200, 200, B/D*100)*C/B))),
+  #                                           width = 0.2, position = ggplot2::position_dodge(0.9),
+  #                                           colour = "gray45") +
+  #       ggplot2::geom_point(stat = "identity", ggplot2::aes(x = A, y = base::ifelse(B/D*100 > 200, 200, B/D*100)), size = 2) +
+  #       ggplot2::theme(axis.title.y = ggplot2::element_blank(),
+  #             axis.text.y = ggplot2::element_blank(),
+  #             axis.text.x = ggplot2::element_text(size = 7),
+  #             axis.title.x = ggplot2::element_text(size = 7),
+  #             plot.title = ggplot2::element_text(hjust = 0.5, size = 9),
+  #             panel.grid.minor.x = ggplot2::element_blank()) +
+  #       ggplot2::labs(title = paste(rGroups[i])) +
+  #       ggplot2::ylab("Recovery (%)") +
+  #       ggplot2::scale_y_continuous(limits = c(0, 210), breaks = base::seq(0, 200, by = 50)) +
+  #       ggplot2::coord_flip()
+  #   }
+  #   
+  #   widths <- c(8,5, base::rep(5, base::length(rGroups)))
+  #   
+  #   evalPlot <- gridExtra::grid.arrange(grobs = evalPlot, nrow = 1, heights = 10, widths = widths)
+  #   
+  #   featPlot <- ntsIUTA::plotFeaturePeaks(xPat, fileIndex = NULL,
+  #                                         features = isdf$group,
+  #                                         mz = NULL, ppm = NULL,
+  #                                         rt = NULL, rtWindow = NULL,
+  #                                         rtUnit = "min",
+  #                                         plotBy = "features",
+  #                                         names = isdf$name)
+  #   
+  #   if (save) {
+  #     results <- base::paste0(projPath,"\\results")
+  #     if (!base::dir.exists(results)) base::dir.create(results)
+  #     ggplot2::ggsave(base::paste0(projPath,"/results/IS_Deviations.tiff"),
+  #                     plot = evalPlot, device = "tiff", path = NULL, scale = 1,
+  #                     width = base::sum(widths), height = 10, units = "cm", dpi = 300, limitsize = TRUE)
+  #     htmlwidgets::saveWidget(plotly::partial_bundle(featPlot), file = base::paste0(projPath,"/results/IS_Features.html"))
+  #   }
+  #   
+  #   IS[["featPlot"]] <- featPlot
+  #   IS[["evalPlot"]] <- evalPlot
+  #   
+  # }
 
   if (save) {
     results <- base::paste0(projPath,"\\results")

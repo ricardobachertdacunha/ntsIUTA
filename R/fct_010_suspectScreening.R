@@ -1,264 +1,267 @@
 
 
+### ntsSuspectData -----
+
+#' @title ntsSuspectData
+#'
+#' @slot suspects The data.frame listing all the suspects of interest.
+#' @slot param The parameters used for suspect screening.
+#' @slot data The raw \linkS4class{featureGroupsScreening}
+#' for each sample replicate group.
+#' @slot inSilico When present, the results from the matched In Silico
+#' fragmentation experiment.
+#' @slot results A data.frame with summarized results, including
+#' the identification level according to the guideline.
+#'
+#' @return An \linkS4class{ntsSuspectData} object to be added to
+#' the workflows slot of an \linkS4class{ntsData} object.
+#'
+#' @export
+#'
+setClass("ntsSuspectData",
+  slots = c(
+    suspects = "data.frame",
+    param = "list",
+    data = "list",
+    inSilico = "list",
+    results = "data.frame"
+  ),
+  prototype = list(
+    suspects = data.frame(),
+    param = list(ppm = 5,
+                rtWindow = 30,
+                adduct = NULL,
+                excludeBlanks = TRUE,
+                withMS2 = TRUE,
+                MS2param = new("MS2param")),
+    data = list(),
+    inSilico = list(),
+    results = data.frame()
+  )
+)
+
+
 
 #' @title screenSuspectsFromCSV
 #'
-#' @param patData A \linkS4class{featureGroups} object with the feature groups of interest
-#' @param polarity The polatiry of the MS files in \code{patData}. Possible values are 'positive' or 'negative'.
-#' @param ppmWindow The allowed mass deviation, in ppm.
-#' @param rtWindow The allowed retention time window, in seconds, when 'rt' is given in the screening list (\code{DB}).
-#' @param screeningList A screeningList.
-#' @param removeBlanks Logical, set to \code{TRUE} to ignore blank samples during suspect screening.
-#' @param blankGroups A charcater vector with replicate group name of blanks to ignore.
-#' @param withMS2 Logical, set to \code{TRUE} for using MS2 for confirming suspects.
-#' @param listMS2 An MS2 list, if not given it will be calculated.
-#' @param ppmMS2 Optional, sets a different mass deviation (in ppm) allowance for correlation of MS2 data.
+#' @description Method to perform suspect screening from a given
+#' list of candidates in a csv file. The method uses the S4 method
+#' \code{screenSuspects} from \pkg{patRoon}.
 #'
-#' @return
-#' 
+#' @param obj An \linkS4class{ntsData} object with features
+#' to preform suspect screening.
+#' @param name An optional string (without spaces) to be used as identifier for the
+#' suspect screening entry in the \code{workflows} slot of the \linkS4class{ntsData} object.
+#' @param suspects A \code{data.frame} or a location for a csv
+#' with details for each suspect compound.
+#' See details for more information about the required data.frame structure.
+#' @param ppm The mass deviation, in ppm, to screen for the suspects.
+#' The default is 5 ppm.
+#' @param rtWindow The retention time deviation, in seconds,
+#' to screen for the QC target standards. The default is 30 seconds.
+#' @param adduct The adduct class for screening suspects. The default is \code{NULL},
+#' which uses the polarity of the \code{obj} or the \code{adduct} class defined
+#' in the suspects data frame. See details for more information.
+#' @param excludeBlanks Logical, set to \code{TRUE} to ignore replicate groups
+#' assigned as blanks in the \code{samples} slot of the \code{obj}.
+#' @param withMS2 Logical, set to \code{TRUE} for using confirmation via MS2.
+#' @param MS2param An \linkS4class{MS2param} object with parameters for MS2 extraction.
+#'
+#' @return A data.frame with the suspect screening results.
+#'
+#' @details The \code{suspects} data.frame should follow the template requires as
+#' obtained via \code{getScreeningListTemplate()}.
+#' Add other details of the template.
+#'
 #' @references \insertRef{Helmus2021}{ntsIUTA}
-#' 
+#'
 #' @export
-#' 
+#'
+#' @importFrom checkmate assertClass
 #' @importFrom dplyr filter arrange left_join select everything mutate distinct desc
 #' @importFrom utils read.csv head
-#' @importFrom patRoon screenSuspects as.data.table screenInfo getDefAvgPListParams replicateGroups generateMSPeakLists generateFormulasSIRIUS
-#' @importFrom fuzzyjoin difference_inner_join
+#' @importFrom data.table rbindlist
+#' @importMethodsFrom patRoon screenSuspects as.data.frame screenInfo annotateSuspects generateFormulas
+#'
 #'
 #' @examples
-#' 
-#' 
-#' 
-screenSuspectsFromCSV <- function(patData = patData, polarity = "positive",
-                                  ppmWindow = 5, rtWindow = 10, screeningList = utils::read.csv(base::file.choose()),
-                                  removeBlanks = TRUE, blankGroups = "Blank",
-                                  withMS2 = TRUE, listMS2 = NULL, ppmMS2 = NULL) {
-  
-  #TODO Improve description of the function
-  
-  
-  sDB <- screeningList
-  sDB <- dplyr::filter(sDB, name != "")
-  has_rt = FALSE
-  if("rt" %in% base::colnames(sDB)) {has_rt <- TRUE}
-  if(has_rt) {sDB$rt <- sDB$rt*60}
-  
-  if(base::length(polarity) > 1) stop("Multiple polarities are not supported! Select either pos for positive or neg for negative ionization.")
-  if (polarity == "positive") adduct <- "[M+H]+"
-  if (polarity == "negative") adduct <- "[M-H]-"
-  
-  if (base::is.null(ppmMS2)) ppmMS2 = ppmWindow
-  
-  rGroups <- patRoon::analysisInfo(patData)$group
-  #if (removeBlanks) rGroups <- rGroups[rGroups != blankGroups]
-  
-  groupNames <- patRoon::replicateGroups(patData)
-  if (removeBlanks) groupNames <- groupNames[!(groupNames %in% blankGroups)]
-  
-  df_patData <- base::as.data.frame(patRoon::as.data.table(patData, average = T))
-  
-  patSuspects <- patRoon::screenSuspects(patData, sDB, rtWindow = rtWindow, mzWindow = 0.03, adduct = adduct, onlyHits = TRUE)
-  
-  suspectsDT  <- dplyr::arrange(patRoon::screenInfo(patSuspects), group)
-  suspectsDT  <- dplyr::select(suspectsDT, group, name, d_mz, d_rt)
-  suspectsDT  <- dplyr::left_join(suspectsDT, df_patData, by = "group")
-  suspectsDT <- dplyr::left_join(suspectsDT, sDB[,c("name", "formula", "comment", "int10")], by = "name")
-  suspectsDT$d_ppm <- (base::abs(suspectsDT$d_mz)/suspectsDT$mz)*1E6
-  suspectsDT <- dplyr::select(suspectsDT, group, name, formula, d_ppm, d_rt, mz, ret, dplyr::everything(), -d_mz)
-  suspectsDT <- dplyr::filter(suspectsDT, d_ppm <= ppmWindow)
-  suspectsDT <- base::as.data.frame(suspectsDT)
-  
-  if (withMS2) {
-  
-    if(base::is.null(listMS2)) listMS2 <- base::list()
-    MS2_avgPListParams <- patRoon::getDefAvgPListParams(clusterMzWindow = 0.005,
-                                               topMost = 50,
-                                               minIntensityPre = 10,
-                                               minIntensityPost = 10)
-    
-    # Evaluation and categorization of hits per replicate group
-    for (i in 1:base::length(groupNames)) {
-      
-      #Collecting name and prepare table
-      colMS2 <- base::paste0("ms2_",groupNames[i])
-      colCat <- base::paste0("cat_",groupNames[i])
-      suspectsDT[, colMS2] <- 0
-      suspectsDT[, colCat] <- 0
-      
-      #Check for lowest categories, 4 only mass and 3 mass and rt
-      temp <- suspectsDT[,c("name", "group", "mz", "ret", "d_rt", groupNames[i]), drop = F]
-      suspectsDT[, colCat] <- base::ifelse(base::as.numeric(temp[,groupNames[i]]) > 0, 4, 0)
-      suspectsDT[, colCat] <- base::ifelse(base::as.numeric(temp[,groupNames[i]]) > 0 & !base::is.na(temp$d_rt), 3, suspectsDT[, colCat])
-      
-      #Extracts the MS2 data for each non 0 feature
-      if(!base::is.null(listMS2[[groupNames[i]]])){
-        tempMS2 <- listMS2[[groupNames[i]]]
-      } else {
-        tempMS2 <- temp[temp[,groupNames[i]] > 0,]
-        tempMS2 <-base::suppressWarnings(
-          patRoon::generateMSPeakLists(patData[base::which(rGroups == groupNames[i]), tempMS2$group[drop = TRUE]],
-                                                       "mzr", maxMSRtWindow = 5,
-                                                       precursorMzWindow = 2,
-                                                       avgFeatParams = MS2_avgPListParams,
-                                                       avgFGroupParams = MS2_avgPListParams)
-        )
-        listMS2[[groupNames[i]]] <- tempMS2
-      }
-      
-      #Loop for all the rows in suspectsDT
-      for (j in 1:base::nrow(temp)) {
-        
-        if (base::as.numeric(temp[j, groupNames[i], drop = T]) > 0) {
-          
-          temp1 <- tempMS2[[temp$group[j]]]$MSMS
-          
-          #tentative to extract MS2 again if temp1 is NULL
-          if(base::is.null(temp1)) {
-            lastTemptMS2 <- base::suppressWarnings(
-              patRoon::generateMSPeakLists(patData[base::which(rGroups == groupNames[i]), temp$group[j, drop = TRUE]],
-                                  "mzr", maxMSRtWindow = 5,
-                                  precursorMzWindow = 2,
-                                  avgFeatParams = MS2_avgPListParams,
-                                  avgFGroupParams = MS2_avgPListParams))
-            temp1 <- lastTemptMS2[[temp$group[j]]]$MSMS
-          }
-          
-          
-          if (!base::is.null(temp1)) {
-            
-            temp1 <- dplyr::filter(temp1, mz < temp$mz[j]+(5/1E6*temp$mz[j])) #remove mz higher than precursor, probably contamination
-            if (base::nrow(temp1) < 15){
-              top5_temp1 <- utils::head(dplyr::arrange(temp1, dplyr::desc(intensity)), n = 5)
-            } else { top5_temp1 <- utils::head(dplyr::arrange(temp1, dplyr::desc(intensity)), n = 10) }
-            
-            
-            # load MS2 from DB
-            temp2 <- dplyr::filter(sDB, name == temp$name[j])
-            #if (base::is.na(temp2$hasMS2[drop = T])) {temp2$hasMS2 <- FALSE}
-            
-            if (temp2$hasMS2[drop = T]) {
-              
-              temp3 <- temp2$mzMS2[drop = T]
-              temp3 <- base::as.data.frame(base::unlist(base::strsplit(temp3, split=";")))
-              base::colnames(temp3) <- c("mz")
-              temp3$mz <- base::as.numeric(temp3$mz)
-              temp3$intensity <- base::as.numeric(base::unlist(base::strsplit(temp2$intMS2[drop = T], split=";")))
-              #remove precurssor ion from fragments list
-              temp3 <- dplyr::filter(temp3, mz < temp2$mz[drop=T] - (5/1E6*temp2$mz[drop=T]))
-              # select top 5 in fragments from db, or top 10 if number of fragments is above 15
-              if (base::nrow(temp3) < 15){
-                top5_temp3 <- utils::head(dplyr::arrange(temp3, dplyr::desc(intensity)), n = 5)
-              } else { top5_temp3 <- utils::head(dplyr::arrange(temp3, dplyr::desc(intensity)), n = 10) }
-              
-              
-              # test match for MS2 correlation and excludes in diff > +/-5ppm
-              temp6 <- fuzzyjoin::difference_inner_join(temp1, temp3, by = c("mz"), max_dist = 0.1, distance_col = "d_ppm")
-              temp6$d_ppm <- base::abs(temp6$d_ppm)/temp6$mz.x*1E6
-              temp6 <- dplyr::filter(temp6, d_ppm <= ppmMS2)
-              
-              # test match only in top 5
-              top5_temp6 <- fuzzyjoin::difference_inner_join(top5_temp1, top5_temp3, by = c("mz"), max_dist = 0.1, distance_col = "d_ppm")
-              top5_temp6$d_ppm <- base::abs(top5_temp6$d_ppm)/top5_temp6$mz.x*1E6
-              top5_temp6 <- dplyr::filter(top5_temp6, d_ppm <= ppmMS2)
-              
-              temp6 <- dplyr::distinct(temp6, mz.x, .keep_all= TRUE) # remove double entries for mz.x
-              top5_temp6 <- dplyr::distinct(top5_temp6, mz.x, .keep_all= TRUE) # remove double entries for mz.x
-              
-              suspectsDT[j, colMS2] <- base::paste0(base::nrow(top5_temp6),"(",base::nrow(top5_temp3),")")
-              
-              if (base::nrow(top5_temp6) >= 2) {
-                
-                suspectsDT[j, colCat] <- 1
-                
-              } else {
-                
-                groupAndIsos <- dplyr::filter(df_patData, mz >= temp$mz[j, drop=T] & mz < 6+temp$mz[j, drop=T])
-                groupAndIsos <- dplyr::filter(groupAndIsos, ret >= temp$ret[j, drop=T]-30 & ret <= temp$ret[j, drop=T]+30)
-                
-                tempMS2withIsotopes <- base::suppressWarnings(
-                  patRoon::generateMSPeakLists(patData[base::which(rGroups == groupNames[i]),
-                                                       groupAndIsos$group[drop = TRUE]],
-                                               "mzr", maxMSRtWindow = 5, precursorMzWindow = 2,
-                                               avgFeatParams = MS2_avgPListParams,
-                                               avgFGroupParams = MS2_avgPListParams)
-                  )
-                
-                #tentative to identify by insillico fragmentation
-                tempFormulas <- patRoon::generateFormulasSIRIUS(patData[base::which(rGroups == groupNames[i]), groupAndIsos$group[drop = TRUE]],
-                                                                tempMS2withIsotopes, relMzDev = ppmMS2,
-                                                                adduct = "[M+H]+",
-                                                                elements = base::gsub("[^a-zA-Z]", "", temp2$formula[drop=T]),
-                                                                profile = "qtof",
-                                                                database = NULL, noise = NULL,
-                                                                topMost = 20, extraOptsGeneral = NULL,
-                                                                verbose = FALSE,
-                                                                calculateFeatures = TRUE, featThreshold = 1)
-                
-                formulaResult <- tempFormulas[[temp$group[j, drop=T]]]
-                if (!base::is.null(formulaResult)) {
-                  formulaResult <- dplyr::filter(formulaResult, neutral_formula == temp2$formula[drop=T])
-                  suspectsDT[j, colMS2] <- base::paste0(base::nrow(formulaResult),"(",base::nrow(temp1),")")
-                  if (base::nrow(formulaResult) >= 2) {
-                    if (base::length(base::unique(formulaResult$frag_mz[drop = T])) >= 2) {suspectsDT[j, colCat] <- 2}
-                  }
-                }
-              }
-            } else {
-              
-              groupAndIsos <- dplyr::filter(df_patData, mz >= temp$mz[j, drop=T] & mz < 6+temp$mz[j, drop=T])
-              groupAndIsos <- dplyr::filter(groupAndIsos, ret >= temp$ret[j, drop=T]-30 & ret <= temp$ret[j, drop=T]+30)
-              
-              tempMS2withIsotopes <-base::suppressWarnings(
-                patRoon::generateMSPeakLists(patData[base::which(rGroups == groupNames[i]),
-                                                     groupAndIsos$group[drop = TRUE]],
-                                             "mzr", maxMSRtWindow = 5, precursorMzWindow = 2,
-                                             avgFeatParams = MS2_avgPListParams,
-                                             avgFGroupParams = MS2_avgPListParams)
-                )
-              
-              temp2 <- dplyr::filter(sDB, name == temp$name[j])
-              #tentative to identify by insillico fragmentation
-              tempFormulas <- patRoon::generateFormulasSIRIUS(patData[base::which(rGroups == groupNames[i]), groupAndIsos$group[drop = TRUE]],
-                                                              tempMS2withIsotopes, relMzDev = ppmMS2,
-                                                              adduct = "[M+H]+",
-                                                              elements = base::gsub("[^a-zA-Z]", "", temp2$formula[drop=T]),
-                                                              profile = "qtof",
-                                                              database = NULL, noise = NULL,
-                                                              topMost = 20, extraOptsGeneral = NULL,
-                                                              calculateFeatures = TRUE, featThreshold = 1)
-              
-              # tempFormulas <- patRoon::generateFormulasGenForm(patData[which(rGroups == groupNames[i]), groupAndIsos$group[drop = TRUE]],
-              #                                                 tempMS2withIsotopes, relMzDev = 10, isolatePrec = TRUE,
-              #                                                 adduct = "[M+H]+", elements = gsub("[^a-zA-Z]", "", temp2$formula[drop=T]),
-              #                                                 topMost = 20, extraOpts = NULL,
-              #                                                 calculateFeatures = TRUE, featThreshold = 1, timeout = 240, hetero = TRUE, oc = TRUE)
-              
-              formulaResult <- tempFormulas[[temp$group[j, drop=T]]]
-              if (!base::is.null(formulaResult)) {
-                formulaResult <- dplyr::filter(formulaResult, neutral_formula == temp2$formula[drop=T])
-                suspectsDT[j, colMS2] <- base::paste0(base::nrow(formulaResult),"(",base::nrow(temp1),")")
-                if (base::nrow(formulaResult) >= 2) {
-                  if (base::length(base::unique(formulaResult$frag_mz[drop = T])) >= 2) {suspectsDT[j, colCat] <- 2}
-                }
-              }
-            }
-          }
+#'
+screenSuspectsFromCSV <- function(obj,
+                                  name = NULL,
+                                  suspects = utils::read.csv(base::file.choose()),
+                                  ppm = 5,
+                                  rtWindow = 30,
+                                  adduct = NULL,
+                                  excludeBlanks = TRUE,
+                                  withMS2 = TRUE,
+                                  MS2param = MS2param()) {
+
+  # TODO A ID and sampleGroups argument for running suspect screening only for a set of features.
+
+  assertClass(obj, "ntsData")
+
+  if (!is.data.frame(suspects)) suspects <- utils::read.csv(suspects)
+
+  if (max(suspects$rt) < 120) suspects$rt <- suspects$rt * 60
+
+  #selects top 5 or 10 fragment if MS2 data is present for suspects
+  if ("hasFragments" %in% colnames(suspects)) {
+    for (n in seq_len(nrow(suspects))) {
+      if (suspects$hasFragments[n]) {
+        top <- unlist(suspects$fragments_mz[n])
+        top <- as.data.frame(unlist(strsplit(top, split = ";")))
+        if (nrow(top) > 5) {
+          colnames(top) <- c("mz")
+          top$mz <- as.numeric(top$mz)
+          top$int <- as.numeric(unlist(strsplit(suspects$fragments_int[n], split = ";")))
+          #remove precursor ion from fragments list
+          top <- dplyr::filter(top, mz < suspects$mz[n] - (5 / 1E6 * suspects$mz[n]))
+          if (nrow(top) < 15) ntop <- 5 else ntop <- 10
+          top <- utils::head(arrange(top, desc(int)), n = ntop)
+          suspects$fragments_mz[n] <- paste(top$mz, collapse = ";")
+          suspects$fragments_int[n] <- paste(top$int, collapse = ";")
+          # TODO add top for formulas but might not be necessary
         }
       }
-      if (exists("temp1")) base::rm(temp1)
-      if (exists("temp2")) base::rm(temp2)
-      if (exists("temp3")) base::rm(temp3)
-      if (exists("temp6")) base::rm(temp6)
-      if (exists("top5_temp1")) base::rm(top5_temp1)
-      if (exists("top5_temp3")) base::rm(top5_temp3)
-      if (exists("top5_temp6")) base::rm(top5_temp6)
     }
   }
-  
-  suspects <- base::list(patSuspects = patSuspects, suspectsDT = suspectsDT)
-  
-  if (!base::is.null(listMS2)) suspects[["MS2"]] <- listMS2
-  
-  return(suspects)
-  
+
+  if (is.null(adduct)) {
+    if (!("adduct" %in% colnames(suspects))) {
+      adduct <- ifelse(obj@polarity == "positive", "[M+H]+",
+                       ifelse(obj@polarity == "negative", "[M-H]-",
+                              stop("polarity argument must be 'positive' or 'negative'")))
+    }
+  }
+
+  rg <- unique(sampleGroups(obj))
+
+  if (excludeBlanks) rg <- rg[!(rg %in% blanks(obj))]
+
+  screen <- screenSuspects(obj@patdata, select(suspects, -mz),
+                           rtWindow = rtWindow, mzWindow = 0.03,
+                           adduct = adduct, onlyHits = TRUE)
+
+  df <- arrange(patRoon::as.data.frame(screen, average = FALSE), group)
+  df <- left_join(df, suspects[, colnames(suspects) %in% c("name", "formula", "adduct", "hasFragments", "intControl")], by = "name")
+  df <- left_join(df, select(arrange(screenInfo(screen), group), group, d_mz, d_rt), by = "group")
+  df$d_ppm <- (abs(df$d_mz) / df$mz) * 1E6
+  df <- dplyr::rename(df, rt = ret, ID = group)
+  df <- select(df, name, formula, adduct, ID, mz, rt, everything(), -d_mz, d_ppm, d_rt)
+  df <- dplyr::filter(df, d_ppm <= ppm)
+  df$d_ppm <- round(df$d_ppm, digits = 1)
+  df$d_rt <- round(df$d_rt, digits = 1)
+
+  screen <- screen[, df$ID]
+
+  elements <- gsub("[^a-zA-Z]", "", df$formula)
+  elements <- paste0(elements, collapse = "")
+  elements <- gsub("([[:upper:]])", " \\1", elements)
+  elements <- unique(strsplit(elements, " ")[[1]])
+  elements <- elements[!elements %in% ""]
+  elements <- paste0(elements, collapse = "")
+
+  data <- list()
+  inSilico <- list()
+  results <- list()
+
+  if (withMS2) {
+
+    for (g in seq_len(length(rg))) {
+
+      temp <- filterFeatureGroups(screen, which(obj@samples$group == rg[g]))
+
+      MS2 <- extractMS2(temp, param = MS2param)
+
+      # TODO Adduct is [M+H]+ by default but should take the value from screening
+      formulas <- patRoon::generateFormulasGenForm(temp, MS2,
+                                                   relMzDev = ppm,
+                                                   isolatePrec = TRUE,
+                                                   adduct = "[M+H]+",
+                                                   elements = elements,
+                                                   topMost = 25, extraOpts = NULL,
+                                                   calculateFeatures = FALSE,
+                                                   featThreshold = 1,
+                                                   timeout = 240, hetero = TRUE, oc = TRUE)
+
+      temp <- patRoon::annotateSuspects(temp, MSPeakLists = MS2,
+                                        formulas = formulas,
+                                        compounds = NULL)
+
+      tempScreen <- temp@screenInfo[match(df$ID, temp@screenInfo$group)]
+
+      tempScreen$d_ppm <- (abs(tempScreen$d_mz) / tempScreen$mz) * 1E6
+
+      isoScore <- tempScreen$group
+      for (iso in seq_len(nrow(tempScreen))) {
+        tempForm <- formulas@formulas[[isoScore[iso]]]
+        tempForm <- tempForm[tempForm$neutral_formula %in% tempScreen$formula, ]
+        tempForm$ID <- isoScore[iso]
+        isoScore[iso] <- round(unique(tempForm$isoScore)[1], digits = 2)
+        if (iso == 1) {
+          Form <- tempForm
+        } else {
+          Form <- rbind(Form, tempForm, fill = TRUE)
+        }
+      }
+
+      tempScreen$isoScore <- isoScore
+
+      tempScreen$hasExpFrag <- FALSE
+      for (i in seq_len(nrow(tempScreen))) {
+        fragments <- MS2[[tempScreen$group[i]]]$MSMS
+        if (!is.null(fragments)) tempScreen$hasExpFrag[i] <- TRUE
+      }
+
+      tempScreen$FragMatch <- paste0(tempScreen$maxFragMatches, "(", tempScreen$maxFrags, ")")
+
+      tempScreen <- dplyr::rename(tempScreen, ID = group, IdLevel = estIDLevel)
+
+      tempScreen$hasFrag <- df$hasFragments
+
+      tempScreen <- select(tempScreen, name, formula, adduct, ID, mz, rt, IdLevel, d_rt, d_ppm, isoScore, FragMatch, hasExpFrag, hasFrag, everything())
+
+      tempScreen <- cbind(tempScreen, df[, colnames(df) %in% obj@samples$sample])
+
+      data[[rg[g]]] <- temp
+
+      inSilico[[rg[g]]] <- Form
+
+      results[[rg[g]]] <- tempScreen
+
+    }
+
+    results <- data.table::rbindlist(results, idcol = "group")
+
+    results <- base::as.data.frame(results)
+
+  } else {
+
+    data <- screen
+
+    results <- df
+
+  }
+
+  sS <- new("ntsSuspectData")
+
+  sS@suspects <- suspects
+
+  sS@param$ppm <- ppm
+  sS@param$rtWindow <- rtWindow
+  sS@param$adduct <- adduct
+  sS@param$excludeBlanks <- excludeBlanks
+  sS@param$withMS2 <- withMS2
+  sS@param$MS2param <- MS2param
+
+  sS@data <- data
+  sS@inSilico <- inSilico
+  sS@results <- results
+
+  if (is.null(name)) name <- "SuspectScreening"
+
+  obj@workflows[[name]] <- sS
+
+  return(obj)
+
 }

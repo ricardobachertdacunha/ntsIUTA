@@ -46,7 +46,10 @@ Imports:
     pkgload,
     Biobase,
     BiocGenerics,
-    MSnbase
+    MSnbase,
+    checkmate,
+    pheatmap,
+    rlang
 Encoding: UTF-8
 LazyData: true
 RdMacros: Rdpack

@@ -1,6 +1,5 @@
 
 
-
 #' @title plotTargetCentroids
 #' @description Plot centroids or profile data for a target compound
 #' using expected \emph{m/z}, retention time and respective deviations.

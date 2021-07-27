@@ -5,6 +5,8 @@
 #' @param ... Character vector specifying directory and or file to
 #'     point to inside the current package.
 #'
+#' @importFrom config get
+#'
 #' @noRd
 #'
 app_sys <- function(...) {

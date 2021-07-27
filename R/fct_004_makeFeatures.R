@@ -25,7 +25,7 @@
 #' @param paramGrouping The parameters for the chosen grouping method.
 #' See documentation of \code{\link[xcms]{groupChromPeaks}} or
 #' \code{\link[patRoon]{groupFeatures}} for more information.
-#' @param recurvive Logical, set to \code{TRUE} for applying recursive
+#' @param recursive Logical, set to \code{TRUE} for applying recursive
 #' integration for samples with missing peaks.
 #' @param paramFill An object of class \code{FillChromPeaksParam}
 #' or \code{ChromPeakAreaParam} containing the parameters
@@ -49,6 +49,7 @@
 #'
 #' @export
 #'
+#' @importFrom checkmate assertClass testChoice
 #' @importClassesFrom patRoon featureGroups
 #' @importClassesFrom xcms XCMSnExp
 #' @importFrom patRoon groupFeatures getXCMSnExp importFeaturesXCMS3 groupFeatIndex
@@ -68,18 +69,25 @@ makeFeatures <- function(obj = NULL,
                          paramFill = NULL,
                          save = TRUE) {
 
+  assertClass(obj, "ntsData")
+
   x <- obj@patdata
-  
+
   if (is.null(algorithm)) algorithm <- obj@algorithms$makeFeatures
-  
-  checkmate::checkChoice(algorithm, c("xcms3", "xcms", "openms"))
-  
+
+  if (!testChoice(algorithm, c("xcms3", "xcms", "openms"))) {
+    warning("Algorithm not recognized. See ?makeFeatures for more information.")
+    return(obj)
+  }
+
   if (is.null(paramAlignment)) paramAlignment <- obj@parameters$peakAlignment
-  
+
   if (is.null(paramGrouping)) paramGrouping <- obj@parameters$peakGrouping
-  
+
   if (is.null(paramFill)) paramFill <- obj@parameters$fillMissing
-  
+
+  # TODO add test for parameters grouping
+
   if (algorithm == "xcms3") {
     x <- getXCMSnExp(x)
     if (rtAlignment) {
@@ -109,13 +117,13 @@ makeFeatures <- function(obj = NULL,
   }
 
   obj@algorithms$makeFeatures <- algorithm
-  
+
   obj@parameters$peakAlignment <- paramAlignment
-  
+
   obj@parameters$peakGrouping <- paramGrouping
-  
+
   obj@parameters$fillMissing <- paramFill
-  
+
   if (class(x) == "XCMSnExp") {
     sinfo <- data.frame(path = dirname(fileNames(x)),
                         analysis = x$sample_name,
@@ -126,7 +134,7 @@ makeFeatures <- function(obj = NULL,
   }
 
   obj@patdata <- x
-  
+
   #updates slot peaks with filled peaks, possibly added to patRoon new version
   if (class(x) == "featureGroupsXCMS3") {
     # TODO make function/method to create peaks table
@@ -140,12 +148,12 @@ makeFeatures <- function(obj = NULL,
     peaks <- rename(peaks, intensity = maxo, area = into)
     obj@peaks <- peaks
   }
-  
+
   #add maker for feature list
-  obj <- buildFeatureList2(obj)
-  
+  obj <- buildFeatureList(obj)
+
   if (save) saveObject(obj = obj)
-  
+
   if (is.character(save)) saveObject(obj = obj, filename = save)
 
   return(obj)
@@ -169,8 +177,6 @@ makeFeatures <- function(obj = NULL,
 #' \insertRef{xcms1}{ntsIUTA}
 #' \insertRef{xcms2}{ntsIUTA}
 #' \insertRef{xcms3}{ntsIUTA}
-#'
-#' @export
 #'
 recursiveIntegration <- function(XCMSfeatures = XCMSfeatures,
                                  paramFill = xcms::ChromPeakAreaParam()) {

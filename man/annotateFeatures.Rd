@@ -21,8 +21,11 @@ Optionally, a character string can be given instead of \code{TRUE}
 to be used as file name, avoiding overwriting.}
 }
 \value{
-
+An \linkS4class{ntsData} object, containing components with 
+annotated features.
 }
 \description{
-Write
+Group features into components according to co-elution and 
+EIC similarities and annotate isotopes and adducts in each component
+per sample replicate group.
 }

@@ -4,44 +4,39 @@
 \name{ntsData-class}
 \alias{ntsData-class}
 \alias{show,ntsData-method}
-\alias{pullSamples,ntsData-method}
-\alias{pullSamplegroups,ntsData-method}
-\alias{pushSamplegroups,ntsData-method}
-\alias{pushSamplegroups<-,ntsData-method}
-\alias{pullBlanks,ntsData-method}
-\alias{pushBlanks,ntsData-method}
-\alias{pushBlanks<-,ntsData-method}
-\alias{pullQC,ntsData-method}
-\alias{pushQC<-,ntsData-method}
+\alias{samples,ntsData-method}
+\alias{sampleGroups,ntsData-method}
+\alias{sampleGroups<-,ntsData-method}
+\alias{blanks,ntsData-method}
+\alias{blanks<-,ntsData-method}
+\alias{QC,ntsData-method}
+\alias{QC<-,ntsData-method}
 \alias{[,ntsData,ANY,missing,missing-method}
-\alias{pullPeaks,ntsData-method}
-\alias{pullFeatures,ntsData-method}
+\alias{peaks,ntsData-method}
+\alias{features,ntsData-method}
+\alias{components,ntsData-method}
 \title{ntsData}
 \usage{
 \S4method{show}{ntsData}(object)
 
-\S4method{pullSamples}{ntsData}(object)
+\S4method{samples}{ntsData}(object)
 
-\S4method{pullSamplegroups}{ntsData}(object)
+\S4method{sampleGroups}{ntsData}(object)
 
-\S4method{pushSamplegroups}{ntsData}(object, value)
+\S4method{sampleGroups}{ntsData}(object) <- value
 
-\S4method{pushSamplegroups}{ntsData}(object) <- value
+\S4method{blanks}{ntsData}(object)
 
-\S4method{pullBlanks}{ntsData}(object)
+\S4method{blanks}{ntsData}(object) <- value
 
-\S4method{pushBlanks}{ntsData}(object, value)
+\S4method{QC}{ntsData}(object)
 
-\S4method{pushBlanks}{ntsData}(object) <- value
-
-\S4method{pullQC}{ntsData}(object)
-
-\S4method{pushQC}{ntsData}(object) <- value
+\S4method{QC}{ntsData}(object) <- value
 
 \S4method{[}{ntsData,ANY,missing,missing}(x, i, j, ..., drop = TRUE)
 
-\S4method{pullPeaks}{ntsData}(
-  obj,
+\S4method{peaks}{ntsData}(
+  object,
   fileIndex = NULL,
   ID = NULL,
   mz = NULL,
@@ -51,8 +46,8 @@
   rtUnit = "sec"
 )
 
-\S4method{pullFeatures}{ntsData}(
-  obj,
+\S4method{features}{ntsData}(
+  object,
   fileIndex = NULL,
   ID = NULL,
   mz = NULL,
@@ -61,9 +56,64 @@
   rtWindow = NULL,
   rtUnit = "sec"
 )
+
+\S4method{components}{ntsData}(
+  object,
+  samples = NULL,
+  ID = NULL,
+  mz = NULL,
+  ppm = 5,
+  rt = NULL,
+  rtWindow = 1,
+  rtUnit = "sec",
+  compNumber = NULL,
+  entireComponents = TRUE,
+  onlyAnnotated = FALSE,
+  onlyRelated = TRUE
+)
 }
 \arguments{
+\item{object}{An \linkS4class{ntsData} object.}
+
+\item{value}{A character vector with the names of the sample replicate group/s
+to be used for QC.}
+
+\item{x}{An \linkS4class{ntsData} object.}
+
+\item{i}{The indice/s or name/s of the samples to keep in the \code{x} object.}
+
+\item{j}{Ignored.}
+
 \item{\dots}{Ignored.}
+
+\item{drop}{Ignored.}
+
+\item{fileIndex}{The indices of samples to keep in the \code{object}.}
+
+\item{ID}{The ID of features of interest.}
+
+\item{mz}{Alternatively to \code{ID}, the \emph{m/z} of interest.
+can be of length two, defining a mass range.}
+
+\item{ppm}{The mass deviation, in ppm, of a given \code{mz}.}
+
+\item{rt}{The retention time to find features.}
+
+\item{rtWindow}{The time deviation. Can be of length two, defining a time range.}
+
+\item{rtUnit}{The unit of the time arguments. Possible values are "sec" and "min".}
+
+\item{samples}{The indice/s or name/s of samples to keep in the \code{object}.}
+
+\item{compNumber}{Alternatively, the component number to find features.}
+
+\item{entireComponents}{Logical, set to \code{TRUE} to extract all features
+from the represented components.}
+
+\item{onlyAnnotated}{Logical, set to \code{TRUE} to extract only annotated features.}
+
+\item{onlyRelated}{Logical, set to \code{TRUE} to extract only features that are related
+to the features of interest.}
 }
 \value{
 An S4 class object named \linkS4class{ntsData}.
@@ -76,29 +126,27 @@ within the \pkg{ntsIUTA} package.
 \itemize{
 \item \code{show}: Informative printing.
 
-\item \code{pullSamples}: Getter for samples.
+\item \code{samples}: Getter for samples.
 
-\item \code{pullSamplegroups}: Getter for sample replicate groups.
+\item \code{sampleGroups}: Getter for sample replicate groups.
 
-\item \code{pushSamplegroups}: Setter for sample replicate groups.
+\item \code{sampleGroups<-}: Setter for sample replicate groups.
 
-\item \code{pushSamplegroups<-}: Setter for sample replicate groups.
+\item \code{blanks}: Getter for blank replicate groups.
 
-\item \code{pullBlanks}: Getter for blank replicate groups.
+\item \code{blanks<-}: Setter for blank replicate groups.
 
-\item \code{pushBlanks}: Setter for blank replicate groups.
+\item \code{QC}: Getter for QC replicate sample groups.
 
-\item \code{pushBlanks<-}: Setter for blank replicate groups.
+\item \code{QC<-}: Setter for QC replicate sample groups.
 
-\item \code{pullQC}: Getter for QC replicate sample groups.
+\item \code{[}: Subset on samples, using sample index or name.
 
-\item \code{pushQC<-}: Setter for QC replicate sample groups.
+\item \code{peaks}: Getter for chromatographic peaks.
 
-\item \code{[}: Subset on samples.
+\item \code{features}: Getter for features (i.e., grouped peaks).
 
-\item \code{pullPeaks}: Getter for chromatographic peaks.
-
-\item \code{pullFeatures}: Getter for features (i.e., grouped peaks).
+\item \code{components}: Getter for components (i.e., annotated features).
 }}
 
 \section{Slots}{
@@ -158,6 +206,12 @@ from the package \pkg{patRoon} can be used but the default
 is the package \pkg{CAMERA} directly. The slot is composed of a list of length 2,
 where the first entry is a data frame with summarized results for each feature
 and the second is the raw data from the \pkg{CAMERA} package.}
+
+\item{\code{control}}{Slot to store the list of internal standards (IS) and the results
+from IS control of the samples in the \code{ntsData} object.}
+
+\item{\code{workflows}}{A list of objects inherent of downstream workflows, such as
+suspect screening.}
 }}
 
 \note{

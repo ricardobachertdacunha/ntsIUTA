@@ -5,48 +5,59 @@
 \title{screenSuspectsFromCSV}
 \usage{
 screenSuspectsFromCSV(
-  patData = patData,
-  polarity = "positive",
-  ppmWindow = 5,
-  rtWindow = 10,
-  screeningList = utils::read.csv(base::file.choose()),
-  removeBlanks = TRUE,
-  blankGroups = "Blank",
+  obj,
+  name = NULL,
+  suspects = utils::read.csv(base::file.choose()),
+  ppm = 5,
+  rtWindow = 30,
+  adduct = NULL,
+  excludeBlanks = TRUE,
   withMS2 = TRUE,
-  listMS2 = NULL,
-  ppmMS2 = NULL
+  MS2param = MS2param()
 )
 }
 \arguments{
-\item{patData}{A \linkS4class{featureGroups} object with the feature groups of interest}
+\item{obj}{An \linkS4class{ntsData} object with features
+to preform suspect screening.}
 
-\item{polarity}{The polatiry of the MS files in \code{patData}. Possible values are 'positive' or 'negative'.}
+\item{name}{An optional string (without spaces) to be used as identifier for the
+suspect screening entry in the workflow slot of the \linkS4class{ntsData} object.}
 
-\item{ppmWindow}{The allowed mass deviation, in ppm.}
+\item{suspects}{A \code{data.frame} or a location for a csv
+with details for each suspect compound.
+See details for more information about the required data.frame structure.}
 
-\item{rtWindow}{The allowed retention time window, in seconds, when 'rt' is given in the screening list (\code{DB}).}
+\item{ppm}{The mass deviation, in ppm, to screen for the suspects.
+The default is 5 ppm.}
 
-\item{screeningList}{A screeningList.}
+\item{rtWindow}{The retention time deviation, in seconds,
+to screen for the QC target standards. The default is 30 seconds.}
 
-\item{removeBlanks}{Logical, set to \code{TRUE} to ignore blank samples during suspect screening.}
+\item{adduct}{The adduct class for screening suspects. The default is \code{NULL},
+which uses the polarity of the \code{obj} or the \code{adduct} class defined
+in the suspects data frame. See details for more information.}
 
-\item{blankGroups}{A charcater vector with replicate group name of blanks to ignore.}
+\item{excludeBlanks}{Logical, set to \code{TRUE} to ignore replicate groups 
+assigned as blanks in the \code{samples} slot of the \code{obj}.}
 
-\item{withMS2}{Logical, set to \code{TRUE} for using MS2 for confirming suspects.}
+\item{withMS2}{Logical, set to \code{TRUE} for using confirmation via MS2.}
 
-\item{listMS2}{An MS2 list, if not given it will be calculated.}
-
-\item{ppmMS2}{Optional, sets a different mass deviation (in ppm) allowance for correlation of MS2 data.}
+\item{MS2param}{An \linkS4class{MS2param} object with parameters for MS2 extraction.}
 }
 \value{
-
+A data.frame with the suspect screening results.
 }
 \description{
-screenSuspectsFromCSV
+Method to perform suspect screening from a given
+list of candidates in a csv file. The method uses the S4 method
+\code{screenSuspects} from \pkg{patRoon}.
+}
+\details{
+The \code{suspects} data.frame should follow the template requires as 
+obtained via \code{getScreeningListTemplate()}.
+Add other details of the template.
 }
 \examples{
-
-
 
 }
 \references{

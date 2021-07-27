@@ -38,6 +38,9 @@ and the second element the actual alignment parameters.}
 See documentation of \code{\link[xcms]{groupChromPeaks}} or
 \code{\link[patRoon]{groupFeatures}} for more information.}
 
+\item{recursive}{Logical, set to \code{TRUE} for applying recursive
+integration for samples with missing peaks.}
+
 \item{paramFill}{An object of class \code{FillChromPeaksParam}
 or \code{ChromPeakAreaParam} containing the parameters
 to apply the recursive integration.
@@ -48,9 +51,6 @@ to apply the recursive integration.
 Note that \code{TRUE} overwrites the existing \linkS4class{ntsData} object.
 Optionally, a character string can be given instead of \code{TRUE}
 to be used as file name, avoiding overwriting.}
-
-\item{recurvive}{Logical, set to \code{TRUE} for applying recursive
-integration for samples with missing peaks.}
 }
 \value{
 An \linkS4class{ntsData} object

@@ -34,6 +34,7 @@
 #'
 #' @export
 #'
+#' @importFrom checkmate assertClass testChoice
 #' @importClassesFrom patRoon features
 #' @importFrom patRoon findFeatures featureTable
 #' @importMethodsFrom MSnbase filterFile fileNames
@@ -47,15 +48,23 @@ peakPicking <- function(obj = NULL,
                         algorithm = NULL,
                         param = NULL,
                         save = TRUE) {
-  
+
+  assertClass(obj, "ntsData")
+
   if (is.null(algorithm)) algorithm <- obj@algorithms$peakPicking
-  
-  checkmate::checkChoice(algorithm, c("xcms3", "xcms", "openms", "envipick"))
-  
+
+  if (!testChoice(algorithm, c("xcms3", "xcms", "openms", "envipick"))) {
+    warning("Peak picking algorithm not recognized. See ?peakPicking for more information.")
+    return(obj)
+  }
+
   if (is.null(param)) param <- obj@parameters$peakPicking
-  
-  if (length(param) == 0) return(print("Peak picking parameters not found or not given."))
-  
+
+  if (length(param) == 0) {
+    warning("Peak picking parameters not found or not given.")
+    return(obj)
+  }
+
   sinfo <- data.frame(path = dirname(obj@samples$file),
                       analysis = obj@samples$sample,
                       group = obj@samples$group,
@@ -64,9 +73,11 @@ peakPicking <- function(obj = NULL,
   ag <- list(analysisInfo = sinfo, algorithm = algorithm)
 
   pat <- do.call(findFeatures, c(ag, param, verbose = TRUE))
-  
+
   obj@patdata <- pat
-  
+
+  # TODO Make function for peaks table.
+
   if (class(pat) == "featuresXCMS3") {
     peaks <- as.data.frame(chromPeaks(pat@xdata, isFilledColumn = TRUE))
     peaks$group <- sapply(peaks$sample, FUN = function(x) x <- obj@samples$group[x])
@@ -85,15 +96,15 @@ peakPicking <- function(obj = NULL,
     peaks <- select(peaks, ID, sample, group, everything())
     peaks <- rename(peaks, rt = ret, rtmin = retmin, rtmax = retmax)
   }
-  
+
   obj@peaks <- peaks
-  
+
   obj@algorithms$peakPicking <- algorithm
-  
+
   obj@parameters$peakPicking <- param
-  
+
   if (save) saveObject(obj = obj)
-  
+
   if (is.character(save)) saveObject(obj = obj, filename = save)
 
   return(obj)

@@ -12,6 +12,8 @@ rtrBuilder(rt = NULL, rtWindow = NULL, rtUnit = "sec")
 \item{rtWindow}{The retention time window to calculate the range.
 Can be length 1 (default to 1 minute), for a fixed deviation of the given \code{rt} or  length 2.
 When length 2, it overwrites a given \code{rt} and uses the two values to calculate the range.}
+
+\item{rtUnit}{The time unit for the time arguments. Possible values are "sec" and "min".}
 }
 \description{
 rtrBuilder

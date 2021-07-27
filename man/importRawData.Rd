@@ -7,7 +7,7 @@
 importRawData(
   obj = NULL,
   rtFilter = NULL,
-  timeUnit = "min",
+  rtUnit = "min",
   msLevel = c(1, 2),
   centroidedData = TRUE,
   removeEmptySpectra = TRUE,
@@ -20,7 +20,7 @@ importRawData(
 \item{rtFilter}{A numeric vector with length 2 defining the minimum
 and maximum chromatographic retention time for the listed MS files.}
 
-\item{timeUnit}{The unit of the \code{rtFilter}.
+\item{rtUnit}{The unit of the \code{rtFilter}.
 Possible values are \code{min} (the default) and \code{sec}.}
 
 \item{msLevel}{The MS dimensions for the rtFilter to be applied.

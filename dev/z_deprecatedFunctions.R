@@ -1,5 +1,1477 @@
 
 
+#' @title buildFeatureList_Old
+#' @description Function to create a \code{data.frame} with detailed information for each feature in the given a \linkS4class{XCMSnExp} object object.
+#' Optionally, a list of \linkS4class{xsAnnotate} objects per replicate group as obtained by \code{makeFeatureComponents} can be given.
+#' The information from annotated isotopes and adducts for each component will be added to the \code{data.frame}.
+#' 
+#' @param x A \linkS4class{XCMSnExp} object.
+#' @param xA A list of \linkS4class{xsAnnotate} objects per replicate group.
+#' @param xPat A \linkS4class{featureGroups} object converted by \code{\link{getPatData}}.
+#' @param snWindow Time in seconds to expand the peak width for calculation of the signal-to-noise ratio.
+#' @param save Logical, set to \code{TRUE} to save the generated \code{fl} object in the disk.
+#' @param projPath The \code{projPath} directory as defined in the \code{setup} object.
+#'
+#' @return A \code{data.frame} with detailed information for each feature in the given objects.
+#' 
+#' @export
+#' 
+#' @import magrittr
+#' @importFrom BiocParallel registered SnowParam register bpparam bplapply
+#' @importFrom parallel detectCores
+#' @importFrom xcms filterMsLevel chromPeaks featureDefinitions
+#' @importFrom methods as
+#' @importMethodsFrom MSnbase fileNames
+#' @importFrom patRoon importFeatureGroupsXCMS3 as.data.table
+#' @importFrom dplyr select mutate group_by count filter between all_of everything
+#' @importFrom stats quantile sd na.omit
+#' @importFrom CAMERA getPeaklist
+#' @importFrom stringr str_extract
+#' 
+#' 
+#'
+#' @examples
+#' 
+#' 
+#' 
+buildFeatureList_Old <-  function(x = featData, xA = featComp, xPat = patData,
+                                  snWindow = 240,
+                                  save = TRUE, projPath = setup$projPath){
+  
+  maxMultiProcess = TRUE
+  if (maxMultiProcess) {
+    snow <- registered("SnowParam")
+    if (snow$workers < detectCores()) {
+      snow <- SnowParam(workers = detectCores() - 1,
+                        type = "SOCK",
+                        exportglobals = FALSE,
+                        progressbar = TRUE)
+      register(snow, default = TRUE)
+    }
+  }
+  
+  # x = featData
+  # xA = featComp
+  # xPat = patData
+  # snWindow = 240
+  
+  #collect centroids
+  base::cat("Extracting centroids...")
+  base::cat("\n")
+  cent <- xcms::filterMsLevel(x, msLevel. = 1)
+  cent <- base::as.data.frame(methods::as(cent, "data.frame"))
+  cent$rt <- base::as.numeric(cent$rt)
+  cent$mz <- base::as.numeric(cent$mz)
+  cent$i <- base::as.numeric(cent$i)
+  base::colnames(cent) <- c("file", "rt", "mz", "into")
+  
+  #chromPeaks
+  # TODO Peaks IDs when filled adds a zero which is not there for raw peaks IDs
+  chromPeaks <- xcms::chromPeaks(x, isFilledColumn = TRUE, msLevel = 1)
+  
+  
+  #collect features
+  fl <- xcms::featureDefinitions(x)
+  fl <- base::as.data.frame(fl)
+  fl$FT <- base::row.names(fl)
+  fl <- fl[,!(base::colnames(fl) %in% c("ms_level",x$sample_group))]
+  
+  if (base::is.null(xPat)) {
+    patSampleInfo <- base::data.frame(path = base::dirname(MSnbase::fileNames(x)),
+                                      analysis = x$sample_name,
+                                      group = x$sample_group,
+                                      blank = "")
+    xPat <- patRoon::importFeatureGroupsXCMS3(x, patSampleInfo)
+  }
+  
+  patfl <- base::as.data.frame(patRoon::as.data.table(xPat, average = TRUE, areas = FALSE))
+  rGroups <- base::unique(x$sample_group)
+  for (i in 1:base::length(rGroups)) {
+    patfl[,base::paste0(rGroups[i],"_sd")] <- base::apply(
+      X = patRoon::as.data.table(xPat, average = FALSE)[, .SD, .SDcols = x$sample_name[x$sample_group == rGroups[i]]],
+      MARGIN = 1, function(x) {
+        base::round(base::ifelse(sd(x) != 0, sd(x)/mean(x), NA), digits = 2)})
+  }
+  fl <- base::cbind(fl, dplyr::select(patfl, -ret))
+  fl$rt <- fl$rtmed
+  fl$patFT <- fl$group
+  fl <- base::cbind(dplyr::select(fl, FT, patFT, mz, rt, dplyr::everything(), -mzmin, -mzmax, -rtmin, -rtmax, -group, -mzmed, -rtmed),
+                    dplyr::select(fl, mzmin, mzmax, rtmin, rtmax))
+  
+  fl <- dplyr::mutate(fl, hasFilled = 0,
+                      sn = 0, sn_max = 0, sn_sd = 0, noise = 0, noise_sd = NA,
+                      egauss = 0, egauss_sd = NA, egauss_min = 0, 
+                      dppm = 0, dppm_sd = 0, dppm_max = 0,
+                      others_N = 0, others = base::I(base::list("")), others_R = base::I(base::list("")),
+                      bg25 = NA, bg50 = NA, bg75 = NA, bg100 = NA,
+                      nCent = base::I(base::list(0)))
+  
+  fl2 <- fl
+  
+  base::row.names(fl2) <- 1:base::nrow(fl2)
+  
+  fl2$hasFilled <- base::unlist(base::lapply(X = base::as.list(fl$peakidx[drop = F]),
+                                             function(x) {1 %in% chromPeaks[base::unlist(x), "is_filled"] }))
+  
+  #update both mz and rt min and max values 
+  fl2$mzmin <- base::unlist(base::lapply(X = base::as.list(fl$peakidx[drop = F]),
+                                         function(x) {base::min(chromPeaks[base::unlist(x), "mzmin", drop = T])}))              
+  fl2$mzmax <- base::unlist(base::lapply(X = base::as.list(fl$peakidx[drop = F]),
+                                         function(x) {base::max(chromPeaks[base::unlist(x), "mzmax", drop = T])})) 
+  fl2$rtmin <- base::unlist(base::lapply(X = base::as.list(fl$peakidx[drop = F]),
+                                         function(x) {base::min(chromPeaks[base::unlist(x), "rtmin", drop = T])})) 
+  fl2$rtmax <- base::unlist(base::lapply(X = base::as.list(fl$peakidx[drop = F]),
+                                         function(x) {base::max(chromPeaks[base::unlist(x), "rtmax", drop = T])})) 
+  
+  #add gaussian fitting values
+  fl2$egauss <- base::unlist(base::lapply(X = base::as.list(fl$peakidx[drop = F]),
+                                          function(x) {base::round(base::mean(chromPeaks[base::unlist(x), "egauss", drop = T], na.rm = T), digits = 2)})) 
+  fl2$egauss_sd <- base::unlist(base::lapply(X = base::as.list(fl$peakidx[drop = F]),
+                                             function(x) {base::round(stats::sd(chromPeaks[base::unlist(x), "egauss", drop = T], na.rm = T), digits = 2)}))
+  fl2$egauss_min <- base::unlist(base::lapply(X = base::as.list(fl$peakidx[drop = F]),
+                                              function(x) {
+                                                x <- chromPeaks[base::unlist(x), "egauss", drop = T]
+                                                x <- base::ifelse(base::all(base::is.na(x)), NA, base::round(base::min(x, na.rm = T), digits = 2))}))
+  fl2$egauss[base::is.nan(fl2$egauss)] <- NA
+  
+  
+  #add dppm
+  fl2$dppm <- base::unlist(base::lapply(X = base::as.list(fl$peakidx[drop = F]),
+                                        function(x) {base::round(base::mean(chromPeaks[base::unlist(x), "dppm", drop = T], na.rm = T), digits = 0)})) 
+  fl2$dppm_sd <- base::unlist(base::lapply(X = base::as.list(fl$peakidx[drop = F]),
+                                           function(x) {base::round(stats::sd(chromPeaks[base::unlist(x), "dppm", drop = T], na.rm = T), digits = 0)}))
+  fl2$dppm_max <- base::unlist(base::lapply(X = base::as.list(fl$peakidx[drop = F]),
+                                            function(x) {base::round(base::max(chromPeaks[base::unlist(x), "dppm", drop = T], na.rm = T), digits = 0)}))
+  
+  
+  #collect bg information for the 15% quantile (probability) of the intensity centroids
+  if (base::max(fl2$rt)-base::min(fl2$rt) < 500) {
+    rtr <- stats::quantile(base::min(fl2$rtmin):base::max(fl2$rtmax), probs = seq(0,1,1))
+  } else {
+    if (base::max(fl2$rt)-base::min(fl2$rt) < 1000) {
+      rtr <- stats::quantile(base::min(fl2$rtmin):base::max(fl2$rtmax), probs = seq(0,1,0.5))
+    } else {
+      rtr <- stats::quantile(base::min(fl2$rtmin):base::max(fl2$rtmax), probs = seq(0,1,0.25))
+    }
+  }
+  
+  rGroups <- x$sample_group
+  
+  base::gc(verbose = FALSE, full = TRUE)
+  
+  #system.time({
+  
+  base::cat("Gathering feature details...")
+  base::cat("\n")
+  
+  extraInfo <- BiocParallel::bplapply(X = 1:base::nrow(fl2), cent = cent, fl2 = fl2, rtr = rtr, rGroups = rGroups, snWindow = snWindow,
+                                      function(i, cent, fl2, rtr, rGroups, snWindow) {
+                                        temp <- fl2[,c("sn", "sn_max", "sn_sd", "noise", "noise_sd", "others_N", "others", "others_R", "bg25", "bg50", "bg75", "bg100", "nCent")][1,]
+                                        temp[,c("bg25","bg50","bg75","bg100")] <- NA
+                                        
+                                        temp_cent <- cent[cent$mz >= fl2$mzmin[i] & cent$mz <= fl2$mzmax[i],]
+                                        
+                                        #base::cat(base::paste0(i,", "))
+                                        
+                                        nCent <- dplyr::group_by(temp_cent, file) 
+                                        nCent <- dplyr::count(nCent, file)
+                                        #nCent <- cbind(data.frame(rg = rGroups),nCent)
+                                        temp$nCent[1] <- I(base::list(c(base::min(nCent$n),base::max(nCent$n))))
+                                        
+                                        temp$bg25[1] <- base::round(stats::quantile(temp_cent$into[temp_cent$rt <= rtr[2]],
+                                                                                    probs = base::seq(0,1,0.15))[2], digits = 0)
+                                        
+                                        if(base::max(fl2$rt)-base::min(fl2$rt) >= 500) {
+                                          temp$bg50[1] <- base::round(stats::quantile(temp_cent$into[temp_cent$rt <= rtr[3] & temp_cent$rt > rtr[2]],
+                                                                                      probs = base::seq(0,1,0.15))[2], digits = 0)
+                                        }
+                                        
+                                        if(base::max(fl2$rt)-base::min(fl2$rt) >= 1000) {
+                                          temp$bg75[1] <- base::round(stats::quantile(temp_cent$into[temp_cent$rt <= rtr[4]  & temp_cent$rt > rtr[3]],
+                                                                                      probs = base::seq(0,1,0.15))[2], digits = 0)
+                                          
+                                          temp$bg100[1] <- base::round(stats::quantile(temp_cent$into[temp_cent$rt <= rtr[5]  & temp_cent$rt > rtr[4]],
+                                                                                       probs = base::seq(0,1,0.15))[2], digits = 0)
+                                        }
+                                        
+                                        #Find other peaks within the same mz space as feature
+                                        otherpeaks <- fl2[fl2$mz >= fl2$mzmin[i] & fl2$mz <= fl2$mzmax[i],]
+                                        otherpeaks <- otherpeaks[otherpeaks$FT != fl2$FT[i],]
+                                        
+                                        if (base::nrow(otherpeaks) > 0) {
+                                          
+                                          for (j in 1:base::nrow(otherpeaks)) { #nrow(otherpeaks)
+                                            
+                                            #test the resolution between peaks to verify separation using R=(rt2-rt1)/((w1+w2)/2)
+                                            R <- base::abs(fl2$rt[i] - otherpeaks$rt[j]) / (((fl2$rtmax[i] - fl2$rtmin[i]) + (otherpeaks$rtmax[j] - otherpeaks$rtmin[j])) / 2 )
+                                            
+                                            checkOtherPeaksNoise <- FALSE
+                                            if (checkOtherPeaksNoise) {
+                                              # test the s/n of the otherpeak to remove it or not from temp_cent, using the replicate group with the highest intensity
+                                              otherpeak_noise <- cent[cent$mz >= otherpeaks$mzmin[j] & cent$mz <= otherpeaks$mzmax[j],]
+                                              otherpeak_noise <- dplyr::filter(temp_cent, dplyr::between(rt, otherpeaks$rtmin[j] - snWindow, otherpeaks$rtmax[j] + snWindow))
+                                              otherpeak_int <- dplyr::select(otherpeaks[j,], dplyr::all_of(base::unique(rGroups)))
+                                              otherpeak_rg <- base::which(otherpeak_int == base::max(otherpeak_int))
+                                              otherpeak_int <- base::max(otherpeak_int)
+                                              if (base::nrow(otherpeak_noise) > 0) {
+                                                otherpeak_noise <-  base::round(stats::quantile(otherpeak_noise$into[otherpeak_noise$file %in%
+                                                                                                                       base::which(rGroups == base::unique(rGroups)[otherpeak_rg])],
+                                                                                                probs = base::seq(0,1,0.25))[2], digits = 0)
+                                                otherpeak_noise <- base::unname(otherpeak_noise)
+                                              } else {otherpeak_noise <-  0}
+                                              otherpeak_check <- base::ifelse(otherpeak_noise == 0, 3, otherpeak_int/otherpeak_noise)
+                                              otherpeak_check <- base::unname(otherpeak_check)
+                                              
+                                              if (otherpeak_check > 3 & !base::is.nan(otherpeak_check)) {
+                                                #if other peak has s/n higher than 3 then is rt space is subtracted from the centroids table
+                                                temp_cent <- dplyr::filter(temp_cent, !dplyr::between(rt, otherpeaks$rtmin[j], otherpeaks$rtmax[j]))
+                                                if (temp$others_R[1] == "") {
+                                                  temp$others_R[1] <- base::I(base::list(base::round(R, digits = 1)))
+                                                } else {
+                                                  temp$others_R[1] <- base::I(base::list(c(base::unlist(temp$others_R[1]), base::round(R, digits = 1))))
+                                                }
+                                                temp$others_N[1] <- temp$others_N[1]+1
+                                                if (temp$others[1] == "") {
+                                                  temp$others[1] <- base::I(base::list(otherpeaks$FT[j,drop=T]))
+                                                } else {
+                                                  temp$others[1] <- base::I(base::list(c(base::unlist(temp$others[1]), otherpeaks$FT[j,drop=T])))
+                                                }
+                                              }
+                                              base::rm(otherpeak_check, otherpeak_int, otherpeak_noise, otherpeak_rg)
+                                              
+                                            } else {
+                                              
+                                              temp_cent <- dplyr::filter(temp_cent, !dplyr::between(rt, otherpeaks$rtmin[j], otherpeaks$rtmax[j]))
+                                              if (temp$others_R[1] == "") {
+                                                temp$others_R[1] <- I(base::list(base::round(R, digits = 1)))
+                                              } else {
+                                                temp$others_R[1] <- I(base::list(c(base::unlist(temp$others_R[1]), base::round(R, digits = 1))))
+                                              }
+                                              temp$others_N[1] <- temp$others_N[1]+1
+                                              if (temp$others[1] == "") {
+                                                temp$others[1] <- I(base::list(otherpeaks$FT[j,drop=T]))
+                                              } else {
+                                                temp$others[1] <- I(base::list(c(base::unlist(temp$others[1]), otherpeaks$FT[j,drop=T])))
+                                              }
+                                              
+                                            }
+                                          }
+                                          base::rm(j)
+                                        }
+                                        
+                                        
+                                        #calculate s/n for the feature in each replicate
+                                        temp_cent <- dplyr::filter(temp_cent, dplyr::between(rt, fl2$rtmin[i] - snWindow, fl2$rtmax[i] + snWindow))
+                                        temp_cent <- dplyr::filter(temp_cent, !dplyr::between(rt, fl2$rtmin[i], fl2$rtmax[i]))
+                                        temp_int <- dplyr::select(fl2[i,], dplyr::all_of(base::unique(rGroups)))
+                                        noiselevel <- base::rep(0,base::length(temp_int))
+                                        for (rg in 1:base::length(temp_int)) {
+                                          if (base::nrow(temp_cent) > 0) {
+                                            noiselevel[rg] <-  base::round(stats::quantile(temp_cent$into[temp_cent$file %in%
+                                                                                                            base::which(rGroups == base::unique(rGroups)[rg])],
+                                                                                           probs = base::seq(0,1,0.25))[3], digits = 0)
+                                          } else {base::message(base::paste0("sn could not be calculated for: ",fl2$FT[i]))}
+                                        }
+                                        
+                                        sn <- base::unlist(temp_int/noiselevel)
+                                        sn[base::is.infinite(sn)] <- NA
+                                        sn[base::is.nan(sn)] <- NA
+                                        
+                                        sn_max <- base::ifelse(TRUE %in% !base::is.na(sn), base::max(sn, na.rm = T), NA)
+                                        sn_sd <- stats::sd(sn, na.rm = T)
+                                        noise <- base::mean(noiselevel, na.rm = T)
+                                        noise_sd <- stats::sd(noiselevel, na.rm = T)
+                                        
+                                        temp$sn <- base::round(base::mean(sn, na.rm = T), digits = 0)
+                                        temp$sn_max <- base::round(sn_max, digits = 0)
+                                        temp$sn_sd <- base::round(sn_sd, digits = 0)
+                                        temp$noise <- base::round(noise, digits = 0)
+                                        temp$noise_sd <- base::round(noise_sd, digits = 0)
+                                        
+                                        i <- temp
+                                        
+                                      }, BPPARAM = BiocParallel::bpparam("SnowParam"))
+  
+  base::gc(verbose = FALSE, full = TRUE)
+  
+  extraInfo <- base::do.call("rbind", extraInfo)
+  
+  #})
+  
+  fl2$sn <- extraInfo$sn
+  fl2$sn_max <- extraInfo$sn_max
+  fl2$sn_sd <- extraInfo$sn_sd
+  fl2$noise <- extraInfo$noise
+  fl2$noise_sd <- extraInfo$noise_sd
+  fl2$others_N <- extraInfo$others_N
+  fl2$others <- extraInfo$others
+  fl2$others_R <- extraInfo$others_R
+  fl2$bg25 <- extraInfo$bg25
+  fl2$bg50 <- extraInfo$bg50
+  fl2$bg75 <- extraInfo$bg75
+  fl2$bg100 <- extraInfo$bg100
+  fl2$nCent <- extraInfo$nCent
+  
+  #add annotation to feature list
+  
+  fl3 <- fl2
+  
+  if (!base::is.null(xA)) {
+    
+    fl3 <- dplyr::mutate(fl3, comp = 0, Mion = 0, iso = "", isoGroup = 0, adduct = "", adductMions = "")
+    
+    base::cat("Adding annotation details...")
+    base::cat("\n")
+    
+    #produce table with annotation and featureID
+    rIndex <- 1:base::length(xA)
+    for (r in rIndex) {
+      ano_temp <- CAMERA::getPeaklist(xA[[r]], intval = "maxo")
+      ano_temp$rGroup <- base::names(xA)[r]
+      ano_temp$FT <- fl3$FT
+      ano_temp <- dplyr::select(ano_temp, rGroup, FT, dplyr::everything())
+      if (r == 1 | base::length(rIndex) == 1) {
+        ano <- ano_temp
+      } else {
+        ano <- base::rbind(ano,ano_temp)
+      }
+    }
+    
+    rGroups <- rGroups[rGroups %in% base::names(xA)]
+    
+    ano2 <- BiocParallel::bplapply(X = 1:base::nrow(fl3), ano = ano, fl3 = fl3, rGroups = rGroups, function(i, ano, fl3, rGroups) {
+      
+      ano_temp <- fl3[c("Mion", "comp", "isoGroup", "iso", "adduct", "adductMions")][1,]
+      
+      FT <- fl3$FT[i]
+      
+      FT_ano <- ano[ano$FT == FT,]
+      
+      Mion <- base::round(base::unique(FT_ano$mz) - 1.007276, digits = 4)
+      
+      #Save comp number
+      comp <- base::as.numeric(base::unique(FT_ano$pcgroup))
+      ano_temp$comp <- comp
+      
+      #extract iso group numbers and type for each rGroup
+      isotopes <- FT_ano$isotopes
+      isotopes <- base::strsplit(isotopes, split = "\\]\\[")
+      
+      isoGroups <- base::lapply(X = 1:base::length(isotopes), isotopes = isotopes, function(x, isotopes) isotopes[[x]][1])
+      isoGroups <- stringr::str_extract(isoGroups, pattern = "([0-9]+)")
+      ano_temp$isoGroup <- base::I(base::list(base::as.numeric(isoGroups)))
+      
+      iso <- base::lapply(X = 1:base::length(isotopes), isotopes = isotopes, function(x, isotopes) isotopes[[x]][2])
+      iso <- base::ifelse(!base::is.na(iso), base::paste0("[",iso), NA)
+      
+      #if all the same iso type, excluding NA values, recalculates Mion
+      uniqueIso <- stats::na.omit(base::unique(iso))
+      ano_temp$iso <-  base::I(base::list(base::unique(iso[!base::is.na(iso)])))
+      
+      if (base::length(uniqueIso) == 1) {
+        Mion <- base::data.frame(rGroup = base::unique(rGroups)[base::which(!base::is.na(isoGroups))])
+        Mion$isoGroups <- base::as.numeric(isoGroups[base::which(!base::is.na(isoGroups))])
+        Mion$Mion <- base::unlist(base::lapply(X=1:base::nrow(Mion), ano = ano, Mion = Mion, function(m, ano, Mion){
+          temp_ano <- ano[ano$rGroup == Mion[m,1, drop=T],]
+          temp_iso <- base::strsplit(temp_ano$isotopes, split = "\\]\\[")
+          temp_iso <- base::lapply(X = 1:base::length(temp_iso), temp_iso = temp_iso, function(x, temp_iso) {temp_iso[[x]][1]})
+          temp_iso <- stringr::str_extract(temp_iso, pattern = "([0-9]+)")
+          temp_ano <- temp_ano[base::as.numeric(temp_iso) %in% Mion$isoGroups[m],]
+          temp_ano <- temp_ano[base::grepl(pattern = "[M]", temp_ano$isotopes, fixed = TRUE),]
+          temp_iso <- base::unlist(base::strsplit(temp_ano$isotopes, split = "\\]\\["))[2]
+          temp_iso <- stringr::str_extract(temp_iso, pattern = "([0-9]+)")
+          temp_iso <- base::ifelse(base::is.na(temp_iso), 1, temp_iso)
+          temp_ano <- temp_ano$mz - 1.007276 / base::as.numeric(temp_iso)
+          temp_ano <- base::round(temp_ano, digits = 5)
+        }))
+        Mion_temp <- base::unique(Mion$Mion)
+        Mion <- base::ifelse(base::length(Mion_temp) == 1, Mion_temp, Mion)
+      }
+      
+      ano_temp$Mion <- Mion
+      
+      
+      #extract adducts
+      adducts <- FT_ano$adduct
+      adducts <- base::unlist(base::strsplit(adducts, split = " "))
+      
+      if (base::length(adducts) > 0) {
+        
+        adductClass <- adducts[base::seq(1, base::length(adducts),2)]
+        adductClass <- base::unique(adductClass)
+        ano_temp$adduct <- base::paste(adductClass, collapse = " ")
+        AdductMions <- adducts[base::seq(2,base::length(adducts),2)]
+        AdductMions <- base::as.numeric(base::unique(AdductMions))
+        ano_temp$adductMions <- base::I(base::list(AdductMions))
+        
+      }
+      
+      i <- ano_temp
+      
+    }, BPPARAM = BiocParallel::bpparam("SnowParam"))
+    
+    base::gc(verbose = FALSE, full = TRUE)
+    
+    ano2 <- base::do.call("rbind", ano2)
+    
+    fl3$comp <- ano2$comp
+    fl3$Mion <- ano2$Mion
+    fl3$iso <- ano2$iso
+    fl3$isoGroup <- ano2$isoGroup
+    fl3$adduct <- ano2$adduct
+    fl3$adductMions <- ano2$adductMions
+    
+  }
+  
+  
+  if (save)
+  {
+    rData <- base::paste0(projPath,"\\rData")
+    if (!base::dir.exists(rData)) base::dir.create(rData)
+    base::saveRDS(fl3, file = base::paste0(rData,"\\fl.rds"))
+  }
+  
+  return(fl3)
+  
+}
+
+
+
+#' @title screenSuspectsFromCSV_Old
+#' 
+#' @description Method to perform suspect screening from a given
+#' list of candidates in a csv file. The method uses the S4 method
+#' \code{screenSuspects} from \pkg{patRoon}.
+#'
+#' @param obj An \linkS4class{ntsData} object with features
+#' to preform suspect screening.
+#' @param suspects A \code{data.frame} or a location for a csv
+#' with details for each suspect compound.
+#' See details for more information about the required data.frame structure.
+#' @param ppm The mass deviation, in ppm, to screen for the suspects.
+#' The default is 5 ppm.
+#' @param rtWindow The retention time deviation, in seconds,
+#' to screen for the QC target standards. The default is 30 seconds.
+#' @param adduct The adduct class for screening suspects. The default is \code{NULL},
+#' which uses the polarity of the \code{obj} or the \code{adduct} class defined
+#' in the suspects data frame. See details for more information.
+#' @param excludeBlanks Logical, set to \code{TRUE} to ignore replicate groups 
+#' assigned as blanks in the \code{samples} slot of the \code{obj}.
+#' @param withMS2 Logical, set to \code{TRUE} for using confirmation via MS2.
+#' @param listMS2 An MS2 list, if not given it will be calculated.
+#' @param ppmMS2 Optional, sets a different mass deviation (in ppm)
+#' for correlation of MS2 data.
+#' If \code{NULL} (the default) the \code{ppm} argument is used.
+#'
+#' @return A data.frame with the suspect screening results.
+#' 
+#' @details The \code{suspects} data.frame should follow the template requires as 
+#' obtained via \code{getScreeningListTemplate()}.
+#' Add other details of the template.
+#' 
+#' @references \insertRef{Helmus2021}{ntsIUTA}
+#' 
+#' @export
+#' 
+#' @importFrom checkmate assertClass
+#' @importFrom dplyr filter arrange left_join select everything mutate distinct desc
+#' @importFrom utils read.csv head
+#' @importFrom patRoon screenSuspects as.data.table screenInfo getDefAvgPListParams replicateGroups generateMSPeakLists generateFormulasSIRIUS
+#' @importFrom fuzzyjoin difference_inner_join
+#'
+#' @examples
+#' 
+screenSuspectsFromCSV_Old <- function(obj,
+                                  suspects = utils::read.csv(base::file.choose()),
+                                  ppm = 5,
+                                  rtWindow = 30,
+                                  adduct = NULL,
+                                  excludeBlanks = TRUE,
+                                  withMS2 = TRUE, listMS2 = NULL, ppmMS2 = NULL) {
+  
+  # TODO Adapt to ntsData frame work
+  
+  assertClass(obj, "ntsData")
+  
+  if (!is.data.frame(suspects)) suspects <- utils::read.csv(suspects)
+  
+  if (max(suspects$rt) < 120) suspects$rt <- suspects$rt * 60
+  
+  #selects top 5 or 10 fragment if MS2 data is present for suspects
+  if ("hasFragments" %in% colnames(suspects)) {
+    for (n in seq_len(nrow(suspects))) {
+      if (suspects$hasFragments[n]) {
+        top <- unlist(suspects$fragments_mz[n])
+        top <- as.data.frame(unlist(strsplit(top, split = ";")))
+        if (nrow(top) > 5) {
+          colnames(top) <- c("mz")
+          top$mz <- as.numeric(top$mz)
+          top$int <- as.numeric(unlist(strsplit(suspects$fragments_int[n], split = ";")))
+          #remove precursor ion from fragments list
+          top <- dplyr::filter(top, mz < suspects$mz[n] - (5 / 1E6 * suspects$mz[n]))
+          if (nrow(top) < 15) ntop = 5 else ntop = 10
+          top <- utils::head(dplyr::arrange(top, dplyr::desc(int)), n = ntop)
+          suspects$fragments_mz[n] <- paste(top$mz, collapse = ";")
+          suspects$fragments_int[n] <- paste(top$int, collapse = ";")
+          # TODO add top for formulas but might not be necessary        
+        }
+      }
+    }
+  }
+  
+  if (is.null(adduct)) {
+    if (!("adduct" %in% colnames(suspects))) {
+      adduct <- ifelse(obj@polarity == "positive", "[M+H]+",
+                       ifelse(obj@polarity == "negative", "[M-H]-",
+                              stop("polarity argument must be 'positive' or 'negative'")))
+    }
+  }
+  
+  rg <- unique(sampleGroups(obj))
+  
+  if (excludeBlanks) rg <- rg[!(rg %in% blanks(obj))]
+  
+  screen <- screenSuspects(obj@patdata, select(suspects, -mz),
+                           rtWindow = rtWindow, mzWindow = 0.03,
+                           adduct = adduct, onlyHits = TRUE)
+  
+  df <- arrange(patRoon::as.data.frame(screen, average = FALSE), group)
+  df <- left_join(df, suspects[, colnames(suspects) %in% c("name", "formula", "adduct", "hasFragments", "intControl")], by = "name")
+  df <- left_join(df, select(arrange(screenInfo(screen), group), group, d_mz, d_rt), by = "group")
+  df$d_ppm <- (abs(df$d_mz) / df$mz) * 1E6
+  df <- dplyr::rename(df, rt = ret, ID = group)
+  df <- select(df, name, formula, adduct, ID, mz, rt, everything(), -d_mz, d_ppm, d_rt)
+  df <- dplyr::filter(df, d_ppm <= ppm)
+  df$d_ppm <- round(df$d_ppm, digits = 1)
+  df$d_rt <- round(df$d_rt, digits = 1)
+  
+  screen <- screen[, df$ID]
+  
+  elements <- gsub("[^a-zA-Z]", "", df$formula)
+  elements <- paste0(elements, collapse = "")
+  elements <- gsub('([[:upper:]])', ' \\1', elements)
+  elements <- unique(strsplit(elements, " ")[[1]]) 
+  elements <- elements[!elements %in% ""]
+  elements <- paste0(elements, collapse = "")
+  
+  data <- list()
+  results <- list()
+  
+  for (g in seq_len(length(rg))) {
+    
+    temp <- filterFeatureGroups(screen, which(obj@samples$group == rg[g]))
+    
+    # TODO Adduct is [M+H]+ by default but should take the value from screening
+    
+    control_avgPListParams <- getDefAvgPListParams(
+      clusterMzWindow = 0.003,
+      topMost = 50,
+      minIntensityPre = 10,
+      minIntensityPost = 10
+    )
+    
+    MS2 <- suppressWarnings(generateMSPeakLists(
+      temp, "mzr",
+      maxMSRtWindow = 10,
+      precursorMzWindow = 1.3,
+      avgFeatParams = control_avgPListParams, 
+      avgFGroupParams = control_avgPListParams
+    ))
+    
+    formulas <- patRoon::generateFormulasGenForm(temp, MS2,
+                                                 relMzDev = ppm,
+                                                 isolatePrec = TRUE,
+                                                 adduct = "[M+H]+",
+                                                 elements = elements,
+                                                 topMost = 25, extraOpts = NULL,
+                                                 calculateFeatures = TRUE,
+                                                 featThreshold = 1,
+                                                 timeout = 240, hetero = TRUE, oc = TRUE)
+    
+    
+    temp <- patRoon::annotateSuspects(temp, MSPeakLists = MS2,
+                                      formulas = formulas,
+                                      compounds = NULL)
+    
+    
+    tempScreen <- temp@screenInfo[match(tempdf$ID, temp@screenInfo$group)]
+    
+    tempScreen$d_ppm <- (abs(tempScreen$d_mz) / tempScreen$mz) * 1E6
+    
+    isoScore <- tempScreen$group
+    for (iso in seq_len(nrow(tempScreen))) {
+      tempForm <- formulas@formulas[[isoScore[iso]]]
+      tempForm <- tempForm[tempForm$neutral_formula %in% tempScreen$formula, ]
+      isoScore[iso] <- round(unique(tempForm$isoScore)[1], digits = 2)
+    }
+    
+    tempScreen$isoScore <- isoScore
+    
+    tempScreen$hasExpFrag <- FALSE
+    for (i in seq_len(nrow(tempScreen))) {
+      fragments <- MS2[[tempScreen$group[i]]]$MSMS
+      if (!is.null(fragments)) tempScreen$hasExpFrag[i] <- TRUE
+    }
+    
+    tempScreen$FragMatch <- paste0(tempScreen$maxFragMatches, "(", tempScreen$maxFrags, ")")
+    
+    tempScreen <- dplyr::rename(tempScreen, ID = group, IdLevel = estIDLevel)
+    
+    tempScreen$hasFrag <- df$hasFragments
+    
+    tempScreen <- select(tempScreen, name, formula, adduct, ID, mz, rt, IdLevel, d_rt, d_ppm, isoScore, FragMatch, hasExpFrag, hasFrag, everything())
+    
+    tempScreen <- cbind(tempScreen, df[, colnames(df) %in% obj@samples$sample[obj@samples$group == rg[g]]])
+    
+    data[[rg[g]]] <- temp
+    results[[rg[g]]] <- tempScreen
+    
+  }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  if (base::is.null(ppmMS2)) ppmMS2 = ppmWindow
+  
+  
+  
+  if (withMS2) {
+    
+    if(base::is.null(listMS2)) listMS2 <- base::list()
+    MS2_avgPListParams <- patRoon::getDefAvgPListParams(clusterMzWindow = 0.005,
+                                                        topMost = 50,
+                                                        minIntensityPre = 10,
+                                                        minIntensityPost = 10)
+    
+    # Evaluation and categorization of hits per replicate group
+    for (i in 1:base::length(groupNames)) {
+      
+      #Collecting name and prepare table
+      colMS2 <- base::paste0("ms2_",groupNames[i])
+      colCat <- base::paste0("cat_",groupNames[i])
+      suspectsDT[, colMS2] <- 0
+      suspectsDT[, colCat] <- 0
+      
+      #Check for lowest categories, 4 only mass and 3 mass and rt
+      temp <- suspectsDT[,c("name", "group", "mz", "ret", "d_rt", groupNames[i]), drop = F]
+      suspectsDT[, colCat] <- base::ifelse(base::as.numeric(temp[,groupNames[i]]) > 0, 4, 0)
+      suspectsDT[, colCat] <- base::ifelse(base::as.numeric(temp[,groupNames[i]]) > 0 & !base::is.na(temp$d_rt), 3, suspectsDT[, colCat])
+      
+      #Extracts the MS2 data for each non 0 feature
+      if(!base::is.null(listMS2[[groupNames[i]]])){
+        tempMS2 <- listMS2[[groupNames[i]]]
+      } else {
+        tempMS2 <- temp[temp[,groupNames[i]] > 0,]
+        tempMS2 <-base::suppressWarnings(
+          patRoon::generateMSPeakLists(patData[base::which(rGroups == groupNames[i]), tempMS2$group[drop = TRUE]],
+                                       "mzr", maxMSRtWindow = 5,
+                                       precursorMzWindow = 2,
+                                       avgFeatParams = MS2_avgPListParams,
+                                       avgFGroupParams = MS2_avgPListParams)
+        )
+        listMS2[[groupNames[i]]] <- tempMS2
+      }
+      
+      #Loop for all the rows in suspectsDT
+      for (j in 1:base::nrow(temp)) {
+        
+        if (base::as.numeric(temp[j, groupNames[i], drop = T]) > 0) {
+          
+          temp1 <- tempMS2[[temp$group[j]]]$MSMS
+          
+          #tentative to extract MS2 again if temp1 is NULL
+          if(base::is.null(temp1)) {
+            lastTemptMS2 <- base::suppressWarnings(
+              patRoon::generateMSPeakLists(patData[base::which(rGroups == groupNames[i]), temp$group[j, drop = TRUE]],
+                                           "mzr", maxMSRtWindow = 5,
+                                           precursorMzWindow = 2,
+                                           avgFeatParams = MS2_avgPListParams,
+                                           avgFGroupParams = MS2_avgPListParams))
+            temp1 <- lastTemptMS2[[temp$group[j]]]$MSMS
+          }
+          
+          
+          if (!base::is.null(temp1)) {
+            
+            temp1 <- dplyr::filter(temp1, mz < temp$mz[j]+(5/1E6*temp$mz[j])) #remove mz higher than precursor, probably contamination
+            if (base::nrow(temp1) < 15){
+              top5_temp1 <- utils::head(dplyr::arrange(temp1, dplyr::desc(intensity)), n = 5)
+            } else { top5_temp1 <- utils::head(dplyr::arrange(temp1, dplyr::desc(intensity)), n = 10) }
+            
+            
+            # load MS2 from DB
+            temp2 <- dplyr::filter(sDB, name == temp$name[j])
+            #if (base::is.na(temp2$hasMS2[drop = T])) {temp2$hasMS2 <- FALSE}
+            
+            if (temp2$hasMS2[drop = T]) {
+              
+              temp3 <- temp2$mzMS2[drop = T]
+              temp3 <- base::as.data.frame(base::unlist(base::strsplit(temp3, split=";")))
+              base::colnames(temp3) <- c("mz")
+              temp3$mz <- base::as.numeric(temp3$mz)
+              temp3$intensity <- base::as.numeric(base::unlist(base::strsplit(temp2$intMS2[drop = T], split=";")))
+              #remove precurssor ion from fragments list
+              temp3 <- dplyr::filter(temp3, mz < temp2$mz[drop=T] - (5/1E6*temp2$mz[drop=T]))
+              # select top 5 in fragments from db, or top 10 if number of fragments is above 15
+              if (base::nrow(temp3) < 15){
+                top5_temp3 <- utils::head(dplyr::arrange(temp3, dplyr::desc(intensity)), n = 5)
+              } else { top5_temp3 <- utils::head(dplyr::arrange(temp3, dplyr::desc(intensity)), n = 10) }
+              
+              
+              # test match for MS2 correlation and excludes in diff > +/-5ppm
+              temp6 <- fuzzyjoin::difference_inner_join(temp1, temp3, by = c("mz"), max_dist = 0.1, distance_col = "d_ppm")
+              temp6$d_ppm <- base::abs(temp6$d_ppm)/temp6$mz.x*1E6
+              temp6 <- dplyr::filter(temp6, d_ppm <= ppmMS2)
+              
+              # test match only in top 5
+              top5_temp6 <- fuzzyjoin::difference_inner_join(top5_temp1, top5_temp3, by = c("mz"), max_dist = 0.1, distance_col = "d_ppm")
+              top5_temp6$d_ppm <- base::abs(top5_temp6$d_ppm)/top5_temp6$mz.x*1E6
+              top5_temp6 <- dplyr::filter(top5_temp6, d_ppm <= ppmMS2)
+              
+              temp6 <- dplyr::distinct(temp6, mz.x, .keep_all= TRUE) # remove double entries for mz.x
+              top5_temp6 <- dplyr::distinct(top5_temp6, mz.x, .keep_all= TRUE) # remove double entries for mz.x
+              
+              suspectsDT[j, colMS2] <- base::paste0(base::nrow(top5_temp6),"(",base::nrow(top5_temp3),")")
+              
+              if (base::nrow(top5_temp6) >= 2) {
+                
+                suspectsDT[j, colCat] <- 1
+                
+              } else {
+                
+                groupAndIsos <- dplyr::filter(df_patData, mz >= temp$mz[j, drop=T] & mz < 6+temp$mz[j, drop=T])
+                groupAndIsos <- dplyr::filter(groupAndIsos, ret >= temp$ret[j, drop=T]-30 & ret <= temp$ret[j, drop=T]+30)
+                
+                tempMS2withIsotopes <- base::suppressWarnings(
+                  patRoon::generateMSPeakLists(patData[base::which(rGroups == groupNames[i]),
+                                                       groupAndIsos$group[drop = TRUE]],
+                                               "mzr", maxMSRtWindow = 5, precursorMzWindow = 2,
+                                               avgFeatParams = MS2_avgPListParams,
+                                               avgFGroupParams = MS2_avgPListParams)
+                )
+                
+                #tentative to identify by insillico fragmentation
+                tempFormulas <- patRoon::generateFormulasSIRIUS(patData[base::which(rGroups == groupNames[i]), groupAndIsos$group[drop = TRUE]],
+                                                                tempMS2withIsotopes, relMzDev = ppmMS2,
+                                                                adduct = "[M+H]+",
+                                                                elements = base::gsub("[^a-zA-Z]", "", temp2$formula[drop=T]),
+                                                                profile = "qtof",
+                                                                database = NULL, noise = NULL,
+                                                                topMost = 20, extraOptsGeneral = NULL,
+                                                                verbose = FALSE,
+                                                                calculateFeatures = TRUE, featThreshold = 1)
+                
+                formulaResult <- tempFormulas[[temp$group[j, drop=T]]]
+                if (!base::is.null(formulaResult)) {
+                  formulaResult <- dplyr::filter(formulaResult, neutral_formula == temp2$formula[drop=T])
+                  suspectsDT[j, colMS2] <- base::paste0(base::nrow(formulaResult),"(",base::nrow(temp1),")")
+                  if (base::nrow(formulaResult) >= 2) {
+                    if (base::length(base::unique(formulaResult$frag_mz[drop = T])) >= 2) {suspectsDT[j, colCat] <- 2}
+                  }
+                }
+              }
+            } else {
+              
+              groupAndIsos <- dplyr::filter(df_patData, mz >= temp$mz[j, drop=T] & mz < 6+temp$mz[j, drop=T])
+              groupAndIsos <- dplyr::filter(groupAndIsos, ret >= temp$ret[j, drop=T]-30 & ret <= temp$ret[j, drop=T]+30)
+              
+              tempMS2withIsotopes <-base::suppressWarnings(
+                patRoon::generateMSPeakLists(patData[base::which(rGroups == groupNames[i]),
+                                                     groupAndIsos$group[drop = TRUE]],
+                                             "mzr", maxMSRtWindow = 5, precursorMzWindow = 2,
+                                             avgFeatParams = MS2_avgPListParams,
+                                             avgFGroupParams = MS2_avgPListParams)
+              )
+              
+              temp2 <- dplyr::filter(sDB, name == temp$name[j])
+              #tentative to identify by insillico fragmentation
+              tempFormulas <- patRoon::generateFormulasSIRIUS(patData[base::which(rGroups == groupNames[i]), groupAndIsos$group[drop = TRUE]],
+                                                              tempMS2withIsotopes, relMzDev = ppmMS2,
+                                                              adduct = "[M+H]+",
+                                                              elements = base::gsub("[^a-zA-Z]", "", temp2$formula[drop=T]),
+                                                              profile = "qtof",
+                                                              database = NULL, noise = NULL,
+                                                              topMost = 20, extraOptsGeneral = NULL,
+                                                              calculateFeatures = TRUE, featThreshold = 1)
+              
+              # tempFormulas <- patRoon::generateFormulasGenForm(patData[which(rGroups == groupNames[i]), groupAndIsos$group[drop = TRUE]],
+              #                                                 tempMS2withIsotopes, relMzDev = 10, isolatePrec = TRUE,
+              #                                                 adduct = "[M+H]+", elements = gsub("[^a-zA-Z]", "", temp2$formula[drop=T]),
+              #                                                 topMost = 20, extraOpts = NULL,
+              #                                                 calculateFeatures = TRUE, featThreshold = 1, timeout = 240, hetero = TRUE, oc = TRUE)
+              
+              formulaResult <- tempFormulas[[temp$group[j, drop=T]]]
+              if (!base::is.null(formulaResult)) {
+                formulaResult <- dplyr::filter(formulaResult, neutral_formula == temp2$formula[drop=T])
+                suspectsDT[j, colMS2] <- base::paste0(base::nrow(formulaResult),"(",base::nrow(temp1),")")
+                if (base::nrow(formulaResult) >= 2) {
+                  if (base::length(base::unique(formulaResult$frag_mz[drop = T])) >= 2) {suspectsDT[j, colCat] <- 2}
+                }
+              }
+            }
+          }
+        }
+      }
+      if (exists("temp1")) base::rm(temp1)
+      if (exists("temp2")) base::rm(temp2)
+      if (exists("temp3")) base::rm(temp3)
+      if (exists("temp6")) base::rm(temp6)
+      if (exists("top5_temp1")) base::rm(top5_temp1)
+      if (exists("top5_temp3")) base::rm(top5_temp3)
+      if (exists("top5_temp6")) base::rm(top5_temp6)
+    }
+  }
+  
+  suspects <- base::list(patSuspects = patSuspects, suspectsDT = suspectsDT)
+  
+  if (!base::is.null(listMS2)) suspects[["MS2"]] <- listMS2
+  
+  return(suspects)
+  
+  # rGroups <- patRoon::analysisInfo(patData)$group
+  # #if (removeBlanks) rGroups <- rGroups[rGroups != blankGroups]
+  # 
+  # groupNames <- patRoon::replicateGroups(patData)
+  # if (removeBlanks) groupNames <- groupNames[!(groupNames %in% blankGroups)]
+  # 
+  # df_patData <- base::as.data.frame(patRoon::as.data.table(patData, average = T))
+  # 
+  # patSuspects <- patRoon::screenSuspects(patData, sDB, rtWindow = rtWindow, mzWindow = 0.03, adduct = adduct, onlyHits = TRUE)
+  # 
+  # suspectsDT  <- dplyr::arrange(patRoon::screenInfo(patSuspects), group)
+  # suspectsDT  <- dplyr::select(suspectsDT, group, name, d_mz, d_rt)
+  # suspectsDT  <- dplyr::left_join(suspectsDT, df_patData, by = "group")
+  # suspectsDT <- dplyr::left_join(suspectsDT, sDB[,c("name", "formula", "comment", "int10")], by = "name")
+  # suspectsDT$d_ppm <- (base::abs(suspectsDT$d_mz)/suspectsDT$mz)*1E6
+  # suspectsDT <- dplyr::select(suspectsDT, group, name, formula, d_ppm, d_rt, mz, ret, dplyr::everything(), -d_mz)
+  # suspectsDT <- dplyr::filter(suspectsDT, d_ppm <= ppmWindow)
+  # suspectsDT <- base::as.data.frame(suspectsDT)
+  
+}
+
+
+
+#' @title checkAnnotation_Old
+#' @description Extract annotation details for features selected by \code{ID},
+#' \emph{m/z} and retention time or component number (\code{comp}) of all
+#' or selected sample replicate groups in an \linkS4class{ntsData} object.
+#'
+#' @param obj An \linkS4class{ntsData} object containing annotated features.
+#' @param samples The samples (name or index) to extract the features.
+#' The default is \code{NULL} which considers all existing sample replicate groups,
+#' excluding any assigned blank replicate groups as listed in the \code{obj}.
+#' Note that the features are taken from sample replicate groups, meaning that
+#' features will be extracted from sample replicate groups
+#' that contain the specified samples. 
+#' @param ID The identifier/s of selected features. When specified,
+#' it overwrites any given \code{mz} or \code{comp} values.
+#' @param mz The \emph{m/z} to find features. Not used if \code{ID} is specified.
+#' Can be a vector of length 2, defining the mass range to find features.
+#' @param ppm The expected mass deviation (in ppm) to search
+#' for features of a given \code{mz}.
+#' @param rt The expected retention time of the \emph{m/z} of interest,
+#' only used if \code{ID} is not specified.
+#' @param rtWindow The expected retention time deviation for searching.
+#' Can be a vector of length 2, giving the time range to find features.
+#' @param rtUnit The time unit used.
+#' Possible values are \code{sec} and \code{min}. Default is \code{sec}.
+#' @param comp The component number/s to extract features.
+#' Only used if both \code{ID} and \code{mz} are \code{NULL}.
+#' @param entireComponents Logical, set to \code{TRUE} (The default) to give the
+#' all the features in the components represented by the selected features.
+#' @param onlyAnnotated Logical, set to \code{TRUE} to return only annotated features.
+#' @param onlyRelated Logical, set to \code{TRUE} to return only features that are related,
+#' meaning features annotated with the same molecular ion.
+#'
+#' @return A \code{data.frame} with annotation details for
+#' the selected/found features.
+#' 
+#' @note If all (\code{ID}, \code{mz} and \code{comp}) are \code{NULL},
+#' the returned \code{data.frame} will contain all the features
+#' for each sample replicate group. Additionally, the three logical arguments
+#' are applied in the follwoing order: (1) \code{entireComponents},
+#' (2) \code{onlyAnnotated} and (3) \code{onlyRelated}.
+#' 
+#' @export
+#'
+#' @importFrom checkmate assertClass assertSubset
+#' @importFrom dplyr filter between
+#'
+checkAnnotation_Old <- function(obj = NULL,
+                            samples = NULL,
+                            ID = NULL,
+                            mz = NULL, ppm = 5,
+                            rt = NULL, rtWindow = 1, rtUnit = "sec",
+                            comp = NULL,
+                            entireComponents = TRUE,
+                            onlyAnnotated = FALSE,
+                            onlyRelated = TRUE) {
+  
+  assertClass(obj, "ntsData")
+  
+  assertSubset(rtUnit, c("sec", "min"))
+  
+  ft <- obj@annotation$df
+  
+  if (nrow(ft) == 0) return(cat("Annotation not found in the ntsData object!"))
+  
+  #filter for a replicate group or for all
+  if (!is.null(samples)) {
+    if (is.character(samples)) {
+      rg <- unique(obj@samples$group[obj@samples$sample %in% samples])
+    } else {
+      rg <- unique(obj@samples$group[samples])
+    }
+    ft <- ft[ft$group %in% rg, ]
+  }
+  
+  if (!is.null(ID)) {
+    ft <- ft[ft$ID %in% ID, ]
+  } else {
+    #When ID is NULL but specified by mz +/- ppm  
+    if (!is.null(mz)) {
+      mzr <- mzrBuilder(mz = mz, ppm = ppm)
+      rtr <- rtrBuilder(rt = rt, rtWindow = rtWindow, rtUnit = rtUnit)
+      ft <- dplyr::filter(ft,
+                          dplyr::between(mz, mzr[1], mzr[2]),
+                          dplyr::between(rt, rtr[1], rtr[2]))
+    } else {
+      #When only the comp number is given
+      if (!is.null(comp)) ft <- ft[ft$comp %in% comp, ]
+    }
+  }
+  
+  if (nrow(ft) == 0) return(cat("Features not found with the given selection parameters!"))
+  
+  ft2 <- ft
+  
+  if (entireComponents) {
+    ft2 <- obj@annotation$df[obj@annotation$df$comp %in% ft$comp, ]
+  }
+  
+  #filter ano by selecting only annotated Features
+  if (onlyAnnotated) {
+    ft2 <- ft2[!is.na(ft2$Mion) | !is.na(ft2$adductMion), ]
+  }
+  
+  if (onlyRelated) {
+    ft2 <- ft2[ft2$Mion %in% na.omit(ft$Mion) | ft2$adductMion %in% na.omit(ft$adductMion), ]
+  }
+  
+  return(ft2)
+  
+}
+
+
+#' @title plotFeaturePeaks_Old
+#' @description Plots peaks for each feature in an \linkS4class{ntsData} object.
+#'
+#' @param obj An \linkS4class{ntsData} object.
+#' @param fileIndex The index or name of the sample/s.
+#' The default is \code{NULL} and all samples are used.
+#' @param ID The identifier of the features of interest.
+#' When not \code{NULL}, overwrites any given \code{mz} and \code{rt} value.
+#' @param mz Optional target \emph{m/z} to find features using
+#' the mass deviation specified by the \code{ppm} parameter.
+#' @param ppm The mass deviation to extract the features
+#' when \code{mz} is specified.
+#' @param rt The retention time in minutes or seconds,
+#' depending on the defined \code{rtUnit}, see below.
+#' Only used when \code{mz} is specified.
+#' @param rtWindow The time deviation to collect features.
+#' The time unit is the defined by \code{rtUnit}.
+#' A time interval can be given with a length 2 vector,
+#' defining the minimum and maximum retention time.
+#' @param rtUnit Possible entries are \code{min} or \code{sec}.
+#' The default is \code{min}.
+#' @param msLevel The MS level to extract the data.
+#' For the moment, only 1 is possible.
+#' @param names A character string with names for each feature given in \code{features}.
+#' Note that length should match between \code{names} and \code{features}.
+#'
+#' @return A double plot with peak chromatograms on the top part
+#' and feature peak groups below.
+#' 
+#' @export
+#' 
+#' @importFrom checkmate assertClass assertSubset
+#' @importFrom xcms filterFile hasFeatures featureDefinitions featureChromatograms chromPeaks
+#' @importMethodsFrom MSnbase rtime
+#' @importFrom BiocGenerics as.data.frame
+#' @importFrom patRoon as.data.table
+#' @importFrom plotly plot_ly add_trace layout hide_colorbar subplot toRGB
+#' @importFrom stats setNames
+#'
+#' @examples
+#' 
+setMethod("plotFeaturePeaks", "ntsData", function(obj, fileIndex = NULL,
+                                                  ID = NULL,
+                                                  mz = NULL, ppm = 20,
+                                                  rt = NULL, rtWindow = NULL,
+                                                  rtUnit = "sec",
+                                                  msLevel = 1,
+                                                  interactive = TRUE) {
+  
+  assertClass(obj, "ntsData")
+  
+  assertSubset(rtUnit, c("sec", "min"))
+  
+  assertSubset(colorBy, c("features", "samples", "samplegroups"))
+  
+  if (!is.null(fileIndex)) obj <- filterFileFaster(obj, fileIndex)
+  
+  rtr <- NULL
+  
+  if (!is.null(ID)) {
+    ft <- obj@features[obj@features$ID %in% ID, ]
+  } else {
+    if (!is.null(mz)) {
+      mzr <- mzrBuilder(mz = mz, ppm = ppm)
+      rtr <- rtrBuilder(rt = rt, rtWindow = rtWindow, rtUnit = rtUnit)
+      ft <- dplyr::filter(obj@features,
+                          dplyr::between(mz, mzr[1], mzr[2]),
+                          dplyr::between(rt, rtr[1], rtr[2]))
+    } else {
+      return(cat("One of ID or mz should be given."))
+    }
+  }
+  
+  if (nrow(ft) == 0) return(cat("No features found."))
+  
+  pk <- list()
+  for (i in seq_len(nrow(ft))) {
+    pk[[ft$ID[i]]] <- obj@peaks[obj@peaks$ID %in% unlist(ft$pIdx[i]), ]
+  }
+  
+  pk <- pk[lapply(pk, nrow) > 0]
+  
+  if (length(pk) == 0) return(cat("No features found."))
+  
+  if (is.null(rtr)) rtr <- c(min(ft$rtmin) - 60, max(ft$rtmax) + 60)
+  
+  if (is.null(ppm)) ppm = 5
+  
+  EICs <- list()
+  EICs <- lapply(pk, function(x) {
+    extractEIC(obj,
+               mz = c(min(x$mzmin) - ((ppm / 1E6) * min(x$mzmin)),
+                      max(x$mzmax) + ((ppm / 1E6) * max(x$mzmax))),
+               rtWindow = rtr,
+               rtUnit = "sec")
+  })
+  
+  sp <- obj@samples$sample
+  rg <- obj@samples$group
+  
+  
+  
+  
+  
+  colors <- getColors(nrow(ft))
+  
+  #first plot for samples
+  spleg <- lapply(pk, function(x) x$sample)
+  spleg2 <- spleg[[1]]
+  if (length(spleg) > 1) for (s in 2:length(spleg)) spleg2 <- c(spleg2, spleg[[s]])
+  legG <- spleg2
+  sleg <- !duplicated(spleg2)
+  
+  #Second plot for features
+  FlegG <- ft$ID
+  Fspleg <- lapply(pk, function(x) x$sample)
+  Fspleg2 <- rep(FlegG[1], length(Fspleg[[1]]))
+  if (length(Fspleg) > 1) for (s in 2:length(Fspleg)) Fspleg2 <- c(Fspleg2, rep(FlegG[s], length(Fspleg[[s]])))
+  Fsleg <- !duplicated(Fspleg2)
+  
+  
+  
+  # if (colorBy == "samples") {
+  #   colors <- getColors(obj, "samples")
+  #   spleg <- lapply(pk, function(x) x$sample)
+  #   spleg2 <- spleg[[1]]
+  #   if (length(spleg) > 1) for (s in 2:length(spleg)) spleg2 <- c(spleg2, spleg[[s]])
+  #   legG <- spleg2
+  #   sleg <- !duplicated(spleg2)
+  # } else {
+  #   if (colorBy == "features") {
+  #     colors <- getColors(nrow(ft))
+  #     legG <- ft$ID
+  #     spleg <- lapply(pk, function(x) x$sample)
+  #     spleg2 <- rep(legG[1], length(spleg[[1]]))
+  #     if (length(spleg) > 1) for (s in 2:length(spleg)) spleg2 <- c(spleg2, rep(legG[s], length(spleg[[s]])))
+  #     sleg <- !duplicated(spleg2)
+  #   } else {
+  #     colors <- getColors(obj, "samplegroups")
+  #     spleg <- lapply(pk, function(x) x$group)
+  #     spleg2 <- spleg[[1]]
+  #     if (length(spleg) > 1) for (s in 2:length(spleg)) spleg2 <- c(spleg2, spleg[[s]])
+  #     legG <- spleg2
+  #     sleg <- !duplicated(spleg2)
+  #   }
+  # }
+  
+  if (interactive) {
+    
+    plot <- plot_ly()
+    
+    counter <- 1
+    
+    for (i in seq_len(nrow(ft))) {
+      
+      for (z in seq_len(nrow(pk[[i]]))) {
+        
+        df <- EICs[[i]][EICs[[i]]$file == which(sp == pk[[i]]$sample[z]), ]
+        
+        plot <- plot %>% add_trace(df,
+                                   x = df$rt,
+                                   y = df$i,
+                                   type = "scatter", mode = "lines",
+                                   line = list(width = 0.5,
+                                               color = colors[i]),
+                                   connectgaps = TRUE,
+                                   name = legG[z],
+                                   legendgroup = legG[z],
+                                   showlegend = sleg[counter]
+        )
+        
+        df <- df[df$rt >= pk[[i]]$rtmin[z] & df$rt <= pk[[i]]$rtmax[z], ]
+        
+        plot <- plot %>%  add_trace(df,
+                                    x = df$rt,
+                                    y = df$i,
+                                    type = "scatter", mode =  "lines+markers",
+                                    fill = 'tozeroy', connectgaps = TRUE,
+                                    fillcolor = paste(color = colors[i], 50, sep = ""),
+                                    line = list(width = 0.1, color = colors[i]),
+                                    marker = list(size = 3, color = colors[i]),
+                                    name = legG[z],
+                                    legendgroup = legG[z],
+                                    showlegend = FALSE,
+                                    hoverinfo = 'text',
+                                    text = paste('</br> feature: ', ft$ID[i],
+                                                 '</br> peak: ', pk[[i]]$ID[z],
+                                                 '</br> sample: ', pk[[i]]$sample[z],
+                                                 '</br> <i>m/z</i>: ', round(df$mz, digits = 4),
+                                                 '</br> rt: ', round(df$rt, digits = 0),
+                                                 '</br> Int: ', round(df$i, digits = 0))
+        )
+        
+        counter <- counter + 1
+        
+      }
+    }
+    
+    plot2 <- plot_ly()
+    
+    rect <- list()
+    
+    dotsColor <- c("#000000","#FDFEFE00")
+    dotsColor <- stats::setNames(dotsColor, c("0","1"))
+    
+    for (f in seq_len(nrow(ft))) {
+      
+      df2 <- pk[[f]]
+      
+      # rect[[f]] <- list(type = "rect", fillcolor = paste(colors[f], "15", sep = ""),
+      #                   line = list(color = colors[f], width = 1, dash = 'dash'),
+      #                   x0 = min(df2$rtmin, na.rm = T),
+      #                   x1 = max(df2$rtmax, na.rm = T),
+      #                   xref = "x", y0 = 0, y1 = length(sp) - 1, yref = "y")
+      
+      
+      
+      plot2 <- plot2 %>% plotly::add_trace(df2,
+                                           x = df2$rt,
+                                           y = df2$sample, type = "scatter", mode = "markers",
+                                           error_x = list(type = "data", symmetric = FALSE,
+                                                          array = df2$rtmax - df2$rt,
+                                                          arrayminus = df2$rt - df2$rtmin,
+                                                          color = colors[f],
+                                                          width = 5),
+                                           color = as.character(df2$is_filled), colors = dotsColor, size = 6,
+                                           marker = list(line = list(color = colors[f], width = 3)),
+                                           name = FlegG[f],
+                                           legendgroup = FlegG[f],
+                                           showlegend = TRUE,
+                                           hoverinfo = 'text', text = paste('</br> feature: ', names(pk[f]),
+                                                                            '</br> sample: ', df2$sample,
+                                                                            '</br> height: ', round(df2$intensity, digits = 0),
+                                                                            '</br> width: ', round(df2$rtmax - df2$rtmin, digits = 0),
+                                                                            '</br> dppm: ', round(((df2$mzmax - df2$mzmin)/df2$mz)*1E6, digits = 1),
+                                                                            '</br> filled: ', base::ifelse(df2$is_filled == 1, "TRUE", "FALSE")))
+    }
+    #plot2 <- plot2 %>% plotly::layout(shapes = rect)
+    plot2 <- plotly::hide_colorbar(plot2)
+    
+    plot2
+    
+    
+    plotList <- list()
+    plotList[["plot"]] <- plot
+    plotList[["plot2"]] <- plot2
+    
+    
+    xaxis <- base::list(linecolor = plotly::toRGB("black"), linewidth = 2, title = "Retention Time (sec.)",
+                        titlefont = list(size = 12, color = "black"),
+                        range = rtr, autotick = T, ticks = "outside")
+    
+    yaxis1 = list(linecolor = plotly::toRGB("black"), linewidth = 2, title = "Intensity",
+                  titlefont = list(size = 12, color = "black"))
+    
+    yaxis2 = list(linecolor = plotly::toRGB("black"), linewidth = 2, title = "Sample",
+                  titlefont = list(size = 12, color = "black"), tick0 = 0, dtick = 1)
+    
+    plotf <- plotly::subplot(plotList, nrows = 2, margin = 0.04, shareX = TRUE, which_layout = "merge")
+    
+    plotf <- plotf %>% plotly::layout(xaxis = xaxis, yaxis = yaxis1, yaxis2 = yaxis2)
+    
+    plotf
+    
+    return(plot)
+    
+  } else {
+    
+    # non-iteractive
+    
+  }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  #check if is x is XCMSnExp (xcms) or featureGroups (patRoon)
+  if (base::class(x) == "featureGroupsXCMS3") {
+    if (!base::is.null(fileIndex)) {x <- x[fileIndex,]}
+    y <- x@xdata
+  } else {
+    if (base::class(x) == "XCMSnExp") {
+      if (!base::is.null(fileIndex)) {x <- xcms::filterFile(x, fileIndex, keepFeatures = TRUE,  keepAdjustedRtime = TRUE)}
+      y <- x
+    } else {
+      stop("x must be an XCMSnExp (xcms) or featureGroups (patRoon) object.")
+    }
+  }
+  
+  if (!xcms::hasFeatures(y)) stop ("Features not found in the given XCMSnExp object.")
+  
+  rtr <- c(base::min(MSnbase::rtime(y)), base::max(MSnbase::rtime(y)))
+  if (!base::is.null(rt)) if (rtUnit == "min") rt <- rt*60
+  if (!base::is.null(rtWindow)) if (rtUnit == "min") rtWindow <- rtWindow*60
+  if (!base::is.null(rt) & !base::is.null(rtWindow)) { rtr <- c((rt) - rtWindow, (rt) + rtWindow) }
+  if (base::is.null(rt)) if (!base::is.null(rtWindow)) if (base::length(rtWindow) == 2) { rtr <- rtWindow }
+  
+  #When priotity is for feature and than mz
+  if (!base::is.null(features)) {
+    if (base::unique(base::grepl("M*_R", features, fixed = FALSE))) {
+      gKey <- base::cbind(patRoon::as.data.table(x, average = TRUE)[,.SD, .SDcols = "group"],
+                          base::data.frame(FT = base::row.names(xcms::featureDefinitions(y))))
+      gKey <- base::as.data.frame(gKey)
+      FT <- gKey[gKey$group %in% features, "FT", drop = T]
+    } else {
+      FT <- features
+    }
+    #When features are no given but a specific mz +/- ppm  
+  } else {
+    if (base::is.null(mz)) stop("If features are not given, at least mz should be given.")
+    FT <- base::row.names(xcms::featureDefinitions(y, mz = mz, ppm = ppm, rt = rtr, type = "within", msLevel = 1))
+  }
+  
+  if (base::length(FT) == 0 | base::is.null(FT)) stop ("Features were not found with the given paramters.") 
+  
+  defFT <- xcms::featureDefinitions(y)
+  defFT <- defFT[base::row.names(defFT) %in% FT,]
+  
+  #Make features legend
+  features <- base::character()
+  for (f in 1:base::length(FT)) {
+    features <- c(features, base::paste("M", base::round(defFT$mzmed[base::row.names(defFT) %in% FT[f],drop = T], digits = 0),
+                                        "_R", base::round(defFT$rtmed[base::row.names(defFT) %in% FT[f],drop = T], digits = 0),
+                                        "_", FT[f],sep=""))
+  }
+  
+  featuresID <- features
+  
+  if (!base::is.null(names) & base::length(names) == base::length(features)) {
+    features <- names
+  }
+  
+  chrom <- xcms::featureChromatograms(y, features = FT, aggregationFun = "sum",
+                                      expandRt = rtr[2]-rtr[1], include = "any",
+                                      filled = TRUE, missing = NA)
+  
+  df <- base::data.frame(rtime = base::as.numeric(),intensity = base::as.numeric(),sample = base::as.character(),FT = base::as.character())
+  for (f in 1:base::nrow(defFT)) {
+    for (s in 1:base::ncol(chrom)) {
+      temp <- chrom[f,s]
+      temp <- BiocGenerics::as.data.frame(temp)
+      temp$sample <- y$sample_name[s]
+      temp$FT <- FT[f]
+      df <- base::rbind(df,temp)
+    }
+  }
+  
+  if (plotBy == "samples") {
+    colors <- ntsIUTA::getColors(y, "samples")
+  } else {
+    if (plotBy == "features") {
+      colors <- ntsIUTA::getColors(base::length(features))
+    } else {
+      colors = ntsIUTA::getColors(y, "groups")
+    }
+  }
+  
+  p1 <- plotly::plot_ly(df)
+  showlegend = base::rep(0,base::length(features))
+  for (s in 1:base::length(y$sample_name)) { 
+    for (f in 1:base::length(FT)) {
+      rtFT <- base::as.data.frame(xcms::chromPeaks(y)[base::unlist(defFT[base::row.names(defFT) %in% FT[f] ,"peakidx"]), ])
+      if(base::unique(TRUE %in% (rtFT$sample == s))) {
+        showlegend[f] = 1 + showlegend[f]
+        p1 <- p1 %>% plotly::add_trace(df,
+                                       x = df[df$FT == FT[f] & df$sample ==  y$sample_name[s], "rtime"],
+                                       y = df[df$FT == FT[f] & df$sample ==  y$sample_name[s], "intensity"],
+                                       type = "scatter", mode = "lines",
+                                       line = list(width = 0.5,
+                                                   color = ifelse(plotBy == "samples",base::unname(colors[s]),
+                                                                  ifelse(plotBy == "features", colors[f],base::unname(colors[s])))),
+                                       connectgaps = TRUE,
+                                       name = ifelse(plotBy == "samples",y$sample_name[s],
+                                                     ifelse(plotBy == "features", features[f], y$sample_group[s])),
+                                       legendgroup = ifelse(plotBy == "samples",y$sample_name[s],
+                                                            ifelse(plotBy == "features", features[f], y$sample_group[s])),
+                                       showlegend = ifelse(plotBy == "samples",base::ifelse(f == 1, T, F),
+                                                           ifelse(plotBy == "features", base::ifelse(showlegend[f] == 1, T, F),
+                                                                  base::ifelse(f == 1, T, F))))
+        
+        
+        
+        rtFT <- rtFT[rtFT$sample == s, c("rtmin","rtmax")]
+        p1 <- p1 %>%  plotly::add_trace(df,
+                                        x = df[df$FT == FT[f] & df$sample ==  y$sample_name[s] & df$rtime >= rtFT[1,1] & df$rtime <= rtFT[1,2], "rtime"],
+                                        y = df[df$FT == FT[f] & df$sample ==  y$sample_name[s] & df$rtime >= rtFT[1,1] & df$rtime <= rtFT[1,2],"intensity"],
+                                        type = "scatter", mode = "lines", fill = 'tozeroy', connectgaps = TRUE,
+                                        fillcolor = ifelse(plotBy == "samples",paste(color = base::unname(colors[s]),50, sep = ""),
+                                                           ifelse(plotBy == "features", paste(color = base::unname(colors[f]),50, sep = ""),
+                                                                  paste(color = base::unname(colors[s]),50, sep = ""))),
+                                        line = list(width = 0.1,
+                                                    color = ifelse(plotBy == "samples",base::unname(colors[s]),
+                                                                   ifelse(plotBy == "features", colors[f],base::unname(colors[s])))),
+                                        name = ifelse(plotBy == "samples",y$sample_name[s],
+                                                      ifelse(plotBy == "features", features[f],y$sample_group[s])),
+                                        legendgroup = ifelse(plotBy == "samples",y$sample_name[s],
+                                                             ifelse(plotBy == "features", features[f],y$sample_group[s])),
+                                        showlegend = F) #base::ifelse(showlegend == 1, T, F)
+      }
+    }
+  }
+  
+  p2 <- plotly::plot_ly()
+  rect <- list()
+  colorsRect <- ntsIUTA::getColors(x = base::length(features))
+  dotsColor <- c("#000000","#FDFEFE00")
+  dotsColor <- stats::setNames(dotsColor, c("0","1"))
+  for (f in 1:base::length(FT)) {
+    rtFT <- base::as.data.frame(xcms::chromPeaks(y, isFilledColumn = TRUE)[base::unlist(defFT[base::row.names(defFT) %in% FT[f] ,"peakidx"]), ])
+    
+    rect[[f]] <- list(type = "rect", fillcolor = base::paste(colorsRect[f],"15", sep = ""),
+                      line = list(color = colorsRect[f], width = 1, dash = 'dash'), #'rgba(62, 186, 32,0.15)'
+                      x0 = base::min(rtFT$rtmin, na.rm = T),
+                      x1 = base::max(rtFT$rtmax, na.rm = T),
+                      xref = "x", y0 = 1, y1 = base::max(base::length(y$sample_name)), yref = "y")
+    
+    p2 <- p2 %>% plotly::add_trace(rtFT,
+                                   x = rtFT$rt,
+                                   y = rtFT$sample, type = "scatter", mode = "markers",
+                                   color = as.character(rtFT$is_filled), colors = dotsColor, size = 6,
+                                   marker = list(line = list(color = colorsRect[f], width = 3)),
+                                   showlegend = FALSE,
+                                   hoverinfo = 'text', text = paste('</br> feature: ', featuresID[f],
+                                                                    '</br> sample: ', y$sample_name[rtFT$sample],
+                                                                    '</br> height: ', base::round(rtFT$maxo, digits = 0),
+                                                                    '</br> width: ', base::round(rtFT$rtmax-rtFT$rtmin, digits = 0),
+                                                                    '</br> dppm: ', rtFT$dppm,
+                                                                    '</br> sn: ', rtFT$sn,
+                                                                    '</br> egauss: ', base::round(rtFT$egauss, digits = 3),
+                                                                    '</br> filled: ', base::ifelse(rtFT$is_filled == 1, "TRUE", "FALSE")))
+  }
+  p2 <- p2 %>% plotly::layout(shapes = rect)
+  p2 <- plotly::hide_colorbar(p2)
+  
+  plotList <- list()
+  plotList[[paste0("p1",s)]]<- p1
+  plotList[[paste0("p2",s)]]<- p2
+  
+  title <- base::list(text = "Coisas", x = 0.1, y = 0.98, font = base::list(size = 14, color = "black"))
+  
+  xaxis <- base::list(linecolor = plotly::toRGB("black"), linewidth = 2, title = "Retention Time (sec.)",
+                      titlefont = base::list(size = 12, color = "black"),
+                      range = c(rtr), autotick = T, ticks = "outside")
+  
+  yaxis1 = list(linecolor = plotly::toRGB("black"), linewidth = 2, title = "Intensity",
+                titlefont = list(size = 12, color = "black"))
+  
+  yaxis2 = list(linecolor = plotly::toRGB("black"), linewidth = 2, title = "Sample",
+                titlefont = list(size = 12, color = "black"), tick0 = 0, dtick = 1)
+  
+  plot <- plotly::subplot(plotList, nrows = 2, margin = 0.04, shareX = TRUE, which_layout = "merge")
+  plot <- plot %>% plotly::layout(xaxis = xaxis, yaxis = yaxis1, yaxis2 = yaxis2)
+  
+  return(plot)
+  
+})
+
+
+
+
 #' @title checkQC_old
 #' @description Function to check QC samples in \code{rawData}.
 #' 
@@ -318,7 +1790,7 @@ checkQC_old <- function(rawQC = rawData,
 
 
 
-#' @title makeFeatureComponents
+#' @title makeFeatureComponents_Old
 #' @description Uses the \pkg{CAMERA} package to find isotopes by grouping features over the retention time
 #' and extracted ion chromotogram (EIC) for the given deviations. The isotopes are found for each replicate group.
 #'
@@ -365,7 +1837,7 @@ checkQC_old <- function(rawQC = rawData,
 #' 
 #' 
 #' 
-makeFeatureComponents <- function(featData = featData, polarity = "positive",
+makeFeatureComponents_Old <- function(featData = featData, polarity = "positive",
                                   sigma = 5, perfwhm = 0.5, cor_eic_th = 0.85,
                                   cor_exp_th = 0.75, pval = 0.05,
                                   calcCaS = TRUE, calcIso = TRUE,
@@ -504,7 +1976,7 @@ makeFeatureComponents <- function(featData = featData, polarity = "positive",
 
 
 
-#' @title plotComponentSpectrum
+#' @title plotComponentSpectrum_Old
 #' @description Plots the spectra for given features, \emph{m/z} and rt or components from a list of \linkS4class{xsAnnotate} objects.
 #' 
 #' 
@@ -541,7 +2013,7 @@ makeFeatureComponents <- function(featData = featData, polarity = "positive",
 #' 
 #' 
 #' 
-plotComponentSpectrum <- function(xA = featComp, replicateGroups = NULL,
+plotComponentSpectrum_Old <- function(xA = featComp, replicateGroups = NULL,
                                   features = NULL, featData = featData,
                                   mz = NULL, ppm = 5, mzWindowPlot = NULL,
                                   rt = NULL, rtWindow = 1, rtUnit = "min",
@@ -765,7 +2237,7 @@ plotComponentSpectrum <- function(xA = featComp, replicateGroups = NULL,
 
 
 
-#' @title plotFeaturesOld
+#' @title plotFeatures_Old
 #' @description Plot features from a \linkS4class{featureGroups}.
 #'
 #' @param features A \linkS4class{featureGroups} object with one or more files and grouped peaks (i.e., features).
@@ -797,7 +2269,7 @@ plotComponentSpectrum <- function(xA = featComp, replicateGroups = NULL,
 #'
 #' @examples
 #'
-plotFeaturesOld <- function(features = features,
+plotFeatures_Old <- function(features = features,
                             fileIndex = NULL,
                             ID = NULL,
                             mz = NULL, ppm = 5,

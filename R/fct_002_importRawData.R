@@ -9,7 +9,7 @@
 #' @param obj An \linkS4class{ntsData} object.
 #' @param rtFilter A numeric vector with length 2 defining the minimum
 #' and maximum chromatographic retention time for the listed MS files.
-#' @param timeUnit The unit of the \code{rtFilter}.
+#' @param rtUnit The unit of the \code{rtFilter}.
 #' Possible values are \code{min} (the default) and \code{sec}.
 #' @param msLevel The MS dimensions for the rtFilter to be applied.
 #' The default is both MS1 and MS2 using \code{c(1,2)}.
@@ -35,6 +35,7 @@
 #'
 #' @export
 #'
+#' @importFrom checkmate assertClass
 #' @importFrom BiocParallel SnowParam register
 #' @importFrom parallel detectCores
 #' @importClassesFrom MSnbase OnDiskMSnExp
@@ -49,23 +50,30 @@
 #'
 importRawData <- function(obj = NULL,
                           rtFilter = NULL,
-                          timeUnit = "min",
+                          rtUnit = "min",
                           msLevel = c(1, 2),
                           centroidedData = TRUE,
                           removeEmptySpectra = TRUE,
                           save = FALSE) {
-  
+
+  assertClass(obj, "ntsData")
+
   snow <- SnowParam(workers = detectCores() - 1,
                     type = "SOCK",
                     exportglobals = FALSE,
                     progressbar = TRUE)
-  
+
   register(snow, default = TRUE)
-  
+
   msFiles <- obj@samples$file[drop = TRUE]
   sample_name <- obj@samples$sample
   sample_group <- obj@samples$group
-  
+
+  if (length(sample_name) == 0) {
+    warning("There are not samples in the ntsData object.")
+    return(obj)
+  }
+
   raw <- suppressWarnings(
     readMSData(msFiles,
                pdata = new("NAnnotatedDataFrame",
@@ -78,18 +86,18 @@ importRawData <- function(obj = NULL,
   )
 
   if (!is.null(rtFilter)) {
-    if (timeUnit == "min") rtFilter <- rtFilter * 60
+    if (rtUnit == "min") rtFilter <- rtFilter * 60
     raw <- filterRt(raw, rt = rtFilter, msLevel. = msLevel)
   }
-  
+
   if (removeEmptySpectra) raw <- filterEmptySpectra(raw)
 
   obj@MSnExp <- raw
-  
+
   if (save) saveObject(obj = obj)
-  
+
   if (is.character(save)) saveObject(obj = obj, filename = save)
-  
+
   return(obj)
 
 }
@@ -187,14 +195,93 @@ centroidProfileData <- function(obj,
                        refineMz = "none")
     }
   }
-  
+
   obj@MSnExp <- raw
-  
+
   if (save) {
     fls_new <- fileNames(raw)
     writeMSData(raw, file = fls_new)
   }
 
   return(obj)
+
+}
+
+
+
+#' @title extractEIC
+#' @description Extracts an ion chromatogram (EIC) from raw data of a specified \emph{m/z}.
+#'
+#' @param obj An \linkS4class{ntsData} object with one or more files.
+#' @param fileIndex The index of the file/s to extract the centroids or profile data.
+#' @param mz Target \emph{m/z} to the EIC.
+#' @param ppm The mass deviation to extract the data for the EIC in \code{ppm}.
+#' @param rt The retention time in minutes or seconds, depending on the defined \code{rtUnit}, see below.
+#' With Zero or \code{NULL} the complete retention time will be used.
+#' @param rtWindow The time deviation to collect centroids or profile data. The time unit is the defined by \code{rtUnit}.
+#' A time interval can be given with a length 2 vector, defining the minimum and maximum retention time.
+#' @param rtUnit Possible entries are \code{min} or \code{sec}. The default is \code{sec}.
+#' @param msLevel The MS level to extract the data. For the moment, only 1 is possible.
+#' @param normIntensity Logical, set to \code{TRUE} for normalizing the intensity values between 1 and 0 for each file in the given \code{raw} object.
+#'
+#' @return A \code{data.frame} with the columns \code{file}, \code{rt}, \code{mz} and \code{i}
+#' representing the mzML file index, the retention time, the \emph{m/z} and the intensity, respectively.
+#'
+#' @export
+#'
+#' @importFrom checkmate assertClass
+#' @importClassesFrom MSnbase OnDiskMSnExp
+#' @importClassesFrom ProtGenerics ProcessingStep
+#' @importFrom ProtGenerics ProcessingStep executeProcessingStep
+#' @importMethodsFrom ProtGenerics filterMz rtime
+#' @importMethodsFrom MSnbase filterFile filterRt filterMz filterMsLevel rtime
+#' @importFrom methods as
+#' @importFrom data.table rbindlist
+#'
+#' @examples
+#'
+extractEIC <- function(obj = NULL, fileIndex = NULL,
+                       mz = NULL, ppm = NULL,
+                       rt = NULL, rtWindow = NULL,
+                       rtUnit = "sec", msLevel = 1,
+                       normIntensity = FALSE) {
+
+  assertClass(obj, "ntsData")
+
+  if (length(obj@MSnExp) == 0) {
+    warning("No raw data found in the MSnExp slot of the ntsData object.
+            Use the function importRawData to import data from raw files")
+  }
+
+  if (!is.null(fileIndex)) obj <- filterFileFaster(obj, fileIndex)
+
+  mzr <- NULL
+
+  if (!is.null(mz)) mzr <- mzrBuilder(mz = mz, ppm = ppm)
+
+  rtr <- rtrBuilder(rt = rt, rtWindow = rtWindow, rtUnit = rtUnit)
+
+  if (is.null(rtr)) {
+    tt <- rtime(obj@MSnExp)
+    rtr <- c(min(tt), max(tt))
+  }
+
+  raw <- filterRt(object = obj@MSnExp, rt = rtr)
+
+  raw <- filterMsLevel(raw, msLevel. = msLevel)
+
+  if (!is.null(mzr)) raw <- suppressWarnings(filterMz(raw, mz = mzr))
+
+  raw <- suppressWarnings(methods::as(raw, "data.frame"))
+
+  if (normIntensity) {
+    raw <- split(raw, raw$file)
+    for (j in seq_len(length(raw))) {
+      raw[[j]]$i <- (raw[[j]]$i - min(raw[[j]]$i)) / (max(raw[[j]]$i) - min(raw[[j]]$i))
+    }
+    raw <- rbindlist(lapply(raw, function(x) as.data.frame.list(x)), fill = TRUE)
+  }
+
+  return(raw)
 
 }
