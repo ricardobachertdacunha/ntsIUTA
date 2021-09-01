@@ -284,7 +284,8 @@ filterFeatureGroups <- function(x, i) {
     }
 
     if (class(x) == "featureGroupsScreening") {
-      x@screenInfo <- x@screenInfo[zeros, ]
+      #x@screenInfo <- x@screenInfo[zeros, ] #x@screenInfo[x@screenInfo$groups %in% x@groups, ]
+      x@screenInfo[x@screenInfo$groups %in% x@groups, ]
     }
 
   } else {

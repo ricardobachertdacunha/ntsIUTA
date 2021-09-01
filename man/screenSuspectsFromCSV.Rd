@@ -21,7 +21,7 @@ screenSuspectsFromCSV(
 to preform suspect screening.}
 
 \item{name}{An optional string (without spaces) to be used as identifier for the
-suspect screening entry in the workflow slot of the \linkS4class{ntsData} object.}
+suspect screening entry in the \code{workflows} slot of the \linkS4class{ntsData} object.}
 
 \item{suspects}{A \code{data.frame} or a location for a csv
 with details for each suspect compound.
@@ -37,7 +37,7 @@ to screen for the QC target standards. The default is 30 seconds.}
 which uses the polarity of the \code{obj} or the \code{adduct} class defined
 in the suspects data frame. See details for more information.}
 
-\item{excludeBlanks}{Logical, set to \code{TRUE} to ignore replicate groups 
+\item{excludeBlanks}{Logical, set to \code{TRUE} to ignore replicate groups
 assigned as blanks in the \code{samples} slot of the \code{obj}.}
 
 \item{withMS2}{Logical, set to \code{TRUE} for using confirmation via MS2.}
@@ -53,7 +53,7 @@ list of candidates in a csv file. The method uses the S4 method
 \code{screenSuspects} from \pkg{patRoon}.
 }
 \details{
-The \code{suspects} data.frame should follow the template requires as 
+The \code{suspects} data.frame should follow the template requires as
 obtained via \code{getScreeningListTemplate()}.
 Add other details of the template.
 }

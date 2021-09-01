@@ -364,6 +364,7 @@ setMethod("[", c("ntsData", "ANY", "missing", "missing"), function(x, i, ...) {
       #To be replaced when sub-setting in patRoon is fixed
       x@patdata <- filterFeatureGroups(x@patdata, i = sidx)
 
+      # TODO subsetting rebuilds feature list, interferse with filtering of feature list
       x <- buildFeatureList(x)
 
     } else {

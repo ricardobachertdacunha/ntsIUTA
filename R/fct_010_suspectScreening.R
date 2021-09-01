@@ -101,8 +101,9 @@ screenSuspectsFromCSV <- function(obj,
   assertClass(obj, "ntsData")
 
   if (!is.data.frame(suspects)) suspects <- utils::read.csv(suspects)
-
-  if (max(suspects$rt) < 120) suspects$rt <- suspects$rt * 60
+  
+  # TODO create check if rt column is NA, for patRoon suspect screening rt column is optional
+  #if (max(suspects$rt) < 120) suspects$rt <- suspects$rt * 60
 
   #selects top 5 or 10 fragment if MS2 data is present for suspects
   if ("hasFragments" %in% colnames(suspects)) {
@@ -170,6 +171,7 @@ screenSuspectsFromCSV <- function(obj,
     for (g in seq_len(length(rg))) {
 
       temp <- filterFeatureGroups(screen, which(obj@samples$group == rg[g]))
+      #temp <- screen
 
       MS2 <- extractMS2(temp, param = MS2param)
 
@@ -237,7 +239,7 @@ screenSuspectsFromCSV <- function(obj,
 
   } else {
 
-    data <- screen
+    data[1] <-screen
 
     results <- df
 

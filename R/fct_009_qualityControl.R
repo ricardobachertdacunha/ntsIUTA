@@ -140,7 +140,8 @@ checkQC <- function(
 
   if (max(targets$rt) < 120) targets$rt <- targets$rt * 60
 
-  if (!("adduct" %in% colnames(suspects))) {
+# TODO change check from supects to targets
+  if (!("adduct" %in% colnames(targets))) {
     adduct <- ifelse(data@polarity == "positive", "[M+H]+",
                      ifelse(data@polarity == "negative", "[M-H]-",
                             stop("polarity argument must be 'positive' or 'negative'")))
