@@ -14,31 +14,100 @@ filterMinInt <- function(obj, IntThreshold = 500) {
 
   feats <- patRoon::as.data.frame(obj@features)
 
-  if (!("filtered" %in% colnames(feats))) {
-    feats$filtered <- FALSE
+  if (!("isFiltered" %in% colnames(feats))) {
+    feats$isFiltered <- FALSE
   }
+  
   if (!("filteredBy" %in% colnames(feats))) {
     feats$filteredBy <- ""
   }
-# TODO select only unfiltered data
-for (i in 6:(length(unique(sampleGroups(obj)))-1)) {
+
+  lastCol <- length(unique(sampleGroups(obj)))+5
+
+  feats <- feats[feats$isFiltered == FALSE,]
+
+  # for( j in 1:nrow(feats)) { 
+  #   vari <- feats[j,i] <= IntThreshold
+  #   if(!(is.na(vari))){
+  #     if (vari) { feats$filtered[j] <- TRUE
+  #                 feats$filteredBy[j] <- "MinInt" }
+  #   }
+  # }
   
-  for( j in 1:nrow(feats)) { 
+    # for(j in 1:nrow(feats)) { 
+    # 
+    # vari <- feats[j,6:lastCol]
+    # 
+    #   if(!(is.na(vari))){
+    #   
+    #    if ((TRUE %in% (vari < IntThreshold))) { 
+    #      feats$isFiltered[j] <- TRUE
+    #      feats$filteredBy[j] <- "MinInt"}
+    #   }
+    # }
+  
+    for(i in 1:nrow(feats)) {
+      if(all((feats[i,6:lastCol] < IntThreshold), na.rm = TRUE)) {
+        feats$isFiltered[i] <- TRUE
+        feats$filteredBy[i] <- "MinInt"
+        }
+    }
+
+
+  obj@features <- feats
+
+  return(obj)
+}
+
+
+#' filterBlank
+#'
+#' @param obj An \linkS4class{ntsData} object.
+#' @param blankThreshold A numerical value set at the desired minimum intensity set for features.
+#'
+#' @return
+#'
+#' @export
+#' 
+#' @examples
+#'
+
+filterBlank <- function(obj, blankThreshold = 3) {
+  
+  feats <-obj@features
+  
+  if (!("isFiltered" %in% colnames(feats))) {
+    feats$isFiltered <- FALSE
+  }
+  
+  if (!("filteredBy" %in% colnames(feats))) {
+    feats$filteredBy <- ""
+  }
+  
+  lastCol <- length(unique(sampleGroups(obj)))+5
+  
+  feats <- feats[feats$isFiltered == FALSE,]
+
+  for(i in 1:nrow(feats)) {
     
-    vari <- feats[j,i] <= IntThreshold
+ #   blnk <- feats[i,6] * blankThreshold
     
-    if(!(is.na(vari))){
+
+    if(all((feats[i,7:lastCol] < (feats[i,6] * blankThreshold)), na.rm = TRUE)) {
       
-      if (vari) { feats$filtered[j] <- TRUE
-                  feats$filteredBy[j] <- "MinInt" }
+      feats$isFiltered[i] <- TRUE
+      feats$filteredBy[i] <- "blankThreshold"
     }
   }
+  
+  
+  obj@features <- feats
+  
+  return(obj)
 }
 
-obj@features <- feats
 
-return(obj)
-}
+
 
 # filterPeaks <- function(peaks = peaks,
 #                         fileIndex = NULL,
