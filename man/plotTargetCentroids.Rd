@@ -6,7 +6,7 @@
 \usage{
 plotTargetCentroids(
   obj = NULL,
-  fileIndex = NULL,
+  samples = NULL,
   mz = NULL,
   ppm = 20,
   rt = NULL,
@@ -19,7 +19,7 @@ plotTargetCentroids(
 \arguments{
 \item{obj}{An \linkS4class{ntsData} object with one or more MS files.}
 
-\item{fileIndex}{The index of the file/s to extract the centroids or profile data.}
+\item{samples}{The index or names of the sample/s to extract the centroids or profile data.}
 
 \item{mz}{The target \emph{m/z}. Note that \code{m/z} is not the expected
 monoisotopic mass but the expected adduct (\emph{i.e.} \code{[M+H]+}).}
@@ -49,7 +49,4 @@ target based on given \code{mz}.
 \description{
 Plot centroids or profile data for a target compound
 using expected \emph{m/z}, retention time and respective deviations.
-}
-\examples{
-
 }

@@ -17,7 +17,7 @@ AlteredCameraParam(
   noise = 350,
   searchAdducts = TRUE,
   ppmAdducts = 5,
-  extendedList = FALSE
+  extendedList = TRUE
 )
 }
 \arguments{
@@ -55,7 +55,4 @@ An \linkS4class{AlteredCameraParam} class object for annotation.
 }
 \description{
 AlteredCameraParam
-}
-\examples{
-
 }

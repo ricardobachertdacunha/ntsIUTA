@@ -43,6 +43,3 @@ below in the \code{samples}. If processed data is already present,
 the new files will invalidate the structure.
 Therefore, data processing should be rerun.
 }
-\examples{
-
-}

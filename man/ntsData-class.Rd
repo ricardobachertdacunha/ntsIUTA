@@ -37,7 +37,7 @@
 
 \S4method{peaks}{ntsData}(
   object,
-  fileIndex = NULL,
+  samples = NULL,
   ID = NULL,
   mz = NULL,
   ppm = 20,
@@ -48,7 +48,7 @@
 
 \S4method{features}{ntsData}(
   object,
-  fileIndex = NULL,
+  samples = NULL,
   ID = NULL,
   mz = NULL,
   ppm = 20,
@@ -88,7 +88,7 @@ to be used for QC.}
 
 \item{drop}{Ignored.}
 
-\item{fileIndex}{The indices of samples to keep in the \code{object}.}
+\item{samples}{The indice/s or name/s of samples to keep in the \code{object}.}
 
 \item{ID}{The ID of features of interest.}
 
@@ -102,8 +102,6 @@ can be of length two, defining a mass range.}
 \item{rtWindow}{The time deviation. Can be of length two, defining a time range.}
 
 \item{rtUnit}{The unit of the time arguments. Possible values are "sec" and "min".}
-
-\item{samples}{The indice/s or name/s of samples to keep in the \code{object}.}
 
 \item{compNumber}{Alternatively, the component number to find features.}
 
@@ -221,7 +219,4 @@ Slot \code{patdata} will contain the object \linkS4class{features} or
 \linkS4class{featureGroups} generated from the \pkg{patRoon} package.
 Both objects can be used within native functions of \pkg{MSnbase} and
 \pkg{patRoon}.
-}
-\examples{
-
 }

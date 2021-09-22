@@ -42,8 +42,6 @@
 #' @importFrom dplyr select everything rename
 #' @importFrom data.table rbindlist
 #'
-#' @examples
-#'
 peakPicking <- function(obj = NULL,
                         algorithm = NULL,
                         param = NULL,
@@ -51,19 +49,24 @@ peakPicking <- function(obj = NULL,
 
   assertClass(obj, "ntsData")
 
+  if (length(obj@MSnExp) == 0) {
+    print("Importing data to MSnExp slot...")
+    obj <- importRawData(obj, removeEmptySpectra = TRUE, save = FALSE)
+  }
+  
   if (is.null(algorithm)) algorithm <- obj@algorithms$peakPicking
 
-  if (!testChoice(algorithm, c("xcms3", "xcms", "openms", "envipick"))) {
+  if (!testChoice(algorithm, c("xcms3", "xcms", "openms", "envipick", "sirius", "kpic2", "safd"))) {
     warning("Peak picking algorithm not recognized. See ?peakPicking for more information.")
     return(obj)
   }
 
   if (is.null(param)) param <- obj@parameters$peakPicking
 
-  if (length(param) == 0) {
-    warning("Peak picking parameters not found or not given.")
-    return(obj)
-  }
+  # if (length(param) == 0) {
+  #   warning("Peak picking parameters not found or not given.")
+  #   return(obj)
+  # }
 
   sinfo <- data.frame(path = dirname(obj@samples$file),
                       analysis = obj@samples$sample,
@@ -76,28 +79,7 @@ peakPicking <- function(obj = NULL,
 
   obj@patdata <- pat
 
-  # TODO Make function for peaks table.
-
-  if (class(pat) == "featuresXCMS3") {
-    peaks <- as.data.frame(chromPeaks(pat@xdata, isFilledColumn = TRUE))
-    peaks$group <- sapply(peaks$sample, FUN = function(x) x <- obj@samples$group[x])
-    peaks$sample <- sapply(peaks$sample, FUN = function(x) x <- obj@samples$sample[x])
-    peaks <- split(peaks, f = peaks$sample)
-    peaks <- as.data.frame(rbindlist(peaks))
-    peaks$ID <- 1:nrow(peaks)
-    peaks <- select(peaks, ID, sample, group, everything())
-    peaks <- rename(peaks, intensity = maxo, area = into)
-  } else {
-    peaks <- featureTable(pat)
-    for (i in seq_len(nrow(obj@samples))) peaks[[i]]$sample <- obj@samples$sample[i]
-    for (i in seq_len(nrow(obj@samples))) peaks[[i]]$group <- obj@samples$group[i]
-    peaks <- as.data.frame(rbindlist(peaks))
-    peaks$ID <- 1:nrow(peaks)
-    peaks <- select(peaks, ID, sample, group, everything())
-    peaks <- rename(peaks, rt = ret, rtmin = retmin, rtmax = retmax)
-  }
-
-  obj@peaks <- peaks
+  obj <- buildPeakList(obj)
 
   obj@algorithms$peakPicking <- algorithm
 
@@ -109,4 +91,48 @@ peakPicking <- function(obj = NULL,
 
   return(obj)
 
+}
+
+
+#' @title buildPeakList
+#'
+#' @param obj An \linkS4class{ntsData} object containing a \linkS4class{features}
+#' object in the slot \code{patdata}.
+#'
+#' @return A data.frame containing information for peaks in each sample.
+#' 
+#' @importClassesFrom patRoon features
+#' @importMethodsFrom patRoon featureTable
+#' @importFrom dplyr rename select
+#' @importMethodsFrom xcms chromPeaks
+#' @importFrom data.table rbindlist
+#'
+buildPeakList <- function(obj) {
+  
+  pat <- obj@patdata
+  
+  peaks <- base::as.data.frame(data.table::rbindlist(featureTable(pat), idcol = "sample"))
+  
+  if ("group" %in% colnames(peaks)) peaks <- rename(peaks, feature = group)
+  
+  peaks <- rename(peaks, rt = ret, rtmin = retmin, rtmax = retmax)
+  
+  peaks$group <- sapply(peaks$sample, FUN = function(x) x <- obj@samples$group[which(obj@samples$sample == x)])
+  
+  if (class(pat) == "featuresXCMS3" | class(pat) == "featureGroupsXCMS3") {
+    extra <- base::as.data.frame(chromPeaks(pat@xdata, isFilledColumn = TRUE))
+    extra <- rename(extra, intensity = maxo, area = into)
+    peaks <- cbind(peaks, extra[,!(colnames(extra) %in% colnames(peaks))])
+  }
+  
+  peaks$ID <- seq_len(nrow(peaks))
+  
+  rownames(peaks) <- peaks$ID
+  
+  peaks <- select(peaks, ID, sample, group, everything())
+  
+  obj@peaks <- peaks
+  
+  return(obj)
+  
 }

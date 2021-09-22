@@ -5,7 +5,7 @@
 #' (TIC, BPC and EIC, respectively) of an \linkS4class{ntsData} object.
 #'
 #' @param obj An \linkS4class{ntsData} object with one or more files.
-#' @param fileIndex The index of the file/s to extract the data.
+#' @param samples The index or names of the sample/s to extract the data.
 #' @param mz Optional target \emph{m/z} to obtain an EIC.
 #' Note that when not \code{NULL} (the default), EIC is always returned.
 #' @param ppm The mass deviation to extract the data for the EIC, in \code{ppm}.
@@ -38,7 +38,8 @@
 #' @importFrom dplyr group_by arrange top_n summarize
 #' @importFrom checkmate assertSubset assertClass
 #'
-plotRawChrom <- function(obj, fileIndex = NULL,
+plotRawChrom <- function(obj,
+                         samples = NULL,
                          mz = NULL, ppm = 20,
                          rt = NULL, rtWindow = NULL,
                          rtUnit = "sec",
@@ -46,18 +47,6 @@ plotRawChrom <- function(obj, fileIndex = NULL,
                          type = "tic",
                          colorBy = "sampleGroups",
                          interactive = FALSE) {
-
-  # obj = dtcent
-  # fileIndex = 1:2
-  # mz <- 213.1869
-  # rt <- NULL
-  # rtUnit = "min"
-  # ppm <- 20
-  # rtWindow = NULL
-  # msLevel = 1
-  # type = "tic"
-  # colorBy = "sampleGroups"
-  # interactive = FALSE
 
   assertClass(obj, "ntsData")
 
@@ -79,11 +68,11 @@ plotRawChrom <- function(obj, fileIndex = NULL,
       main <- toupper(type)
     }
   }
-
-  if (!is.null(fileIndex)) obj <- filterFileFaster(obj, fileIndex)
+  
+  if (!is.null(samples)) obj <- filterFileFaster(obj, samples)
 
   df <- extractEIC(obj = obj,
-                   fileIndex = NULL,
+                   samples = NULL,
                    mz = mz, ppm = ppm,
                    rt = rt, rtWindow = rtWindow,
                    rtUnit = rtUnit, msLevel = 1,

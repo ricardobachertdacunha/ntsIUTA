@@ -7,8 +7,6 @@
 makeFeatures(
   obj = NULL,
   algorithm = NULL,
-  rtAlignment = TRUE,
-  paramAlignment = NULL,
   paramGrouping = NULL,
   recursive = TRUE,
   paramFill = NULL,
@@ -22,17 +20,6 @@ for one or more samples.}
 \item{algorithm}{The algorithm to use for peak alignment and grouping.
 One of "xcms3" (the default) or "openms".
 When "openms" the \pkg{patRoon} package is used.}
-
-\item{rtAlignment}{Logical, set to \code{TRUE} (the default) to preform
-retention time alignment besides peak grouping.}
-
-\item{paramAlignment}{Applicable for algorithm "xcms3" only,
-the parameters for the chosen retention time alignment method.
-See documentation of \code{\link[xcms]{adjustRtime}} for more information.
-For alignment with the method \code{PeakGroups}, a list of length two
-should be given, where the first element
-is the pre-grouping parameters using \code{\link[xcms]{groupChromPeaks}}
-and the second element the actual alignment parameters.}
 
 \item{paramGrouping}{The parameters for the chosen grouping method.
 See documentation of \code{\link[xcms]{groupChromPeaks}} or
@@ -70,7 +57,4 @@ from the package \pkg{xcms} or from \pkg{patRoon} based on "openms".
 Additionally, a recursive integration for samples with missing peaks
 can be applied using the function \code{\link[xcms]{fillChromPeaks}}
 from the \pkg{xcms} package.
-}
-\examples{
-
 }

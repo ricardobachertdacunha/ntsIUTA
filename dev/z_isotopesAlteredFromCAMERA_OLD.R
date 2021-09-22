@@ -1,5 +1,6 @@
 
 
+
 #' @title FindIsotopesWithValidationAltered
 #' 
 #' @description Altered version of the \code{findIsotopesWithValidation} function from \code{CAMERA} package.
@@ -68,11 +69,12 @@ FindIsotopesWithValidationAltered <- function(xA = xA,
 ### init --------------------------------------------------------------------------------------------------
 
   object <- xA
-  
   numberOfPS <- length(object@pspectra)
   
+  ## scaling
   devppm <- ppm / 1000000
   
+  ## number of peaks in pseudospectrum
   numberOfPeaks <- sum(sapply(object@pspectra, length))
   
   if (numberOfPeaks != nrow(obj@features))
@@ -91,10 +93,7 @@ FindIsotopesWithValidationAltered <- function(xA = xA,
     summarize(mz = mean(mz),
               rt = mean(rt),
               int = mean(intensity),
-              sd = sd(intensity),
               sn = mean(sn, na.rm = TRUE))
-  
-  peaks$sd[is.na(peaks$sd)] <- 0
   
   peaks$sn[is.nan(peaks$sn)] <- 0
   
@@ -107,19 +106,25 @@ FindIsotopesWithValidationAltered <- function(xA = xA,
     }
   }
   
+  mzValues  <- ftID[, "mz", drop = FALSE]
+  
+  rtValues <- ftID[, "rt", drop = FALSE]
+  
+  
   ## isotope matrix
   isoMatrix <- matrix(ncol = 4, nrow = 0)
-  
   colnames(isoMatrix) <- c("mpeak", "isopeak", "iso", "charge")
   
   
 ### find isotopes -----------------------------------------------------------------------------------------
-
+  
   cat("Run isotope peak annotation\n % finished: ")
+  
+  df_temp <- CAMERA::getPeaklist(object, intval = "maxo")
+  df_temp$ID <- ftID$ID
   
   ## look for isotopes in every pseudospectrum
   numberOfPS <- length(object@pspectra)
-  
   isotopeClusterCounter <- 0
   
   for (psIdx in 1:numberOfPS) {
@@ -129,11 +134,9 @@ FindIsotopesWithValidationAltered <- function(xA = xA,
     
     ## get peak indizes for psIdx-th pseudospectrum
     peakIndeces <- object@pspectra[[psIdx]]
-    
     if (length(peakIndeces) <= 1)
       ## Pseudospectrum has only one peak
       next
-    
     
 ### calculate isotopes ----------------------------------------------------------------------------------
 
@@ -141,7 +144,6 @@ FindIsotopesWithValidationAltered <- function(xA = xA,
       peakIndeces,
       mzValues = ftID$mz[peakIndeces],
       intValues = ftID$int[peakIndeces],
-      sdValues = ftID$sd[peakIndeces],
       snValues = ftID$sn[peakIndeces],
       maxcharge = maxcharge,
       devppm = devppm,
@@ -223,18 +225,21 @@ FindIsotopesWithValidationAltered <- function(xA = xA,
 #' @export
 #'
 #' @importFrom CAMERA compoundQuantiles getIsotopeProportion
-#' @importFrom plyr compact
 #' 
 findIsotopesForPSAltered <- function(peakIndeces = peakIndeces,
                                      mzValues = mzValues,
                                      intValues = intValues,
-                                     sdValues = sdValues,
                                      snValues = snValues,
                                      maxcharge = maxcharge,
                                      devppm = devppm,
                                      mzabs = mzabs,
                                      validateIsotopePatterns = TRUE) {
   
+  
+  
+  # mzValues = mzValues[peakIndeces]
+  # intValues = intValues[peakIndeces]
+  # snValues = snValues[peakIndeces]
   
   ## peakIndeces  - peak indeces
   ## mzValues     - m/z vector, contains all m/z values from specific pseudospectrum
@@ -244,6 +249,7 @@ findIsotopesForPSAltered <- function(peakIndeces = peakIndeces,
   ## devppm       - scaled ppm error
   ## mzabs        - absolut error in m/z
   
+  ###################################################################################################
   ## algorithm
   ## 
   ## 1) compute triangular matrix of peak differences regarding m/z
@@ -254,14 +260,13 @@ findIsotopesForPSAltered <- function(peakIndeces = peakIndeces,
   ## 5) box results
   ## 
   
-  ### init --------------------------------------------------------------------------------------------------
-
+  ###################################################################################################
+  
+  ## init
   noiseEstimate <- intValues / snValues
-  noiseEstimate[is.nan(noiseEstimate)] <- 300
-  noiseEstimate[is.infinite(noiseEstimate)] <- 300
-  intensityMin  <- intValues - noiseEstimate - sdValues
-  intensityMax  <- intValues + noiseEstimate + sdValues
-  intensityMin[intensityMin < 0] <- 0
+  noiseEstimate[is.nan(noiseEstimate)] <- 0
+  intensityMin  <- intValues - noiseEstimate
+  intensityMax  <- intValues + noiseEstimate
   
   spectrum <- cbind(peakIndeces, mzValues, intValues, intensityMin, intensityMax)
   colnames(spectrum) <- c("peak index", "mz", "intensity", "intensityMin", "intensityMax")
@@ -272,18 +277,17 @@ findIsotopesForPSAltered <- function(peakIndeces = peakIndeces,
   
   if (numberOfPeaksHere <= 1) return(list())
   
-  ## calculate allowed m/z errors for the given masses
+  ## calculate allowed m/z errors for the given masses; at least mzabs
   mzErrors <- devppm * spectrum[, "mz"]
+  #mzErrors[mzErrors < mzabs] <- mzabs
   
-  ### Compute -----------------------------------------------------------------------------------------------
-
+  ###################################################################################################
   ## compute m/z difference and possible isotopic connection for every peak pair in pseudospectrum
   isotopeDifference <- 1.0033548378
   expectedDistances <- isotopeDifference / 1:maxcharge
-  
   hitsForCharge_c_p1_p2 <- array(
     dim = c(maxcharge, numberOfPeaksHere - 1, numberOfPeaksHere - 1),
-    dimnames = list(1:maxcharge) #c("charge", "peak1", "peak2")
+    dimnames = list(c("charge", "peak1", "peak2"))
   )
   
   for (peakIdx in 1:(numberOfPeaksHere - 1)) {
@@ -304,7 +308,7 @@ findIsotopesForPSAltered <- function(peakIndeces = peakIndeces,
     
   }#end for peakIdx
   
-  ### find chains -------------------------------------------------------------------------------------------
+  ###################################################################################################
   
   ## find and select isotope chains
   goOnSearching <- TRUE
@@ -402,11 +406,10 @@ findIsotopesForPSAltered <- function(peakIndeces = peakIndeces,
     ## no isotope cluster found
     return(list())
   
-### validate chains -----------------------------------------------------------------------------------------
-  
+  ###################################################################################################
+  ## validate chains
   validatedResultChains <- list()
   validatedChainCharges <- list()
-  
   ## for validation
   cpObj <- compoundQuantiles(compoundLibrary = "kegg")
   maximumIsotopeNumber <- max(cpObj@isotopeSet)
@@ -479,18 +482,15 @@ findIsotopesForPSAltered <- function(peakIndeces = peakIndeces,
       chainSegments <- list()
       for (chainSegmentLabel in 1:isotopePatternLabel) {
         chainSegment <- chain[which(isotopePatternMembership == chainSegmentLabel)]
-        if (length(chainSegment) <= 1) {
+        if (length(chainSegment) <= 1)
           next
-        }
+        
         chainSegments[[chainSegmentLabel]] <- chainSegment
       }## end for chainSegment
     } else {
       chainSegments <- list()
       chainSegments[[1]] <- chain
     }
-    
-    ## remove null chains
-    chainSegments <- plyr::compact(chainSegments)
     
     ## box chain segments
     for (chainSegment in chainSegments) {
@@ -499,8 +499,7 @@ findIsotopesForPSAltered <- function(peakIndeces = peakIndeces,
     }## end for chainSegment
   }## end for chain
   
-### Assemble results --------------------------------------------------------------------------------------
-  
+  ###################################################################################################
   ## assemble list of isotope clusters as result
   isoMatrixForPS.list <- list()
   for (chainIdx in seq_len(length.out = length(validatedResultChains))) {
@@ -526,7 +525,6 @@ findIsotopesForPSAltered <- function(peakIndeces = peakIndeces,
   return(isoMatrixForPS.list)
   
 }
-
 
 ### OLD CODE -----
 

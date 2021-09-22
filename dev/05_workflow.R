@@ -99,7 +99,8 @@ dtcent <- importRawData(dtcent,
 
 #### TIC, BPC and EIC ---------------------------------------------------------------------------------------
 
-exEIC <- extractEIC(dtcent, fileIndex = NULL,
+exEIC <- extractEIC(dtcent,
+                    samples = 1:2,
                     mz = 242.1434, ppm = 20,
                     rt = 14.8, rtWindow = 0.5,
                     rtUnit = "min")
@@ -109,7 +110,8 @@ exEIC <- extractEIC(dtcent, fileIndex = NULL,
 
 #### Inspecting Raw Data ------------------------------------------------------------------------------------
 
-plotRawChrom(dtcent, fileIndex = NULL,
+plotRawChrom(dtcent,
+             samples = NULL,
              type = "tic",
              mz = 242.1434, ppm = 20,
              rt = 14.8, rtWindow = 0.5,
@@ -118,7 +120,8 @@ plotRawChrom(dtcent, fileIndex = NULL,
              interactive = FALSE)
 
 #iterative
-plotRawChrom(dtcent, fileIndex = NULL,
+plotRawChrom(dtcent,
+             samples = NULL,
              type = "tic",
              mz = 242.1434, ppm = 20,
              rt = 14.8, rtWindow = 0.5,
@@ -129,7 +132,12 @@ plotRawChrom(dtcent, fileIndex = NULL,
 #plot correlation of replicate sample groups
 plotCorReplicates(dtcent)
 
-
+#plot centroids
+plotTargetCentroids(obj = dtcent,
+                    samples = NULL,
+                    mz = 242.1434, ppm = 20,
+                    rt = 14.8, rtWindow = 0.5,
+                    rtUnit = "min", plotTargetMark = FALSE)
 
 
 ### Profile vs Centroid -------------------------------------------------------------------------------------
@@ -147,12 +155,12 @@ table(MSnbase::isCentroidedFromFile(dtcent@MSnExp), MSnbase::msLevel(dtcent@MSnE
 table(MSnbase::isCentroidedFromFile(dtprof@MSnExp), MSnbase::msLevel(dtprof@MSnExp))
 
 # plot centroided and profile data
-p1 <- plotTargetCentroids(dtcent, fileIndex = 1,
+p1 <- plotTargetCentroids(dtcent, samples = 1,
                           mz = 242.1434, ppm = 150,
                           rt = 14.8, rtWindow = 0.8,
                           rtUnit = "min", plotTargetMark = TRUE)
 
-p2 <- plotTargetCentroids(dtprof, fileIndex = 1,
+p2 <- plotTargetCentroids(dtprof, samples = 1,
                           mz = 242.1434, ppm = 150,
                           rt = 14.8, rtWindow = 0.8,
                           rtUnit = "min", plotTargetMark = TRUE)
@@ -174,12 +182,12 @@ dtprof <- centroidProfileData(obj = dtprof,
                               save = FALSE)
 
 
-p1 <- plotTargetCentroids(dtcent, fileIndex = 1,
+p1 <- plotTargetCentroids(dtcent, samples = 1,
                           mz = 242.1434, ppm = 30,
                           rt = 14.75, rtWindow = 0.8,
                           rtUnit = "min", plotTargetMark = TRUE)
 
-p2 <- plotTargetCentroids(dtprof, fileIndex = 1,
+p2 <- plotTargetCentroids(dtprof, samples = 1,
                           mz = 242.1434, ppm = 30,
                           rt = 14.75, rtWindow = 0.8,
                           rtUnit = "min", plotTargetMark = TRUE)
@@ -190,6 +198,7 @@ plotly::subplot(list(p1, p2), nrows = 1, margin = 0.04)
 
 
 ### Peak Picking --------------------------------------------------------------------------------------------
+# TODO when applying rtFilter for import raw data reuse when peak picking with patRoon
 
 dt <- dtall[1:6]
 
@@ -200,7 +209,11 @@ dt <- importRawData(dt,
                     removeEmptySpectra = TRUE,
                     save = FALSE)
 
-# TODO when applying rtFilter for import raw data reuse when peak picking with patRoon
+plotRawChrom(dt)
+
+plotCorReplicates(dt, binsize = 3)
+
+
 
 
 #### xcms3 --------------------------------------------------------------------------------------------------
@@ -222,7 +235,7 @@ dtxcms@parameters$peakPicking <- paramXCMS
 
 dtxcms <- peakPicking(obj = dtxcms, save = FALSE)
 
-# TODO add importRawData during peak picking when the OndiskMsnExp is not present
+
 
 
 #### openms -------------------------------------------------------------------------------------------------
@@ -261,6 +274,68 @@ dtopenms <- peakPicking(obj = dtopenms, save = FALSE)
 
 
 
+#### sirius -------------------------------------------------------------------------------------------------
+#TODO Error with mz column
+
+dtsirius <- dt
+
+dtsirius@algorithms$peakPicking <- "sirius"
+
+dtsirius@parameters$peakPicking <- list()
+
+dtsirius <- peakPicking(obj = dtsirius, save = FALSE)
+
+
+
+
+#### kpic2 -------------------------------------------------------------------------------------------------
+
+dtkpic2 <- dt
+
+dtkpic2@algorithms$peakPicking <- "kpic2"
+
+dtkpic2@parameters$peakPicking <- list(
+  kmeans = TRUE,
+  level = 1000,
+  mztol = 0.01,
+  gap = 3,
+  width = c(5, 60),
+  alpha = 0.3,
+  min_snr = 4,
+  parallel = TRUE
+)
+
+dtkpic2 <- peakPicking(obj = dtkpic2, save = FALSE)
+class(dtkpic2@patdata)
+
+
+
+
+#### safd -------------------------------------------------------------------------------------------------
+
+dtsafd <- dtprof
+
+dtsafd@algorithms$peakPicking <- "safd"
+
+dtsafd@parameters$peakPicking <- list(
+  profPath = dirname(dtprof@samples$file),
+  mzRange = c(0, 1200),
+  maxNumbIter = 1000,
+  maxTPeakW = 300,
+  resolution = 20000,
+  minMSW = 0.02,
+  RThreshold = 0.75,
+  minInt = 500,
+  sigIncThreshold = 5,
+  S2N = 3,
+  minPeakWS = 3
+)
+
+dtsafd <- peakPicking(obj = dtsafd, save = FALSE)
+
+
+
+
 #### Inspecting Peaks ---------------------------------------------------------------------------------------
 
 #Option 1
@@ -268,49 +343,53 @@ dtxcms@peaks[1,]
 dtopenms@peaks[1,]
 
 #Option 2, using the S4 method
-peaks(dtxcms, fileIndex = NULL, mz = 748.4842, ppm = 10, rt = 14.9, rtUnit = "min")
+peaks(dtxcms, samples = NULL, mz = 748.4842, ppm = 10, rt = 14.9, rtUnit = "min")
 
+plotPeaks(dtxcms, samples = NULL, mz = 748.4842, ppm = 10, rt = 14.9, rtUnit = "min", colorBy = "peaks")
+
+View(peaks(dtxcms, samples = NULL, mz = 441.1670, ppm = 10, rt = 15.27, rtUnit = "min"))
+
+peak1 <- plotPeaks(dtxcms, samples = 4, mz = 441.1670, ppm = 10, rt = 15.27, rtUnit = "min", colorBy = "peaks")
+peak2 <- plotPeaks(dtxcms, samples = 5, mz = 441.1670, ppm = 10, rt = 15.27, rtUnit = "min", colorBy = "peaks")
+peak3 <- plotPeaks(dtxcms, samples = 6, mz = 441.1670, ppm = 10, rt = 15.27, rtUnit = "min", colorBy = "peaks")
+plotly::subplot(list(peak1, peak2, peak3), nrows = 1, margin = 0.04)
+
+mapPeaks(dtxcms, mz = 332.2200, ppm = 20, rtWindow = c(1000, 1200), rtUnit = "sec")
+
+mapPeaks(dtxcms, samples = c(1, 4), mz = c(234, 270), ppm = NULL, rtWindow = c(920, 940), rtUnit = "sec")
 
 
 
 
 ### Alignment and Grouping ----------------------------------------------------------------------------------
 
-
 #### xcms3 --------------------------------------------------------------------------------------------------
 
 dtxcms@algorithms$makeFeatures <- "xcms3"
 
-#Param preGrouping
-#Only necessary if method for alignment is via PeaksGroups
-param1 <- xcms::PeakDensityParam(
-  sampleGroups = "holder",
-  bw = 5,
-  minFraction = 0.5,
-  minSamples = 1,
-  binSize = 0.008,
-  maxFeatures = 100
-)
-
-param2 <- xcms::PeakGroupsParam(
-  minFraction = 1,
-  extraPeaks = 0,
-  smooth = "loess",
-  span = 0.3,
-  family = "gaussian"
-)
-
-paramAlignment <- list(param1, param2)
-
-dtxcms@parameters$peakAlignment <- paramAlignment
-
-paramGroupingxcms <- xcms::PeakDensityParam(
-  sampleGroups = "holder",
-  bw = 3,
-  minFraction = 0.5,
-  minSamples = 1,
-  binSize = 0.008,
-  maxFeatures = 100
+paramGroupingxcms <- list(
+  rtalign = TRUE,
+  loadRawData = TRUE,
+  groupParam = xcms::PeakDensityParam(
+    sampleGroups = "holder",
+    bw = 3,
+    minFraction = 0.5,
+    minSamples = 1,
+    binSize = 0.008,
+    maxFeatures = 100),
+  preGroupParam = xcms::PeakDensityParam(
+    sampleGroups = "holder",
+    bw = 5,
+    minFraction = 0.5,
+    minSamples = 1,
+    binSize = 0.008,
+    maxFeatures = 100),
+  retAlignParam = xcms::PeakGroupsParam(
+    minFraction = 1,
+    extraPeaks = 0,
+    smooth = "loess",
+    span = 0.3,
+    family = "gaussian")
 )
 
 dtxcms@parameters$peakGrouping <- paramGroupingxcms
@@ -323,16 +402,23 @@ paramFill <- xcms::FillChromPeaksParam(
   fixedRt = 0
 )
 
+paramFill <- xcms::ChromPeakAreaParam(
+  mzmin = function(z) quantile(z, probs = 0.25),
+  mzmax = function(z) quantile(z, probs = 0.75),
+  rtmin = function(z) quantile(z, probs = 0.25),
+  rtmax = function(z) quantile(z, probs = 0.75)
+)
+
 dtxcms@parameters$fillMissing <- paramFill
 
+dtxcms
+
 dtxcms2 <- makeFeatures(obj = dtxcms,
-                       algorithm = NULL,
-                       rtAlignment = TRUE,
-                       paramAlignment = NULL,
-                       paramGrouping = NULL,
-                       recursive = TRUE,
-                       paramFill = NULL,
-                       save = FALSE)
+                        algorithm = NULL,
+                        paramGrouping = NULL,
+                        recursive = TRUE,
+                        paramFill = NULL,
+                        save = FALSE)
 
 
 
@@ -381,15 +467,14 @@ plotAlignment(features)
 dtxcms2@features[1,]
 
 #S4 accessor method
-features(dtxcms2, fileIndex = NULL, mz = 748.4842, ppm = 10, rt = 14.9, rtUnit = "min")
-
+features(dtxcms2, samples = NULL, mz = 748.4842, ppm = 10, rt = 14.9, rtUnit = "min")
 
 ##### plot Chroms -----
 
 #Interactive feature/s plot
 plotFeatures(obj = dtxcms2,
-             fileIndex = 3:4,
-             ID = c("M275_R622_2158" , "M210_R586_836"),
+             samples = NULL,
+             ID = NULL,
              mz = 213.1869,
              rt = 15.47,
              rtUnit = "min",
@@ -400,8 +485,8 @@ plotFeatures(obj = dtxcms2,
 
 #Static feature/s plot
 plotFeatures(obj = dtxcms2,
-             fileIndex = NULL,
-             ID = c("M275_R622_2158" , "M210_R586_836"),
+             samples = NULL,
+             ID = NULL,
              mz = 213.1869,
              rt = 15.47,
              rtUnit = "min",
@@ -410,15 +495,27 @@ plotFeatures(obj = dtxcms2,
              colorBy = "features",
              interactive = FALSE)
 
+
+plotFeatures(obj = dtxcms2,
+             samples = 3:4,
+             ID = NULL,
+             mz = 332.2200,
+             rt = NULL,
+             rtUnit = "sec",
+             ppm = 20,
+             rtWindow = c(900, 1200),
+             colorBy = "samples",
+             interactive = FALSE)
+
 #patRoon option
-patRoon::plotChroms(dtxcms2@patdata[, c("M275_R622_2158" , "M210_R586_836")])
+patRoon::plotChroms(dtxcms2@patdata[, c("M263_R937_1829")])
 
 
 ##### plot Feature Peaks -----
 
 plotFeaturePeaks(obj = dtxcms2,
-                 fileIndex = 3:4,
-                 ID = c("M275_R622_2158" , "M210_R586_836"),
+                 samples = 1:5,
+                 ID = NULL,
                  mz = 213.1869,
                  rt = 15.47,
                  rtUnit = "min",
@@ -427,30 +524,259 @@ plotFeaturePeaks(obj = dtxcms2,
                  interactive = TRUE)
 
 
+plotFeaturePeaks(obj = dtxcms2,
+                 samples = NULL,
+                 ID = NULL,
+                 mz = 332.2200,
+                 ppm = 20,
+                 rtWindow = c(1000, 1200),
+                 rtUnit = "sec",
+                 rt = NULL,
+                 interactive = TRUE)
+
+
+plotFeaturePeaks(obj = dtxcms2,
+                 samples = NULL,
+                 ID = c("M263_R937_1829"),
+                 mz = NULL,
+                 rt = NULL,
+                 rtUnit = "min",
+                 ppm = NULL,
+                 rtWindow = NULL,
+                 interactive = TRUE)
+
+
+plotTargetCentroids(obj = dtxcms2,
+                    samples = 4,
+                    mz = 441.1670, ppm = 20,
+                    rt = 15.27, rtWindow = 0.5,
+                    rtUnit = "min", plotTargetMark = FALSE)
+
+
+
+
+### Annotation ----------------------------------------------------------------------------------------------
+
+dtxcms2@algorithms$annotation <- "alteredcamera"
+
+dtxcms2@parameters$annotation <- AlteredCameraParam(
+  sigma = 5,
+  perfwhm = 0.3,
+  cor_eic_th = 0.7,
+  calcCaS = FALSE,
+  cor_exp_th = 0.7,
+  pval = 0.05,
+  validateIsotopePatterns = TRUE,
+  ppmIsotopes = 40,
+  mzabs = 0.005, #not used, remove!
+  noise = 300,
+  searchAdducts = TRUE,
+  ppmAdducts = 5,
+  extendedList = FALSE
+)
+
+dtxcms2 <- annotateFeatures(dtxcms2, excludeBlanks = FALSE, save = FALSE)
+
+
+
+
+#### Inspection ---------------------------------------------------------------------------------------------
+
+# TODO make method for getting the full table
+View(dtxcms2@annotation$comp)
+
+#### Getter -----
+#S4 method for getting components
+View(components(dtxcms2,
+                samples = NULL,
+                ID = NULL,
+                mz = 748.4842, ppm = 20,
+                rt = 14.9, rtWindow = 2, rtUnit = "min",
+                compNumber = NULL,
+                entireComponents = TRUE,
+                onlyAnnotated = TRUE,
+                onlyRelated = TRUE))
+
+diurond6 <- components(dtxcms2,
+                       samples = NULL,
+                       ID = NULL,
+                       mz = 239.0628, ppm = 20,
+                       rt = 15.62, rtWindow = 1, rtUnit = "min",
+                       compNumber = NULL,
+                       entireComponents = TRUE,
+                       onlyAnnotated = TRUE,
+                       onlyRelated = TRUE)
+
+plotFeatures(obj = dtxcms2, ID = diurond6$ID, colorBy = "sampleGroups")
+
+
+##### plot -----
+plotComponents(obj = dtxcms2,
+               samples = NULL,
+               ID = NULL,
+               mz = 748.4842, ppm = 20,
+               rt = 14.9, rtWindow = 2, rtUnit = "min",
+               comp = NULL,
+               entireComponents = TRUE,
+               onlyAnnotated = TRUE,
+               onlyRelated = TRUE,
+               log = FALSE,
+               colorBy = "groups")
+
+plotComponents(obj = dtxcms2,
+               samples = c(1, 4),
+               ID = NULL,
+               mz = 239.0628, ppm = 20,
+               rt = 15.62, rtWindow = 1, rtUnit = "min",
+               comp = NULL,
+               entireComponents = TRUE,
+               onlyAnnotated = TRUE,
+               onlyRelated = TRUE,
+               log = FALSE,
+               colorBy = "groups")
+
+
+
+
+#### Consolidation of Annotation ----------------------------------------------------------------------------
+
+View(dtxcms2@annotation$comp)
+
+new("componentsCamera", xsa = dtxcms2@annotation$raw$Blank,
+                        components = list(dtxcms2@annotation$raw$Blank),
+                        componentInfo = data.table::data.table())
+
+
+
+
+#### Annotation w/ patRoon -----
+
+test <- patRoon::generateComponentsOpenMS(
+  fGroups = dtxcms2@patdata,
+  ionization = dtxcms2@polarity,
+  chargeMin = 1,
+  chargeMax = 3,
+  chargeSpan = 3,
+  qTry = "heuristic",
+  potentialAdducts = patRoon::defaultOpenMSAdducts(dtxcms2@polarity),
+  minRTOverlap = 0.7,
+  retWindow = 1,
+  absMzDev = 0.01,
+  minSize = 2,
+  relMinAdductAbundance = 1,
+  adductConflictsUsePref = TRUE,
+  NMConflicts = c("preferential"),
+  prefAdducts = c("[M+H]+"),
+  extraOpts = NULL
+)
+
+class(test)
+View(patRoon::componentTable(test))
+View(test)
+testv1 <- test@featureComponents$`M200401068-r001`
+testV1 <- rbindlist(testv1, idcol = "comp")
+View(patRoon::findFGroup(test, "M239_R936_1314"))
+
+
+
+test3 <- patRoon::generateComponentsCliqueMS(
+  fGroups = dtxcms2@patdata,
+  ionization = dtxcms2@polarity,
+  maxCharge = 3,
+  maxGrade = 5,
+  ppm = 50,
+  adductInfo = NULL,
+  absMzDev = 0.01,
+  minSize = 2,
+  relMinAdductAbundance = 0.5,
+  adductConflictsUsePref = FALSE,
+  NMConflicts = c("mostIntense"),
+  prefAdducts = c("[M+H]+"),
+  extraOptsCli = NULL,
+  extraOptsIso = NULL,
+  extraOptsAnn = NULL,
+  parallel = TRUE
+)
+
+class(test3)
+View(patRoon::componentTable(test))
+View(test3)
+
+View(patRoon::componentTable(test3)[[patRoon::findFGroup(test3, "M239_R936_1314")]])
+
+test3v1 <- test3@featureComponents$`M200401068-r001`
+test3v1 <- rbindlist(test3v1, idcol = "comp")
+View(test3v1)
+
+
+comptest <- findFGroup(test3@featureComponents$`M200401068-r001`, "M441_R916_5186")
+View(componentTable(test3)[[comptest]])
+comptable <- rbindlist(test3@featureComponents$`M200401068-r001`, idcol = "CMP")
+View(comptable)
+comptable[comptable$group %in% "M239_R936_1314", ]
+comptable[comptable$isogroup %in% 958, ]
+View(comptable[comptable$name == "CMP386", ])
+
+
+test3 <- cliqueMS::getCliques(mzdata = test3, filter = TRUE, mzerror = 5e-06, intdiff = 1e-04,
+                              rtdiff = 1e-04, tol = 1e-05, silent = TRUE)
+View(dtxcms3@workflows$SuspectScreening@results)
+
+#### Build componentsCAMERA -----
+
+test4 <- patRoon::generateComponentsCAMERA(
+  fGroups = dtopenms2@patdata,
+  ionization = dtopenms2@polarity,
+  onlyIsotopes = FALSE,
+  minSize = 2,
+  relMinReplicates = 0.1,
+  extraOpts = list(
+    sigma = 5,
+    perfwhm = 0.45,
+    cor_eic_th = 0.85,
+    graphMethod = "hcs",
+    pval = 0.05,
+    calcCiS = TRUE,
+    calcIso = FALSE,
+    calcCaS = FALSE, maxcharge = 2, maxiso = 5,
+    ppm = 50, mzabs = 0.005, multiplier = 3, max_peaks = 100, intval = "into")
+)
+
+class(test4)
+
+View(test4)
+
+
+View(rbindlist(patRoon::componentTable(test4), idcol = "CMP"))
+
+
 
 
 ### QC check ------------------------------------------------------------------------------------------------
 # Wrapping function for fast QC check using the workflow parameters.
 
-targets <- paste0(system.file(package = "ntsIUTA", dir = "extdata"),
-                  "/QC_ScreeningList_ntsIUTA_MS2_pos.csv")
+QCListPath <- paste0(system.file(package = "ntsIUTA", dir = "extdata"),
+                     "/suspectList_MS2_pos.csv")
 
-dtxcms2 <- checkQC(obj = dtxcms2,
-  targets = targets,
-  algorithmPeakPicking = NULL,
-  algorithmMakeFeatures = NULL,
-  paramPeakPicking = NULL,
-  rtAlignment = TRUE,
-  paramAlignment = NULL,
-  paramGrouping = NULL,
-  recursive = TRUE,
-  paramFill = NULL,
-  rtWindow = 30,
-  ppm = 15,
-  exportResults = FALSE,
-  save = FALSE)
+QCList <- getSuspectList(QCListPath)
 
-plotCheckQC(dtxcms2)
+dtxcms3 <- checkQC(obj = dtxcms2,
+                   targets = QCList,
+                   algorithmPeakPicking = NULL,
+                   algorithmMakeFeatures = NULL,
+                   algorithmAnnotation = NULL,
+                   paramPeakPicking = NULL,
+                   paramGrouping = NULL,
+                   recursive = TRUE,
+                   paramFill = NULL,
+                   paramAnnotation = NULL,
+                   rtWindow = 30,
+                   ppm = 15,
+                   MS2param = MS2param(),
+                   exportResults = FALSE,
+                   save = FALSE)
+
+plotCheckQC(dtxcms3)
 
 plotFeaturePeaks(obj = dtxcms2@QC$data,
                  ID = dtxcms2@QC$results$ID,
@@ -462,58 +788,99 @@ plotFeaturePeaks(obj = dtxcms2@QC$data,
                  names = dtxcms2@QC$results$name,
                  interactive = TRUE)
 
-### Annotation ----------------------------------------------------------------------------------------------
-
-dtxcms2@algorithms$annotation <- "alteredcamera"
-
-dtxcms2@parameters$annotation <- AlteredCameraParam()
-
-dtxcms2 <- annotateFeatures(dtxcms2, save = FALSE)
+View(dtxcms3@QC$results)
 
 
-#### Inspection ---------------------------------------------------------------------------------------------
-
-#### Getter -----
-#S4 method for getting components
-components(dtxcms2,
-           samples = 4:5,
-           ID = NULL,
-           mz = 748.4842, ppm = 20,
-           rt = 14.9, rtWindow = 2, rtUnit = "min",
-           compNumber = NULL,
-           entireComponents = TRUE,
-           onlyAnnotated = TRUE,
-           onlyRelated = TRUE)
-
-##### plot -----
-plotComponents(obj = dtxcms2,
-               samples = 4:5,
-               ID = NULL,
-               mz = 748.4842, ppm = 20,
-               rt = 14.9, rtWindow = 2, rtUnit = "min",
-               comp = NULL,
-               entireComponents = TRUE,
-               onlyAnnotated = TRUE,
-               onlyRelated = TRUE,
-               log = FALSE,
-               colorBy = "groups")
 
 
-# TODO prepare the history with info for rerun the code
-# TODO add storage/drop method for processing steps
-#dtprof@MSnExp@spectraProcessingQueue <- list()
+### IS Check ------------------------------------------------------------------------------------------------
 
-# TODO Check the function getScreeningListTemplate() and alter in method that use screening list
+ISListPath <- paste0(system.file(package = "ntsIUTA", dir = "extdata"),
+                          "/suspectList_IS_pos.csv")
+
+ISList <- getSuspectList(ISListPath)
+
+dtxcms3 <- suspectScreening(obj = dtxcms3,
+                            title = NULL,
+                            samples = NULL,
+                            suspectList = ISList,
+                            ppm = 10,
+                            rtWindow = 30,
+                            adduct = NULL,
+                            excludeBlanks = FALSE,
+                            withMS2 = FALSE,
+                            MS2param = MS2param())
+
+View(dtxcms3@workflows$SuspectScreening@results)
+
+## Add MS2 data to suspectList
+ISList2 <- addMS2Info(wfobj = dtxcms3@workflows$SuspectScreening,
+                      sampleGroup = "Blank",
+                      suspectList = ISList,
+                      MS2param = MS2param(),
+                      updateRT = TRUE,
+                      updateIntControl = TRUE,
+                      save = "suspectList_IS_MS2_pos")
+
+View(ISList2@data)
+
+ISList2 <- getSuspectList(paste0(system.file(package = "ntsIUTA", dir = "extdata"), "/suspectList_IS_MS2_pos.csv"))
+
+dtxcms3 <- checkIS(obj = dtxcms3,
+                   targets = ISList2,
+                   ppm = 10,
+                   rtWindow = 30,
+                   MS2param = MS2param(),
+                   recoveryFrom = "Blank",
+                   exportResults = FALSE,
+                   save = FALSE)
+
+View(dtxcms3@control$results$IN)
+
+plotCheckIS(dtxcms3, rtWindow = 30, ppm = 10)
+
+
+
+
+### Subset ntsData with features ----------------------------------------------------------------------------
+
+# TODO update after final version of annotation workflow
+
+test <- dtxcms2[1:2]
+
+# filter without rebuilding mass and retention time of features
+test2 <- filterFileFaster(dtxcms2, 1:2)
+
+
+
+### Feature Metadata ---------------------------------------------------------------------------------------
+
+# updates the features table with metadata, for improving filtering
+meta <- patRoon::calculatePeakQualities(dtxcms3@patdata,
+                                        weights = NULL,
+                                        flatnessFactor = 0.05, #Passed to MetaClean as the flatness.factor argument to calculateJaggedness and calculateModality.
+                                        avgFunc = max, # mean additional parameter for handling featureGroups
+                                        parallel = TRUE)
+
+#View(patRoon::groupQualities(meta))
+#patRoon::groupScores(meta)
+
+
+
+# TODO talk with Rick about applying a function for each indice based on the type max/min
+
+
+
+
 
 
 ### Filter features -----------------------------------------------------------------------------------------
 
+dtxcms3 <- dtxcms2
 # TODO make filter function/method and create filtering parameters slot
 # TODO Adapt to ntsData, but integrate with features (main filter method)
 filterPeaks(peaks, fileIndex = 4:5, mz = 748.4842, ppm = 10, rt = 14.9, rtUnit = "min")
 filterPeaks(peaksOpenms, fileIndex = 1:2, mz = 748.4842, ppm = 10, rt = 14.9, rtUnit = "min")
-
-
 
 
 ### Workflow Parameters -------------------------------------------------------------------------------------
@@ -648,15 +1015,30 @@ paramFill2 <- xcms::ChromPeakAreaParam(
 
 ### Suspect Screening WF ------------------------------------------------------------------------------------
 
-suspects <- paste0(system.file(package = "ntsIUTA", dir = "extdata"),
-                   "/QC_ScreeningList_ntsIUTA_MS2_pos.csv")
+getSuspectListTemplate(saveTo = system.file(package = "ntsIUTA", dir = "extdata"))
 
-dtxcms2 <- screenSuspectsFromCSV(dtxcms2,
-                                 name = NULL,
-                                 suspects = suspects,
-                                 ppm = 5,
-                                 rtWindow = 30,
-                                 adduct = NULL,
-                                 excludeBlanks = TRUE,
-                                 withMS2 = TRUE,
-                                 MS2param = MS2param())
+suspectListPath <- paste0(system.file(package = "ntsIUTA", dir = "extdata"),
+                          "/suspectList_MS2_pos.csv")
+
+suspectList <- getSuspectList(suspectListPath)
+
+dtxcms3 <- suspectScreening(obj = dtxcms2,
+                            title = NULL,
+                            samples = 4,
+                            suspectList = suspectList,
+                            ppm = 5,
+                            rtWindow = 30,
+                            adduct = NULL,
+                            excludeBlanks = TRUE,
+                            withMS2 = TRUE,
+                            MS2param = MS2param())
+
+
+View(dtxcms3@workflows$SuspectScreening@results)
+
+
+# TODO prepare the history with info for rerun the code
+# TODO add storage/drop method for processing steps
+#dtprof@MSnExp@spectraProcessingQueue <- list()
+
+

@@ -21,6 +21,3 @@ A \linkS4class{featureGroups} object corresponding matching the given \linkS4cla
 \description{
 getPatData
 }
-\examples{
-
-}

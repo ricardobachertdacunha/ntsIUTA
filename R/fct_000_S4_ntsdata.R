@@ -60,8 +60,6 @@
 #'
 #' @export
 #'
-#' @examples
-#'
 setClass("ntsData",
   slots = c(
     title = "character",
@@ -98,7 +96,6 @@ setClass("ntsData",
                       makeFeatures = NA_character_,
                       annotation = NA_character_),
     parameters = list(peakPicking = list(),
-                      peakAlignment = list(),
                       peakGrouping = list(),
                       fillMissing = list(),
                       annotation = list()),
@@ -115,7 +112,7 @@ setClass("ntsData",
     features = data.frame(),
     annotation = list(comp = data.frame(),
                       raw = list()),
-    control = list(standards = data.frame(),
+    control = list(targets = data.frame(),
                    results = data.frame()),
     workflows = list()
   )
@@ -142,9 +139,9 @@ setMethod("show", "ntsData", function(object) {
       "  Date:  ", as.character(object@date), "\n",
       "  Path:  ", object@path, "\n",
       "  Polarity:  ", object@polarity, "\n",
-      "  Sample details:  ", "\n", "\n", sep = "")
+      "  Exp. Samples:  ", "\n", "\n", sep = "")
 
-  if (nrow(st) > 0) rownames(st) <- 1:nrow(st)
+  if (nrow(st) > 0) rownames(st) <- seq_len(nrow(st))
 
   print(st)
 
@@ -153,7 +150,7 @@ setMethod("show", "ntsData", function(object) {
   cat("  QC samples:  ",
       ifelse(nrow(object@QC$samples) < 1, "empty", paste(object@QC$samples$sample, collapse = ", ")),
       "\n", " QC results:  ",
-      ifelse(length(object@QC$results) < 1, "empty", "to add list of result objects"),
+      ifelse(length(object@QC$results) < 1, "empty", paste(nrow(object@QC$results), " compounds evaluated")),
       "\n", set = "")
 
   cat("\n")
@@ -177,11 +174,6 @@ setMethod("show", "ntsData", function(object) {
       "    ", "Peak Picking: ", ifelse(length(object@parameters$peakPicking) > 0,
                                        class(object@parameters$peakPicking),
                                        "empty"), "\n",
-      "    ", "Alignment: ", ifelse(length(object@parameters$peakAlignment) > 0,
-                                    ifelse(length(object@parameters$peakAlignment) == 1,
-                                           class(object@parameters$peakAlignment),
-                                           class(object@parameters$peakAlignment[[1]])),
-                                    "empty"), "\n",
       "    ", "Grouping: ", ifelse(length(object@parameters$peakGrouping) > 0,
                                    class(object@parameters$peakGrouping),
                                    "empty"), "\n",
@@ -209,7 +201,18 @@ setMethod("show", "ntsData", function(object) {
     cat("\n")
     cat(" Number of features:  ", nrow(object@features), "\n", sep = "")
   }
+  
+  # TODO add info for annotation in the show method
+  if (nrow(object@annotation$comp) > 0) {
+    cat("\n")
+    cat(" Annotation:  ", "Add info!", "\n", sep = "")
+  }
 
+  if (length(object@workflows) > 0) {
+    cat("\n")
+    cat(" Workflow Objects:\n", names(object@workflows), "\n", sep = "")
+  }
+  
 })
 
 
@@ -338,6 +341,7 @@ setMethod("QC<-", "ntsData", function(object, value) {
 #'
 #' @importMethodsFrom MSnbase filterFile fileNames
 #' @importMethodsFrom xcms filterFile
+#' @importMethodsFrom patRoon analyses
 #'
 setMethod("[", c("ntsData", "ANY", "missing", "missing"), function(x, i, ...) {
 
@@ -347,6 +351,10 @@ setMethod("[", c("ntsData", "ANY", "missing", "missing"), function(x, i, ...) {
       sn <- x@samples$sample[i]
       sidx <- which(x@samples$sample %in% sn)
     } else {
+      if (FALSE %in% (i %in% x@samples$sample)) {
+        warning("Given sample names not found in the ntsData object!")
+        return(x)
+      }
         sn <- i
         sidx <- which(x@samples$sample %in% sn)
     }
@@ -357,27 +365,10 @@ setMethod("[", c("ntsData", "ANY", "missing", "missing"), function(x, i, ...) {
 
     if (length(x@MSnExp) > 0) x@MSnExp <- MSnbase::filterFile(x@MSnExp, file = sidx)
 
-    if (nrow(x@peaks) > 0) x@peaks <- x@peaks[x@peaks$sample %in% sn,, drop = FALSE]
-
-    if (nrow(x@features) > 0) {
-
-      #To be replaced when sub-setting in patRoon is fixed
-      x@patdata <- filterFeatureGroups(x@patdata, i = sidx)
-
-      # TODO subsetting rebuilds feature list, interferse with filtering of feature list
-      x <- buildFeatureList(x)
-
-    } else {
-
-      #subset patRoon object without featureGroups
-      if (length(x@patdata) > 0) {
-        x@patdata@features <- x@patdata@features[sidx]
-        x@patdata@analysisInfo <- x@patdata@analysisInfo[x@patdata@analysisInfo$analysis %in% sn, ]
-        if (x@patdata@algorithm == "xcms3") {
-          files <- basename(fileNames(x@patdata@xdata)[sidx])
-          x@patdata@xdata <- filterFile(x@patdata@xdata, files)
-        }
-      }
+    if (length(analyses(x@patdata)) > 0) {
+      x@patdata <- x@patdata[sidx]
+      x <- buildPeakList(x)
+      if (nrow(x@features) > 0) x <- buildFeatureList(x)
     }
 
     #annotation, remove replicate groups without samples
@@ -401,7 +392,7 @@ setMethod("[", c("ntsData", "ANY", "missing", "missing"), function(x, i, ...) {
 #' @describeIn ntsData Getter for chromatographic peaks.
 #'
 #' @param object An \linkS4class{ntsData} object.
-#' @param fileIndex The indices of samples to keep in the \code{object}.
+#' @param samples The indices or names of samples to keep.
 #' @param ID The ID of peaks of interest.
 #' @param mz Alternatively to \code{ID}, the \emph{m/z} of interest to find peaks.
 #' Can be of length two, defining a mass range to find peaks.
@@ -416,14 +407,14 @@ setMethod("[", c("ntsData", "ANY", "missing", "missing"), function(x, i, ...) {
 #' @importFrom dplyr filter between
 #'
 setMethod("peaks", "ntsData", function(object,
-                                       fileIndex = NULL, ID = NULL,
+                                       samples = NULL, ID = NULL,
                                        mz = NULL, ppm = 20,
                                        rt = NULL, rtWindow = NULL,
                                        rtUnit = "sec") {
 
   if (nrow(object@peaks) == 0) return(object@peaks)
 
-  if (!missing(fileIndex)) object <- filterFileFaster(object, fileIndex)
+  if (!missing(samples)) object <- filterFileFaster(object, samples)
 
   if (missing(ID)) ID <- NULL
 
@@ -462,7 +453,7 @@ setMethod("peaks", "ntsData", function(object,
 #' @describeIn ntsData Getter for features (i.e., grouped peaks).
 #'
 #' @param object An \linkS4class{ntsData} object.
-#' @param fileIndex The indices of samples to keep in the \code{object}.
+#' @param samples The indices or names of samples to keep in the \code{object}.
 #' @param ID The ID of features of interest.
 #' @param mz Alternatively to \code{ID}, the \emph{m/z} of interest.
 #' can be of length two, defining a mass range.
@@ -477,7 +468,7 @@ setMethod("peaks", "ntsData", function(object,
 #' @importFrom dplyr filter between
 #'
 setMethod("features", "ntsData", function(object,
-                                          fileIndex = NULL, ID = NULL,
+                                          samples = NULL, ID = NULL,
                                           mz = NULL, ppm = 20,
                                           rt = NULL, rtWindow = NULL,
                                           rtUnit = "sec") {
@@ -488,7 +479,7 @@ setMethod("features", "ntsData", function(object,
 
   if (missing(mz)) mz <- NULL
 
-  if (!missing(fileIndex)) object <- filterFileFaster(object, fileIndex)
+  if (!missing(samples)) object <- filterFileFaster(object, samples)
 
   rtr <- NULL
 
@@ -565,23 +556,24 @@ setMethod("components", "ntsData", function(object,
   comp <- object@annotation$comp
 
   if (nrow(comp) == 0) return(comp)
-
-  #filter for a replicate group or for all
+  
+  rg <- unique(object@samples$group)
+  
   if (!is.null(samples)) {
-    if (!is.null(samples)) {
-      if (is.character(samples)) {
-        rg <- unique(object@samples$group[object@samples$sample %in% samples])
-      } else {
-        rg <- unique(object@samples$group[samples])
-      }
-      comp <- comp[comp$group %in% rg, ]
+    if (is.character(samples)) {
+      rg <- unique(object@samples$group[object@samples$sample %in% samples])
+    } else {
+      rg <- unique(object@samples$group[samples])
     }
   }
+
+  comp <- comp[comp$group %in% rg, ]
+  
+  if (nrow(comp) == 0) return(comp)
 
   if (!is.null(ID)) {
     comp <- comp[comp$ID %in% ID, ]
   } else {
-    #When ID is NULL but specified by mz +/- ppm
     if (!is.null(mz)) {
       if (missing(rt)) rt <- NULL
       if (missing(rtWindow)) rtWindow <- NULL
@@ -594,7 +586,6 @@ setMethod("components", "ntsData", function(object,
                             between(mz, mzr[1], mzr[2]),
                             between(rt, rtr[1], rtr[2]))
     } else {
-      #When only the comp number is given
       if (!is.null(compNumber)) {
         comp <- comp[comp$comp %in% compNumber, ]
       }
@@ -606,16 +597,22 @@ setMethod("components", "ntsData", function(object,
   comp2 <- comp
 
   if (!missing(entireComponents)) {
-    if (entireComponents) comp2 <- object@annotation$comp[object@annotation$comp$comp %in% comp2$comp, ]
+    if (entireComponents) {
+      comp2 <- object@annotation$comp[object@annotation$comp$comp %in% comp2$comp |
+                                        object@annotation$comp$isogroup %in% comp2$isogroup, ]
+      comp2 <- comp2[comp2$group %in% rg, ]
+    }
   }
 
-  #filter ano by selecting only annotated Features
   if (!missing(onlyAnnotated)) {
-    if (onlyAnnotated) comp2 <- comp2[!is.na(comp2$Mion) | !is.na(comp2$adductMion), ]
+    if (onlyAnnotated) comp2 <- comp2[!is.na(comp2$isoclass) | (comp2$nAdducts > 0), ]
   }
 
   if (!missing(onlyRelated)) {
-    if (onlyRelated) comp2 <- comp2[comp2$Mion %in% stats::na.omit(comp$Mion) | comp2$adductMion %in% stats::na.omit(comp$adductMion), ]
+    if (onlyRelated) {
+      isos <- comp2$ID[comp2$Mion %in% stats::na.omit(comp$Mion)]
+      comp2 <- comp2[comp2$ID %in% unique(isos), ]
+    }
   }
 
   return(comp2)

@@ -70,8 +70,6 @@ setClass("AlteredCameraParam",
 #'
 #' @export
 #'
-#' @examples
-#'
 AlteredCameraParam <- function(
   sigma = 5,
   perfwhm = 0.45,
@@ -85,7 +83,7 @@ AlteredCameraParam <- function(
   noise = 350,
   searchAdducts = TRUE,
   ppmAdducts = 5,
-  extendedList = FALSE) {
+  extendedList = TRUE) {
 
   paramobj <- do.call(new, c("AlteredCameraParam", as.list(environment())))
 
@@ -96,10 +94,9 @@ AlteredCameraParam <- function(
 }
 
 
-
 ### MS2param -----
 
-#' @title MS2param
+#' @title MS2param-class
 #'
 #' @slot maxMSRtWindow .
 #' @slot precursorMzWindow .
@@ -131,7 +128,6 @@ setClass("MS2param",
     minIntensityPost = 10
   )
 )
-
 
 
 #' MS2param

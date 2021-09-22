@@ -4,7 +4,13 @@
 \alias{annotateFeatures}
 \title{annotateFeatures}
 \usage{
-annotateFeatures(obj = NULL, algorithm = NULL, param = NULL, save = FALSE)
+annotateFeatures(
+  obj = NULL,
+  algorithm = NULL,
+  param = NULL,
+  excludeBlanks = FALSE,
+  save = FALSE
+)
 }
 \arguments{
 \item{obj}{An \linkS4class{ntsData} object with features.}
@@ -13,6 +19,9 @@ annotateFeatures(obj = NULL, algorithm = NULL, param = NULL, save = FALSE)
 "alteredcamera", "camera" or "ramclustr".}
 
 \item{param}{The param used for annotation of isotopes and adducts.}
+
+\item{excludeBlanks}{Logical, set to \code{TRUE} for excluding
+blank replicate groups from annotation.}
 
 \item{save}{Logical, set to \code{TRUE} to save updated
 \linkS4class{ntsData} object in the \strong{rdata} folder.

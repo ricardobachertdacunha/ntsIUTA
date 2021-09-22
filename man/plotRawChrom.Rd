@@ -6,7 +6,7 @@
 \usage{
 plotRawChrom(
   obj,
-  fileIndex = NULL,
+  samples = NULL,
   mz = NULL,
   ppm = 20,
   rt = NULL,
@@ -21,7 +21,7 @@ plotRawChrom(
 \arguments{
 \item{obj}{An \linkS4class{ntsData} object with one or more files.}
 
-\item{fileIndex}{The index of the file/s to extract the data.}
+\item{samples}{The index or names of the sample/s to extract the data.}
 
 \item{mz}{Optional target \emph{m/z} to obtain an EIC.
 Note that when not \code{NULL} (the default), EIC is always returned.}

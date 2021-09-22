@@ -7,12 +7,12 @@
 filterFileFaster(x, i)
 }
 \arguments{
-\item{x}{An \linkS4class{OnDiskMSnExp} object.}
+\item{x}{An \linkS4class{ntsData} object.}
 
 \item{i}{The indices or names of the samples to keep.}
 }
 \value{
-The sub-setted \linkS4class{OnDiskMSnExp} object.
+The sub-setted \linkS4class{ntsData} object.
 }
 \description{
 Filter files (i.e., samples) but it does not redo feature list.

@@ -6,7 +6,7 @@
 \usage{
 plotFeatures(
   obj,
-  fileIndex = NULL,
+  samples = NULL,
   ID = NULL,
   mz = NULL,
   ppm = 20,
@@ -21,7 +21,7 @@ plotFeatures(
 \arguments{
 \item{obj}{An \linkS4class{ntsData} object.}
 
-\item{fileIndex}{The index or name of the sample/s.
+\item{samples}{The index or name of the sample/s.
 The default is \code{NULL} and all samples are used.}
 
 \item{ID}{The identifier of the features of interest.

@@ -38,9 +38,6 @@ Converts raw MS files from different formats to mzML using the external tool \em
 from [ProtesWizard](http://proteowizard.sourceforge.net/) through the interface of \pkg{patRoon} \insertCite{Helmus2021}{ntsIUTA}.
 Possible formats are: \emph{thermo}, \emph{bruker}, \emph{agilent}, \emph{ab} (from AB Sciex) and \emph{waters}.
 }
-\examples{
-
-}
 \references{
 \insertRef{Helmus2021}{ntsIUTA}
 

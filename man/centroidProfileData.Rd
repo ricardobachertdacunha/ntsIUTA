@@ -72,9 +72,6 @@ for data smoothing before centroiding and \emph{m/z} refinement.
 The \code{centroidProfileData} function combines functions \code{smooth}
 and \code{pickPeaks} from the \code{MSnbase} package, see references.
 }
-\examples{
-
-}
 \references{
 \insertRef{MSnbase2}{ntsIUTA}
 }

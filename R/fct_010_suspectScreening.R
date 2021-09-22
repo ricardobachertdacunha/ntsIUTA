@@ -4,11 +4,11 @@
 
 #' @title ntsSuspectData
 #'
-#' @slot suspects The data.frame listing all the suspects of interest.
+#' @slot suspectList The \linkS4class{suspectList} object used for suspect screening.
 #' @slot param The parameters used for suspect screening.
 #' @slot data The raw \linkS4class{featureGroupsScreening}
 #' for each sample replicate group.
-#' @slot inSilico When present, the results from the matched In Silico
+#' @slot inSilico When present, the results from the matched in silico
 #' fragmentation experiment.
 #' @slot results A data.frame with summarized results, including
 #' the identification level according to the guideline.
@@ -20,20 +20,20 @@
 #'
 setClass("ntsSuspectData",
   slots = c(
-    suspects = "data.frame",
+    suspectList = "suspectList",
     param = "list",
     data = "list",
     inSilico = "list",
     results = "data.frame"
   ),
   prototype = list(
-    suspects = data.frame(),
+    suspectList = new("suspectList"),
     param = list(ppm = 5,
-                rtWindow = 30,
-                adduct = NULL,
-                excludeBlanks = TRUE,
-                withMS2 = TRUE,
-                MS2param = new("MS2param")),
+                 rtWindow = 30,
+                 adduct = NULL,
+                 excludeBlanks = TRUE,
+                 withMS2 = TRUE,
+                 MS2param = new("MS2param")),
     data = list(),
     inSilico = list(),
     results = data.frame()
@@ -42,7 +42,7 @@ setClass("ntsSuspectData",
 
 
 
-#' @title screenSuspectsFromCSV
+#' @title suspectScreening
 #'
 #' @description Method to perform suspect screening from a given
 #' list of candidates in a csv file. The method uses the S4 method
@@ -50,11 +50,13 @@ setClass("ntsSuspectData",
 #'
 #' @param obj An \linkS4class{ntsData} object with features
 #' to preform suspect screening.
-#' @param name An optional string (without spaces) to be used as identifier for the
+#' @param samples A character vector with the name of the
+#' samples to perform the suspect screening.
+#' @param ID A character vector with the ID of the features to perform suspect screening.
+#' @param title An optional string (without spaces) to be used as identifier for the
 #' suspect screening entry in the \code{workflows} slot of the \linkS4class{ntsData} object.
-#' @param suspects A \code{data.frame} or a location for a csv
-#' with details for each suspect compound.
-#' See details for more information about the required data.frame structure.
+#' @param suspectList A \linkS4class{suspectList} object containing suspect compounds.
+#' See \link{getSuspectListTemplate} for more details about the information required.
 #' @param ppm The mass deviation, in ppm, to screen for the suspects.
 #' The default is 5 ppm.
 #' @param rtWindow The retention time deviation, in seconds,
@@ -67,11 +69,8 @@ setClass("ntsSuspectData",
 #' @param withMS2 Logical, set to \code{TRUE} for using confirmation via MS2.
 #' @param MS2param An \linkS4class{MS2param} object with parameters for MS2 extraction.
 #'
-#' @return A data.frame with the suspect screening results.
-#'
-#' @details The \code{suspects} data.frame should follow the template requires as
-#' obtained via \code{getScreeningListTemplate()}.
-#' Add other details of the template.
+#' @return An \linkS4class{ntsData} object with screening results
+#' added to the workflows slot.
 #'
 #' @references \insertRef{Helmus2021}{ntsIUTA}
 #'
@@ -83,27 +82,34 @@ setClass("ntsSuspectData",
 #' @importFrom data.table rbindlist
 #' @importMethodsFrom patRoon screenSuspects as.data.frame screenInfo annotateSuspects generateFormulas
 #'
-#'
-#' @examples
-#'
-screenSuspectsFromCSV <- function(obj,
-                                  name = NULL,
-                                  suspects = utils::read.csv(base::file.choose()),
-                                  ppm = 5,
-                                  rtWindow = 30,
-                                  adduct = NULL,
-                                  excludeBlanks = TRUE,
-                                  withMS2 = TRUE,
-                                  MS2param = MS2param()) {
+suspectScreening <- function(obj,
+                             samples = NULL,
+                             ID = NULL,
+                             title = NULL,
+                             suspectList = utils::read.csv(base::file.choose()),
+                             ppm = 5,
+                             rtWindow = 30,
+                             adduct = NULL,
+                             excludeBlanks = TRUE,
+                             withMS2 = TRUE,
+                             MS2param = MS2param()) {
 
-  # TODO A ID and sampleGroups argument for running suspect screening only for a set of features.
-
-  assertClass(obj, "ntsData")
-
-  if (!is.data.frame(suspects)) suspects <- utils::read.csv(suspects)
   
-  # TODO create check if rt column is NA, for patRoon suspect screening rt column is optional
-  #if (max(suspects$rt) < 120) suspects$rt <- suspects$rt * 60
+  assertClass(obj, "ntsData")
+  
+  assertClass(suspectList, "suspectList")
+
+  if (suspectList@rtUnit != "sec") {
+    warning("The rt should be in seconds!")
+    return(obj)
+  }
+    
+  if (suspectList@length == 0) {
+    warning("The suspectList is empty!")
+    return(obj)
+  }
+  
+  suspects <- suspectList@data
 
   #selects top 5 or 10 fragment if MS2 data is present for suspects
   if ("hasFragments" %in% colnames(suspects)) {
@@ -135,20 +141,36 @@ screenSuspectsFromCSV <- function(obj,
     }
   }
 
-  rg <- unique(sampleGroups(obj))
+  obj2 <- obj
+  
+  
+  if (!is.null(samples)) obj2 <- filterFileFaster(obj2, samples)
+  
+  if (excludeBlanks) {
+    if (TRUE %in% (sampleGroups(obj2) %in% blanks(obj2))) {
+      obj2 <- filterFileFaster(obj2, samples(obj2)[!(sampleGroups(obj2) %in% blanks(obj2))])
+    }
+  }
 
-  if (excludeBlanks) rg <- rg[!(rg %in% blanks(obj))]
-
-  screen <- screenSuspects(obj@patdata, select(suspects, -mz),
+  rg <- unique(sampleGroups(obj2))
+  
+  if (!is.null(ID)) {
+    obj2@patdata <- obj2@patdata[, ID]
+    obj2@features <- obj2@features[obj2@features$ID %in% ID, ]
+  }
+  
+  screen <- screenSuspects(obj2@patdata, select(suspects, -mz),
                            rtWindow = rtWindow, mzWindow = 0.03,
                            adduct = adduct, onlyHits = TRUE)
 
   df <- arrange(patRoon::as.data.frame(screen, average = FALSE), group)
+  df <- rename(df, name = susp_name)
   df <- left_join(df, suspects[, colnames(suspects) %in% c("name", "formula", "adduct", "hasFragments", "intControl")], by = "name")
   df <- left_join(df, select(arrange(screenInfo(screen), group), group, d_mz, d_rt), by = "group")
   df$d_ppm <- (abs(df$d_mz) / df$mz) * 1E6
   df <- dplyr::rename(df, rt = ret, ID = group)
   df <- select(df, name, formula, adduct, ID, mz, rt, everything(), -d_mz, d_ppm, d_rt)
+  
   df <- dplyr::filter(df, d_ppm <= ppm)
   df$d_ppm <- round(df$d_ppm, digits = 1)
   df$d_rt <- round(df$d_rt, digits = 1)
@@ -170,16 +192,15 @@ screenSuspectsFromCSV <- function(obj,
 
     for (g in seq_len(length(rg))) {
 
-      temp <- filterFeatureGroups(screen, which(obj@samples$group == rg[g]))
-      #temp <- screen
-
+      temp <- screen[which(obj2@samples$group == rg[g])]
+      
       MS2 <- extractMS2(temp, param = MS2param)
 
-      # TODO Adduct is [M+H]+ by default but should take the value from screening
+      # TODO Adduct is [M+H]+ by default but should take the value from screening list
       formulas <- patRoon::generateFormulasGenForm(temp, MS2,
                                                    relMzDev = ppm,
                                                    isolatePrec = TRUE,
-                                                   adduct = "[M+H]+",
+                                                   adduct = "[M+H]+", # TODO make NULL
                                                    elements = elements,
                                                    topMost = 25, extraOpts = NULL,
                                                    calculateFeatures = FALSE,
@@ -196,7 +217,7 @@ screenSuspectsFromCSV <- function(obj,
 
       isoScore <- tempScreen$group
       for (iso in seq_len(nrow(tempScreen))) {
-        tempForm <- formulas@formulas[[isoScore[iso]]]
+        tempForm <- formulas@groupAnnotations[[isoScore[iso]]]
         tempForm <- tempForm[tempForm$neutral_formula %in% tempScreen$formula, ]
         tempForm$ID <- isoScore[iso]
         isoScore[iso] <- round(unique(tempForm$isoScore)[1], digits = 2)
@@ -223,7 +244,7 @@ screenSuspectsFromCSV <- function(obj,
 
       tempScreen <- select(tempScreen, name, formula, adduct, ID, mz, rt, IdLevel, d_rt, d_ppm, isoScore, FragMatch, hasExpFrag, hasFrag, everything())
 
-      tempScreen <- cbind(tempScreen, df[, colnames(df) %in% obj@samples$sample])
+      tempScreen <- cbind(tempScreen, df[, colnames(df) %in% obj2@samples$sample])
 
       data[[rg[g]]] <- temp
 
@@ -239,7 +260,7 @@ screenSuspectsFromCSV <- function(obj,
 
   } else {
 
-    data[1] <-screen
+    data <- list(screen)
 
     results <- df
 
@@ -247,7 +268,7 @@ screenSuspectsFromCSV <- function(obj,
 
   sS <- new("ntsSuspectData")
 
-  sS@suspects <- suspects
+  sS@suspectList <- suspectList
 
   sS@param$ppm <- ppm
   sS@param$rtWindow <- rtWindow
@@ -260,9 +281,9 @@ screenSuspectsFromCSV <- function(obj,
   sS@inSilico <- inSilico
   sS@results <- results
 
-  if (is.null(name)) name <- "SuspectScreening"
+  if (is.null(title)) title <- "SuspectScreening"
 
-  obj@workflows[[name]] <- sS
+  obj@workflows[[title]] <- sS
 
   return(obj)
 

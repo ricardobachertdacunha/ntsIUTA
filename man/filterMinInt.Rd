@@ -17,6 +17,3 @@ filterMinInt(obj, IntThreshold = 500)
 \description{
 filterMinInt
 }
-\examples{
-
-}

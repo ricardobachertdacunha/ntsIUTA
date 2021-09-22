@@ -3,13 +3,13 @@
 \docType{class}
 \name{MS2param-class}
 \alias{MS2param-class}
-\title{MS2param}
+\title{MS2param-class}
 \value{
 An \linkS4class{MS2param} object containing parameters for
 extraction of MS2 spectra of given precursor ions in an \linkS4class{ntsData} object.
 }
 \description{
-MS2param
+MS2param-class
 }
 \section{Slots}{
 

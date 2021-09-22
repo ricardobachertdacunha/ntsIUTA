@@ -4,7 +4,7 @@
 #' @description Method for plotting features from a \linkS4class{ntsData} object.
 #'
 #' @param obj An \linkS4class{ntsData} object.
-#' @param fileIndex The index or name of the sample/s.
+#' @param samples The index or name of the sample/s.
 #' The default is \code{NULL} and all samples are used.
 #' @param ID The identifier of the features of interest.
 #' When not \code{NULL}, overwrites any given \code{mz} and \code{rt} value.
@@ -38,7 +38,7 @@
 #' @importFrom dplyr between filter
 #' @importFrom plotly toRGB plot_ly add_trace layout
 #'
-plotFeatures <- function(obj, fileIndex = NULL,
+plotFeatures <- function(obj, samples = NULL,
                          ID = NULL,
                          mz = NULL, ppm = 20,
                          rt = NULL, rtWindow = NULL,
@@ -48,7 +48,7 @@ plotFeatures <- function(obj, fileIndex = NULL,
                          interactive = TRUE) {
 
   # obj <- dtxcms2
-  # fileIndex <- 2:5
+  # samples <- 2:5
   # ID <- c("M275_R622_2158" , "M210_R586_836")
   # mz <- 213.1869
   # rt <- 15.47
@@ -64,7 +64,7 @@ plotFeatures <- function(obj, fileIndex = NULL,
 
   assertSubset(colorBy, c("features", "samples", "sampleGroups"))
 
-  if (!is.null(fileIndex)) obj <- filterFileFaster(obj, fileIndex)
+  if (!is.null(samples)) obj <- filterFileFaster(obj, samples)
 
   rtr <- NULL
 
@@ -74,6 +74,7 @@ plotFeatures <- function(obj, fileIndex = NULL,
     if (!is.null(mz)) {
       mzr <- mzrBuilder(mz = mz, ppm = ppm)
       rtr <- rtrBuilder(rt = rt, rtWindow = rtWindow, rtUnit = rtUnit)
+      if (is.null(rtr)) rtr <- c(min(obj@features$rtmin), max(obj@features$rtmax))
       ft <- dplyr::filter(obj@features,
                           dplyr::between(mz, mzr[1], mzr[2]),
                           dplyr::between(rt, rtr[1], rtr[2]))

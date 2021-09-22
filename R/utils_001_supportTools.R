@@ -47,22 +47,6 @@ saveObject <- function(format = "rds",
 
 
 
-#' @title getScreeningListTemplate
-#'
-#' @param projPath The project folder location. Default is \code{setup$projPath}.
-#'
-#' @return Pastes a template .csv file of the screeningList into the projPath.
-#'
-#' @export
-#'
-getScreeningListTemplate <- function(projPath = setup$projPath) {
-  base::file.copy(from = base::paste0(base::system.file(package = "ntsIUTA", dir = "extdata"), "/screeningList_template.csv"),
-                  to = setup$projPath,
-                  overwrite = FALSE)
-}
-
-
-
 #' @title getColors
 #'
 #' @param x An \linkS4class{ntsData} object with one or more files or the number of colours to be produced.
@@ -194,10 +178,10 @@ rtrBuilder <- function(rt = NULL, rtWindow = NULL, rtUnit = "sec") {
 #' @description Filter files (i.e., samples) but it does not redo feature list.
 #' Useful for plotting data or extracting EICs from certain samples.
 #'
-#' @param x An \linkS4class{OnDiskMSnExp} object.
+#' @param x An \linkS4class{ntsData} object.
 #' @param i The indices or names of the samples to keep.
 #'
-#' @return The sub-setted \linkS4class{OnDiskMSnExp} object.
+#' @return The sub-setted \linkS4class{ntsData} object.
 #'
 #' @importMethodsFrom MSnbase filterFile
 #'
@@ -209,6 +193,10 @@ filterFileFaster <- function(x, i) {
     sn <- x@samples$sample[i]
     sidx <- which(x@samples$sample %in% sn)
   } else {
+    if (FALSE %in% (i %in% obj@samples$sample)) {
+      warning("Given sample names not found in the ntsData object!")
+      return(x)
+    }
     sn <- i
     sidx <- which(x@samples$sample %in% sn)
   }
@@ -220,13 +208,20 @@ filterFileFaster <- function(x, i) {
   x@metadata <- x@metadata[x@metadata$sample %in% sn,, drop = FALSE]
 
   x@MSnExp <- filterFile(x@MSnExp, file = sidx)
+  
+  if (length(analyses(x@patdata)) > 0) {
+    #x@patdata <- filterFeatureGroups(x@patdata, sidx)
+    x@patdata <- x@patdata[sidx]
+  }
 
-  if (nrow(x@peaks) > 0) x@peaks <- x@peaks[x@peaks$sample %in% sn,, drop = FALSE]
+  #Subsets the peaks and features slots without rebuilding, thus is faster
+  
+  if (nrow(x@peaks) > 0) x@peaks <- x@peaks[x@peaks$sample %in% sn, ]
 
   if (nrow(x@features) > 0) {
-    rg <- unique(x@samples$group)
-    x@features <- x@features[, !(colnames(x@features) %in% rgr)]
-    x@features <- x@features[!sapply(x@features[, rg] == 0, function(x) sum(x) == length(rg)), ]
+    x@features <- x@features[x@features$ID %in% names(x@patdata), ]
+    #rg <- unique(x@samples$group)
+    #x@features <- x@features[, !(colnames(x@features) %in% rgr)]
   }
 
   return(x)

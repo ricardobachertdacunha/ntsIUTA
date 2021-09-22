@@ -14,14 +14,14 @@ ntsSuspectData
 \section{Slots}{
 
 \describe{
-\item{\code{suspects}}{The data.frame listing all the suspects of interest.}
+\item{\code{suspectList}}{The \linkS4class{suspectList} object used for suspect screening.}
 
 \item{\code{param}}{The parameters used for suspect screening.}
 
 \item{\code{data}}{The raw \linkS4class{featureGroupsScreening}
 for each sample replicate group.}
 
-\item{\code{inSilico}}{When present, the results from the matched In Silico
+\item{\code{inSilico}}{When present, the results from the matched in silico
 fragmentation experiment.}
 
 \item{\code{results}}{A data.frame with summarized results, including

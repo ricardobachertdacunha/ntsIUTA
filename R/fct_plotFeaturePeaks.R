@@ -4,7 +4,7 @@
 #' @description Plots peaks for each feature in an \linkS4class{ntsData} object.
 #'
 #' @param obj An \linkS4class{ntsData} object.
-#' @param fileIndex The index or name of the sample/s.
+#' @param samples The index or name of the sample/s.
 #' The default is \code{NULL} and all samples are used.
 #' @param ID The identifier of the features of interest.
 #' When not \code{NULL}, overwrites any given \code{mz} and \code{rt} value.
@@ -39,9 +39,7 @@
 #' @importFrom dplyr filter between
 #' @importFrom stats setNames
 #'
-#' @examples
-#'
-plotFeaturePeaks <- function(obj, fileIndex = NULL,
+plotFeaturePeaks <- function(obj, samples = NULL,
                              ID = NULL,
                              mz = NULL, ppm = 20,
                              rt = NULL, rtWindow = NULL,
@@ -56,7 +54,7 @@ plotFeaturePeaks <- function(obj, fileIndex = NULL,
 
   if (!is.null(names)) if (!(length(names) == length(ID))) names <- NULL
 
-  if (!is.null(fileIndex)) obj <- filterFileFaster(obj, fileIndex)
+  if (!is.null(samples)) obj <- filterFileFaster(obj, samples)
 
   rtr <- NULL
 
@@ -66,6 +64,7 @@ plotFeaturePeaks <- function(obj, fileIndex = NULL,
     if (!is.null(mz)) {
       mzr <- mzrBuilder(mz = mz, ppm = ppm)
       rtr <- rtrBuilder(rt = rt, rtWindow = rtWindow, rtUnit = rtUnit)
+      if (is.null(rtr)) rtr <- c(min(obj@features$rtmin), max(obj@features$rtmax))
       ft <- dplyr::filter(obj@features,
                           dplyr::between(mz, mzr[1], mzr[2]),
                           dplyr::between(rt, rtr[1], rtr[2]))

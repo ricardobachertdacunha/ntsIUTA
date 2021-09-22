@@ -12,7 +12,7 @@ plotComponents(
   ppm = 5,
   rt = NULL,
   rtWindow = 1,
-  rtUnit = "sec",
+  rtUnit = "min",
   comp = NULL,
   entireComponents = TRUE,
   onlyAnnotated = FALSE,

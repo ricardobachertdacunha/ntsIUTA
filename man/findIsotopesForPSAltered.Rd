@@ -8,6 +8,7 @@ findIsotopesForPSAltered(
   peakIndeces = peakIndeces,
   mzValues = mzValues,
   intValues = intValues,
+  sdValues = sdValues,
   snValues = snValues,
   maxcharge = maxcharge,
   devppm = devppm,
@@ -37,11 +38,6 @@ A list of isotopic annotation for the given peaks.
 }
 \description{
 Function used within \code{FindIsotopesWithValidationAltered}.
-}
-\examples{
-
-
-
 }
 \references{
 \insertRef{CAMERA}{ntsIUTA}

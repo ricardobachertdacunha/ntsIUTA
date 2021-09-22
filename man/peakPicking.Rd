@@ -37,9 +37,6 @@ and \pkg{patRoon} packages, depending on the specified algorithm.
 Possible algorithms are: "xcms3", "xcms", "openms" and "envipick".
 The function arguments depend on the algorithm chosen.
 }
-\examples{
-
-}
 \references{
 \insertRef{Helmus2021}{ntsIUTA}
 \insertRef{xcms1}{ntsIUTA}

@@ -4,28 +4,20 @@
 #' @description Function to check QC samples in an \linkS4class{ntsData} object.
 #'
 #' @param obj An \linkS4class{ntsData} object, containing QC samples.
-#' @param targets A \code{data.frame} or a location for a csv
-#' with details for each standard in the QC samples.
-#' See details for more information about the required data.frame structure.
+#' @param targets The \linkS4class{suspectList} object with the target compounds
+#' for quality control.
 #' @param algorithmPeakPicking The algorithm to use for peak picking.
 #' One of "xcms3" (the default), "xcms", "openms" or "envipick".
 #' @param algorithmMakeFeatures The algorithm to use for peak alignment and grouping.
 #' One of "xcms3" (the default), "xcms" or "openms".
+#' @param algorithmAnnotation The algorithm to use for annotation.
 #' @param paramPeakPicking  List of arguments for the specified algorithm.
 #' See \code{\link[patRoon]{findFeatures}} for more information.
 #' For instance, for "xcms3" as \code{algorithm}, \code{param} should be given
 #' with the method parameters for the peak finding.
 #' See \href{https://rdrr.io/bioc/xcms/man/chromatographic-peak-detection.html}{\code{xcms::findChromPeaks}}
 #' for more information.
-#' @param rtAlignment Logical, set to \code{TRUE} (The default) for performing peak alignment before grouping.
-#' @param paramAlignment Applicable for algorithm "xcms3" only,
-#' the parameters for the chosen retention time alignment method.
-#' See documentation of \code{\link[xcms]{adjustRtime}} for more information.
-#' For alignment with the method \code{PeakGroups}, a list of length two
-#' should be given, where the first element
-#' is the pre-grouping parameters using \code{\link[xcms]{groupChromPeaks}}
-#' and the second element the actual alignment parameters.
-#' @param paramGrouping he parameters for the chosen grouping method.
+#' @param paramGrouping The parameters for the chosen grouping method.
 #' See documentation of \code{\link[xcms]{groupChromPeaks}} or
 #' \code{\link[patRoon]{groupFeatures}} for more information.
 #' @param recursive Logical, set to \code{TRUE} for applying recursive
@@ -34,10 +26,13 @@
 #' or \code{ChromPeakAreaParam} containing the parameters
 #' to apply the recursive integration.
 #' #' See \code{?\link[xcms]{fillChromPeaks}} for more information.
+#' @param paramAnnotation The parameters to perform annotation of isotopologues
+#' and adducts.
 #' @param rtWindow The retention time deviation, in seconds,
 #' to screen for the QC target standards. The default is 30 seconds.
 #' @param ppm The mass deviation, in ppm, to screen for the QC target standards.
 #' The default is 15 ppm.
+#' @param MS2param The parameters to extract MS2 data.
 #' @param exportResults Logical, set to \code{TRUE} for exporting the results to the project folder.
 #' @param save  Logical, set to \code{TRUE} to save updated
 #' \linkS4class{ntsData} object in the \strong{rdata} folder.
@@ -65,26 +60,27 @@
 #' @importFrom plotly partial_bundle
 #'
 #'
-#' @examples
-#'
 checkQC <- function(
   obj = NULL,
-  targets = utils::choose.files(base::getwd(), "Select the QC screening list"),
+  targets = NULL,
   algorithmPeakPicking = NULL,
   algorithmMakeFeatures = NULL,
+  algorithmAnnotation = NULL,
   paramPeakPicking = NULL,
-  rtAlignment = TRUE,
-  paramAlignment = NULL,
   paramGrouping = NULL,
   recursive = TRUE,
   paramFill = NULL,
+  paramAnnotation = NULL,
   rtWindow = 30,
   ppm = 15,
+  MS2param = MS2param(),
   exportResults = FALSE,
   save = FALSE) {
 
 
   assertClass(obj, "ntsData")
+  
+  assertClass(targets, "suspectList")
 
   if (nrow(obj@QC$samples) == 0) {
     warning("No sample replicate group/s assinged for QC in the ntsData object!")
@@ -93,28 +89,34 @@ checkQC <- function(
 
   if (is.null(algorithmPeakPicking)) algorithmPeakPicking <- obj@algorithms$peakPicking
 
-  if (!testChoice(algorithmPeakPicking, c("xcms3", "xcms", "openms", "envipick"))) {
-    warning("Algorithm not recognized. See ?peakPicking for more information.")
-    return(obj)
-  }
-
   if (is.null(algorithmMakeFeatures)) algorithmMakeFeatures <- obj@algorithms$makeFeatures
 
-  if (!testChoice(algorithmMakeFeatures, c("xcms3", "xcms", "openms"))) {
-    warning("Algorithm not recognized. See ?makeFeatures for more information.")
+  if (is.null(algorithmAnnotation)) algorithmAnnotation <- obj@algorithms$annotation
+  
+  if (is.null(paramPeakPicking)) paramPeakPicking <- obj@parameters$peakPicking
+  
+  if (is.null(paramGrouping)) paramGrouping <- obj@parameters$peakGrouping
+  
+  if (is.null(paramFill)) paramFill <- obj@parameters$fillMissing
+  
+  if (is.null(paramAnnotation)) paramAnnotation <- obj@parameters$annotation
+  
+  if (targets@rtUnit != "sec") {
+    warning("The rt should be in seconds!")
     return(obj)
   }
-
-  if (is.null(paramPeakPicking)) paramPeakPicking <- obj@parameters$peakPicking
-  if (is.null(paramAlignment)) paramAlignment <- obj@parameters$peakAlignment
-  if (is.null(paramGrouping)) paramGrouping <- obj@parameters$peakGrouping
-  if (is.null(paramFill)) paramFill <- obj@parameters$fillMissing
-  # TODO Add check for parameters
-
+  
+  if (targets@length == 0) {
+    warning("The targets list is empty!")
+    return(obj)
+  }
+  
   data <- new("ntsData")
 
   data@samples <- obj@QC$samples
 
+  data@samples$blank <- ""
+  
   data@polarity <- obj@polarity
 
   data <- importRawData(data,
@@ -129,19 +131,17 @@ checkQC <- function(
 
   data <- makeFeatures(data,
                        algorithm = algorithmMakeFeatures,
-                       rtAlignment = rtAlignment,
-                       paramAlignment = paramAlignment,
                        paramGrouping = paramGrouping,
                        recursive = recursive,
                        paramFill = paramFill,
                        save = FALSE)
 
-  if (!is.data.frame(targets)) targets <- utils::read.csv(targets)
-
-  if (max(targets$rt) < 120) targets$rt <- targets$rt * 60
-
-# TODO change check from supects to targets
-  if (!("adduct" %in% colnames(targets))) {
+  data <- annotateFeatures(data,
+                           algorithm = algorithmAnnotation,
+                           param = paramAnnotation,
+                           excludeBlanks = FALSE, save = FALSE)
+  
+  if (!("adduct" %in% colnames(targets@data))) {
     adduct <- ifelse(data@polarity == "positive", "[M+H]+",
                      ifelse(data@polarity == "negative", "[M-H]-",
                             stop("polarity argument must be 'positive' or 'negative'")))
@@ -149,12 +149,13 @@ checkQC <- function(
     adduct <- NULL
   }
 
-  screen <- screenSuspects(data@patdata, select(targets, -mz),
+  screen <- screenSuspects(data@patdata, select(targets@data, -mz),
                            rtWindow = rtWindow, mzWindow = 0.02,
                            adduct = adduct, onlyHits = TRUE)
 
   df <- arrange(patRoon::as.data.frame(screen, average = FALSE), group)
-  df <- left_join(df, targets[, colnames(targets) %in% c("name", "formula", "hasFragments", "intControl")], by = "name")
+  df <- rename(df, name = susp_name)
+  df <- left_join(df, targets@data[, colnames(targets@data) %in% c("name", "formula", "hasFragments", "intControl")], by = "name")
   df <- left_join(df, select(arrange(screenInfo(screen), group), group, d_mz, d_rt), by = "group")
   df$av_into <- rowMeans(select(df, data@samples$sample))
   df <- df %>% mutate(sd_into = apply(select(., data@samples$sample), 1, sd))
@@ -162,35 +163,34 @@ checkQC <- function(
   df <- mutate(df, sd_intop = round(sd_into / av_into * 100, digits = 1))
   df$d_ppm <- (abs(df$d_mz) / df$mz) * 1E6
   df <- dplyr::rename(df, rt = ret, ID = group)
+  df$isoN <- 0
   df <- select(df, name, formula, d_ppm, d_rt, ID, mz, rt,
-               av_into, sd_into, sd_intop, everything(), -d_mz)
+               av_into, sd_into, sd_intop, isoN, everything(), -d_mz)
+  
   df <- dplyr::filter(df, d_ppm <= ppm)
   df$d_ppm <- round(df$d_ppm, digits = 1)
   df$d_rt <- round(df$d_rt, digits = 1)
 
+  screen <- screen[, df$ID]
+  
+  annot <- data@annotation$comp[data@annotation$comp$ID %in% df$ID, ]
+  for (i in seq_len(nrow(annot))) {
+    df$isoN[i] <- nrow(data@annotation$comp[data@annotation$comp$isogroup %in% annot$isogroup[i], ]) - 1
+  }
+  
   if ("hasFragments" %in% colnames(df)) {
 
     ms2df <- left_join(df[, c("name", "ID", "hasFragments")],
-                       targets[, colnames(targets) %in% c("name", "fragments_mz", "fragments_int", "fragments_pre")],
+                       targets@data[, colnames(targets@data) %in% c("name", "fragments_mz", "fragments_int", "fragments_pre")],
                        by = "name")
 
-    ms2df <- mutate(ms2df, hasFragments_Exp = FALSE,
-                    fragments_mz_Exp = NA, fragments_int_Exp = NA, fragments_pre_Exp = NA)
+    ms2df <- mutate(ms2df,
+                    hasFragments_Exp = FALSE,
+                    fragments_mz_Exp = NA,
+                    fragments_int_Exp = NA,
+                    fragments_pre_Exp = NA)
 
-    control_avgPListParams <- getDefAvgPListParams(
-      clusterMzWindow = 0.003,
-      topMost = 50,
-      minIntensityPre = 10,
-      minIntensityPost = 10
-    )
-
-    MS2 <- suppressWarnings(generateMSPeakLists(
-      screen, "mzr",
-      maxMSRtWindow = 10,
-      precursorMzWindow = 1.5,
-      avgFeatParams = control_avgPListParams,
-      avgFGroupParams = control_avgPListParams
-    ))
+    MS2 <- extractMS2(screen, param = MS2param)
 
     df$nfrag <- 0
 
@@ -255,7 +255,7 @@ checkQC <- function(
     df <- left_join(df, select(ms2df, -name, -hasFragments), by = "ID")
 
   }
-
+  
   obj@QC$targets <- targets
 
   obj@QC$data <- data
@@ -268,13 +268,9 @@ checkQC <- function(
 
   obj@parameters$peakPicking <- paramPeakPicking
 
-  obj@parameters$peakAlignment <- paramAlignment
-
   obj@parameters$peakGrouping <- paramGrouping
 
   obj@parameters$fillMissing <- paramFill
-
-  #TODO Implement isotope check for QC targets? By using annotation results.
 
   if (exportResults) {
 
@@ -308,7 +304,6 @@ checkQC <- function(
 }
 
 
-
 #' @title plotCheckQC
 #'
 #' @param obj obj An \linkS4class{ntsData} object, containing QC samples.
@@ -321,8 +316,6 @@ checkQC <- function(
 #'
 #' @import ggplot2
 #' @importFrom gridExtra grid.arrange
-#'
-#' @examples
 #'
 plotCheckQC <- function(obj, rtWindow = 30, ppm = 15) {
 
@@ -383,7 +376,25 @@ plotCheckQC <- function(obj, rtWindow = 30, ppm = 15) {
       scale_y_continuous(limits = c(0, 210), breaks = seq(0, 200, by = 50)) +
       coord_flip()
   }
-
+  
+  if ("isoN" %in% colnames(qcdf)) {
+    
+    grobs[["isoN"]] <- ggplot(qcdf) +
+      theme_bw() +
+      geom_rect(aes(ymin = -Inf, ymax = 2, xmin = -Inf, xmax = Inf), fill = "white", alpha = 0.05) +
+      geom_rect(aes(ymin = 2, ymax = 5, xmin = -Inf, xmax = Inf), fill = "ForestGreen", alpha = 0.05) +
+      geom_rect(aes(ymin = 5, ymax = Inf, xmin = -Inf, xmax = Inf), fill = "white", alpha = 0.01) +
+      geom_point(stat = "identity", aes(x = name, y = isoN)) +
+      theme(axis.text.y = element_blank(),
+            axis.title.y = element_blank(),
+            axis.text.x = element_text(size = 7),
+            axis.title.x = element_text(size = 7)) +
+      ylab("Nr Isotopes") +
+      ylim(0, 6) +
+      coord_flip()
+    
+  }
+  
   if ("hasFragments" %in% colnames(qcdf)) {
 
     grobs[["frag"]] <- ggplot(qcdf) +

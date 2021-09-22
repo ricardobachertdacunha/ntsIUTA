@@ -6,7 +6,7 @@
 \usage{
 extractEIC(
   obj = NULL,
-  fileIndex = NULL,
+  samples = NULL,
   mz = NULL,
   ppm = NULL,
   rt = NULL,
@@ -19,7 +19,7 @@ extractEIC(
 \arguments{
 \item{obj}{An \linkS4class{ntsData} object with one or more files.}
 
-\item{fileIndex}{The index of the file/s to extract the centroids or profile data.}
+\item{samples}{The index or names of the sample/s to extract the centroids or profile data.}
 
 \item{mz}{Target \emph{m/z} to the EIC.}
 
@@ -43,7 +43,4 @@ representing the mzML file index, the retention time, the \emph{m/z} and the int
 }
 \description{
 Extracts an ion chromatogram (EIC) from raw data of a specified \emph{m/z}.
-}
-\examples{
-
 }

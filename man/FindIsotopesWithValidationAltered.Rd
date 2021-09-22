@@ -9,8 +9,8 @@ FindIsotopesWithValidationAltered(
   obj = obj,
   sampleidxs = sampleidxs,
   maxcharge = 3,
-  ppm = 50,
-  mzabs = 0.01,
+  ppm = 40,
+  mzabs = 0.005,
   noise = NULL,
   intval = "maxo",
   validateIsotopePatterns = TRUE

@@ -1,5 +1,341 @@
 
 
+#' @title annotateFeatures_Old
+#'
+#' @description Group features into components according to co-elution and
+#' EIC similarities and annotate isotopes and adducts in each component
+#' per sample replicate group.
+#'
+#' @param obj An \linkS4class{ntsData} object with features.
+#' @param algorithm The algorithm for finding isotopes. Possible values are
+#' "alteredcamera", "camera" or "ramclustr".
+#' @param param The param used for annotation of isotopes and adducts.
+#' @param excludeBlanks Logical, set to \code{TRUE} for excluding
+#' blank replicate groups from annotation.
+#' @param save Logical, set to \code{TRUE} to save updated
+#' \linkS4class{ntsData} object in the \strong{rdata} folder.
+#' Note that \code{TRUE} overwrites the existing \linkS4class{ntsData} object.
+#' Optionally, a character string can be given instead of \code{TRUE}
+#' to be used as file name, avoiding overwriting.
+#'
+#' @return An \linkS4class{ntsData} object, containing components with
+#' annotated features.
+#'
+#' @export
+#'
+#' @importFrom checkmate testChoice assertClass
+#' @importFrom patRoon getXCMSSet
+#' @importFrom CAMERA xsAnnotate groupFWHM groupCorr findAdducts getPeaklist
+#' @importFrom utils txtProgressBar setTxtProgressBar read.table
+#' @importFrom dplyr rename select everything
+#'
+annotateFeatures_Old <- function(obj = NULL,
+                             algorithm = NULL,
+                             param = NULL,
+                             excludeBlanks = FALSE,
+                             save = FALSE
+) {
+  
+  assertClass(obj, "ntsData")
+  
+  if (is.null(algorithm)) if (!is.na(obj@algorithms$annotation)) algorithm <- obj@algorithms$annotation
+  
+  if (!testChoice(algorithm, c("alteredcamera", "camera", "ramclustr", "nontarget", "intclust"))) {
+    warning("Algorithm not recognized. See ?annotateFeatures for more information.")
+    return(obj)
+  }
+  
+  if (is.null(param)) if (length(obj@parameters$annotation) > 0) param <- obj@parameters$annotation
+  
+  if (length(param) == 0) {
+    warning("Parameters for annotation must be given!")
+    return(obj)
+  }
+  
+  if (excludeBlanks) {
+    rg <- unique(obj@samples$group[!(obj@samples$group %in% obj@samples$blank)])
+  } else {
+    rg <- unique(obj@samples$group)
+  }
+  
+  if (!(algorithm == "alteredcamera")) {
+    
+    ag <- list(fGroups = obj@patdata, algorithm = algorithm)
+    
+    pat <- do.call(generateComponents, c(ag, param))
+    
+    # TODO convert to data frame from other functions and integrate with df scheme
+    
+  } else {
+    
+    xs <- obj@patdata
+    
+    xs <- getXCMSSet(xs, verbose = TRUE, loadRawData = TRUE)
+    
+    xA <- xsAnnotate(xs = xs,
+                     sample = seq_len(nrow(obj@samples)),
+                     polarity = obj@polarity)
+    
+    xA <- groupFWHM(xA, sigma = param@sigma,
+                    perfwhm = param@perfwhm,
+                    intval = "maxo")
+    
+    xA <- groupCorr(xA,
+                    cor_eic_th = param@cor_eic_th,
+                    cor_exp_th = param@cor_exp_th,
+                    pval = param@pval,
+                    graphMethod = "hcs",
+                    calcIso = FALSE,
+                    calcCiS = TRUE,
+                    calcCaS = param@calcCaS,
+                    psg_list = NULL,
+                    xraw = NULL,
+                    intval = "maxo")
+    
+    xAL <- list()
+    
+    pb <- txtProgressBar(min = 0, max = 100, initial = 0, char = "=", width = 80, style = 3)
+    
+    for (rgidx in seq_len(length(rg))) {
+      
+      setTxtProgressBar(pb, ((rgidx / length(rg)) * 100))
+      
+      sampleidxs <- which(obj@samples$group == rg[rgidx])
+      
+      xA_temp <- FindIsotopesWithValidationAltered(
+        xA = xA,
+        obj = obj,
+        sampleidxs = sampleidxs,
+        ppm = param@ppmIsotopes,
+        mzabs = param@mzabs,
+        noise = param@noise,
+        maxcharge = 3,
+        intval = "maxo",
+        validateIsotopePatterns = param@validateIsotopePatterns
+      )
+      
+      if (param@searchAdducts) {
+        
+        if (param@extendedList) {
+          rules_pos <- system.file("rules/extended_adducts_pos.csv", package = "CAMERA")
+          rules_neg <- system.file("rules/extended_adducts_neg.csv", package = "CAMERA")
+        } else {
+          rules_pos <- system.file("rules/primary_adducts_pos.csv", package = "CAMERA")
+          rules_neg <- system.file("rules/primary_adducts_neg.csv", package = "CAMERA")
+        }
+        
+        if (obj@polarity == "positive") {
+          rules <- utils::read.table(rules_pos, header = TRUE, sep = ",")
+          if (length(colnames(rules)) == 1) {
+            rules <- utils::read.table(rules_pos, header = TRUE, sep = "")
+          }
+          rules <- rbind(rules, data.frame(name = "[M+]",
+                                           nmol = 1,
+                                           charge = 1,
+                                           massdiff = 0,
+                                           oidscore = 12,
+                                           quasi = 1,
+                                           ips = 1))
+        }
+        
+        if (obj@polarity == "negative") {
+          rules <- utils::read.table(rules_neg, header = TRUE, sep = ",")
+          if (length(colnames(rules)) == 1) {
+            rules <- utils::read.table(rules_neg, header = TRUE, sep = "")
+          }
+          rules <- rbind(rules, data.frame(name = "[M-]",
+                                           nmol = 1,
+                                           charge = 1,
+                                           massdiff = 0,
+                                           oidscore = 12,
+                                           quasi = 1,
+                                           ips = 1))
+        }
+        
+        xA_temp <- findAdducts(xA_temp,
+                               ppm = param@ppmAdducts,
+                               mzabs = 0,
+                               multiplier = 2,
+                               polarity = obj@polarity,
+                               rules = rules,
+                               max_peaks = 100,
+                               psg_list = NULL)
+      }
+      
+      xAL[[rg[rgidx]]] <- xA_temp
+      
+    }
+    
+    #prepare data frame
+    for (r in seq_len(length(xAL))) {
+      df_temp <- CAMERA::getPeaklist(xAL[[r]], intval = "maxo")
+      df_temp$group <- names(xAL)[r]
+      df_temp$ID <- obj@features$ID
+      if (r == 1 | length(xAL) == 1) {
+        df <- df_temp
+      } else {
+        df <- rbind(df, df_temp)
+      }
+    }
+    
+  }
+  
+  isotopes <- df$isotopes
+  isotopes <- strsplit(isotopes, split = "\\]\\[")
+  
+  isogroup <- lapply(X = seq_len(length(isotopes)), function(x) isotopes[[x]][1])
+  isogroup <- str_extract(isogroup, pattern = "([0-9]+)")
+  noIsogroup <- is.na(isogroup)
+  isogroup <- paste0(isogroup, "_", df$group)
+  isogroup[noIsogroup] <- NA
+  
+  isoclass <- lapply(X = seq_len(length(isotopes)), function(x) isotopes[[x]][2])
+  isoclass <- as.vector(ifelse(!is.na(isoclass), paste0("[",isoclass), NA))
+  
+  df$isogroup <- isogroup
+  df$isoclass <- isoclass
+  
+  Mion <- df$mz
+  index <- seq_len(length(Mion))
+  isMion <- grepl(pattern = "[M]", isoclass, fixed = TRUE)
+  
+  charge <- sapply(index, FUN =  function(x) {
+    ifelse(isMion[x], as.numeric(str_extract(isoclass[x], pattern = "([0-9]+)")), NA)
+  })
+  charge[is.na(charge)] <- 1
+  
+  if (obj@polarity == "positive") {
+    Mion <- (Mion - 1.007276) * charge
+  } else {
+    Mion <- (Mion + 1.007276) * charge
+  }
+  
+  Mion <- round(Mion, digits = 3)
+  
+  adducts <- strsplit(df$adduct, split = " ")
+  df$conflits <- unlist(lapply(X = seq_len(length(adducts)), function(x) ifelse(length(adducts[[x]]) > 2, TRUE, FALSE)))
+  df$adductclass <- I(lapply(X = seq_len(length(adducts)), function(x) grep("M", adducts[[x]], value = TRUE)))
+  df$adductMion <- I(lapply(X = seq_len(length(adducts)), function(x) as.numeric(grep("M", adducts[[x]], value = TRUE, invert = TRUE))))
+  possibleAdducts <- unlist(lapply(df$adductMion, length))
+  df$nAdducts <- possibleAdducts
+  isAdduct <- possibleAdducts != 0
+  
+  Mion <- unlist(lapply(index, FUN = function(x) ifelse(isAdduct[x] & !df$conflits[x], as.numeric(unlist(df$adductMion[x])), Mion[x])))
+  
+  isopolog <- !isMion
+  isopolog[is.na(isoclass)] <- FALSE
+  
+  names(Mion) <- isogroup
+  
+  Mion <- unlist(lapply(index, function(x) ifelse(isopolog[x], Mion[names(Mion) %in% isogroup[x]], Mion[x])))
+  
+  df$Mion <- as.numeric(Mion)
+  
+  df <- rename(df, comp = pcgroup)
+  df <- select(df, ID, group, comp, Mion, isoclass, isogroup, adductclass, adductMion, conflits, nAdducts, everything())
+  
+  obj@annotation$comp <- df
+  
+  obj@annotation$raw <- xAL
+  
+  obj@algorithms$annotation <- algorithm
+  
+  obj@parameters$annotation <- param
+  
+  if (save) saveObject(obj = obj)
+  
+  if (is.character(save)) saveObject(obj = obj, filename = save)
+  
+  return(obj)
+  
+}
+
+
+#' @title getScreeningListTemplate_Old
+#'
+#' @param projPath The project folder location. Default is \code{setup$projPath}.
+#'
+#' @return Pastes a template .csv file of the screeningList into the projPath.
+#'
+#' @export
+#'
+getScreeningListTemplate_Old <- function(projPath = setup$projPath) {
+  base::file.copy(from = base::paste0(base::system.file(package = "ntsIUTA", dir = "extdata"), "/screeningList_template.csv"),
+                  to = setup$projPath,
+                  overwrite = FALSE)
+}
+
+
+### subsetting ntsData_Old ----
+
+#' @describeIn ntsData Subset on samples, using sample index or name.
+#'
+#' @param x An \linkS4class{ntsData} object.
+#' @param i The indice/s or name/s of the samples to keep in the \code{x} object.
+#' @param j Ignored.
+#' @param drop Ignored.
+#' @param \dots Ignored.
+#'
+#' @export
+#'
+#' @importMethodsFrom MSnbase filterFile fileNames
+#' @importMethodsFrom xcms filterFile
+#'
+setMethod("[", c("ntsData", "ANY", "missing", "missing"), function(x, i, ...) {
+  
+  if (!missing(i)) {
+    
+    if (!is.character(i)) {
+      sn <- x@samples$sample[i]
+      sidx <- which(x@samples$sample %in% sn)
+    } else {
+      sn <- i
+      sidx <- which(x@samples$sample %in% sn)
+    }
+    
+    x@samples <- x@samples[x@samples$sample %in% sn,, drop = FALSE]
+    
+    x@metadata <- x@metadata[x@metadata$sample %in% sn,, drop = FALSE]
+    
+    if (length(x@MSnExp) > 0) x@MSnExp <- MSnbase::filterFile(x@MSnExp, file = sidx)
+    
+    if (nrow(x@peaks) > 0) x@peaks <- x@peaks[x@peaks$sample %in% sn,, drop = FALSE]
+    
+    if (nrow(x@features) > 0) {
+      
+      #To be replaced when sub-setting in patRoon is fixed
+      x@patdata <- filterFeatureGroups(x@patdata, i = sidx)
+      
+      # TODO subsetting rebuilds feature list, interferse with filtering of feature list
+      x <- buildFeatureList(x)
+      
+    } else {
+      
+      #subset patRoon object without featureGroups
+      if (length(x@patdata) > 0) {
+        x@patdata@features <- x@patdata@features[sidx]
+        x@patdata@analysisInfo <- x@patdata@analysisInfo[x@patdata@analysisInfo$analysis %in% sn, ]
+        if (x@patdata@algorithm == "xcms3") {
+          files <- basename(fileNames(x@patdata@xdata)[sidx])
+          x@patdata@xdata <- filterFile(x@patdata@xdata, files)
+        }
+      }
+    }
+    
+    #annotation, remove replicate groups without samples
+    if (nrow(x@annotation$comp) > 0) {
+      rg <- unique(x@samples$group)
+      x@annotation$comp <- x@annotation$comp[x@annotation$comp$group %in% rg, ]
+      x@annotation$raw <- x@annotation$raw[names(x@annotation$raw) %in% rg]
+      if (nrow(x@features) > 0) x@annotation$comp <- x@annotation$comp[x@annotation$comp$ID %in% x@features$ID, ]
+    }
+  }
+  
+  return(x)
+  
+})
+
+
 #' @title buildFeatureList_Old
 #' @description Function to create a \code{data.frame} with detailed information for each feature in the given a \linkS4class{XCMSnExp} object object.
 #' Optionally, a list of \linkS4class{xsAnnotate} objects per replicate group as obtained by \code{makeFeatureComponents} can be given.

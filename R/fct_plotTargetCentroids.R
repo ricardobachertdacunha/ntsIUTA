@@ -5,7 +5,7 @@
 #' using expected \emph{m/z}, retention time and respective deviations.
 #'
 #' @param obj An \linkS4class{ntsData} object with one or more MS files.
-#' @param fileIndex The index of the file/s to extract the centroids or profile data.
+#' @param samples The index or names of the sample/s to extract the centroids or profile data.
 #' @param mz The target \emph{m/z}. Note that \code{m/z} is not the expected
 #' monoisotopic mass but the expected adduct (\emph{i.e.} \code{[M+H]+}).
 #' @param ppm The mass deviation to extract centroids in \code{ppm}.
@@ -32,20 +32,19 @@
 #' @importFrom grDevices colorRamp
 #' @importFrom plotly plot_ly layout add_annotations toRGB subplot hide_colorbar hide_legend
 #'
-#' @examples
-#'
-plotTargetCentroids <- function(obj = NULL, fileIndex = NULL,
+plotTargetCentroids <- function(obj = NULL,
+                                samples = NULL,
                                 mz = NULL, ppm = 20,
                                 rt = NULL, rtWindow = NULL,
                                 rtUnit = "min", title = NULL,
                                 plotTargetMark = TRUE) {
-
-  if (!is.null(fileIndex)) obj <- obj[fileIndex]
+  
+  if (!is.null(samples)) obj <- filterFileFaster(obj, samples)
 
   if (is.null(mz)) return(cat("Target mz should be defined!"))
 
   df <- extractEIC(obj = obj,
-                   fileIndex = NULL,
+                   samples = NULL,
                    mz = mz, ppm = ppm,
                    rt = rt, rtWindow = rtWindow,
                    rtUnit = rtUnit, msLevel = 1,
@@ -105,7 +104,7 @@ plotTargetCentroids <- function(obj = NULL, fileIndex = NULL,
                   type = "scatter", mode = "markers", color = temp$i, colors = colors,
                   marker = list(size = 8, line = list(color = "white", width = 0.5)), name = paste0(s, "p1"))
 
-    p1 <- p1 %>% layout(shapes = c(vline1, line))
+    if (plotTargetMark) p1 <- p1 %>% layout(shapes = c(vline1, line))
 
     p1 <- p1 %>% add_annotations(text = sNames[s], x = 0.05, y = 1, yref = "paper", xref = "paper",
                                  xanchor = "left", yanchor = "bottom", align = "center",
@@ -115,7 +114,7 @@ plotTargetCentroids <- function(obj = NULL, fileIndex = NULL,
                   type = "scatter", mode = "markers", color = temp$i, colors = colors,
                   marker = list(size = 8, line = list(color = "white", width = 0.5)), name = paste0(s, "p2"))
 
-    p2 <- p2 %>% layout(shapes = list(c(vline2, line), c(hline, line), rect))
+    if (plotTargetMark) p2 <- p2 %>% layout(shapes = list(c(vline2, line), c(hline, line), rect))
 
     plotList[[paste0("p1", s)]] <- p1
     plotList[[paste0("p2", s)]] <- p2

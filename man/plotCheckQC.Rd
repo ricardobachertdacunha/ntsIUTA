@@ -19,6 +19,3 @@ A plot of the QC check results.
 \description{
 plotCheckQC
 }
-\examples{
-
-}

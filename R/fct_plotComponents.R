@@ -50,12 +50,13 @@
 #' @importFrom checkmate assertSubset assertClass
 #' @importFrom stringr str_replace_all
 #' @importFrom plotly plot_ly add_bars toRGB layout
+#' @importFrom CAMERA getPeaklist
 #'
 plotComponents <- function(obj = NULL,
                            samples = NULL,
                            ID = NULL,
                            mz = NULL, ppm = 5,
-                           rt = NULL, rtWindow = 1, rtUnit = "sec",
+                           rt = NULL, rtWindow = 1, rtUnit = "min",
                            comp = NULL,
                            entireComponents = TRUE,
                            onlyAnnotated = FALSE,
@@ -76,8 +77,8 @@ plotComponents <- function(obj = NULL,
                    rt = rt, rtWindow = rtWindow, rtUnit = rtUnit,
                    comp = comp,
                    entireComponents = entireComponents,
-                   onlyAnnotated = entireComponents,
-                   onlyRelated = entireComponents)
+                   onlyAnnotated = onlyAnnotated,
+                   onlyRelated = onlyRelated)
 
 
   #plotting table
@@ -89,20 +90,9 @@ plotComponents <- function(obj = NULL,
 
   if (colorBy == "groups") {
 
-    intft <- ft
-    colnames(intft) <- str_replace_all(colnames(intft), "[[:punct:]]", "")
-    spNames <- str_replace_all(obj@samples$sample[obj@samples$group %in% unique(ft$group)], "[[:punct:]]", "")
-    names(spNames) <- obj@samples$group[obj@samples$group %in% unique(ft$group)]
-    intft <- intft[, colnames(intft) %in% spNames, drop = FALSE]
-    colnames(intft) <- names(spNames)
-    intft$group <- ft$group
-
-    ft$int <- apply(intft, MARGIN = 1, FUN = function(x) {
-      x <- mean(as.numeric(x[names(x) %in% x[names(x) %in% "group"]]), na.rm = TRUE)
-      ifelse(log, log(x), x)
-    })
-
-    intrange <- c(0, max(ft$int, na.rm = TRUE) * 2)
+    if (log) ft$intensity <- log(ft$intensity)
+    
+    intrange <- c(0, max(ft$intensity, na.rm = TRUE) * 2)
 
     rg <- unique(ft$group)
 
@@ -111,7 +101,8 @@ plotComponents <- function(obj = NULL,
     for (g in seq_len(length(rg))) {
 
       plot <- plot %>% add_bars(x = ft$mz[ft$group %in% rg[g]],
-                                y = ft$int[ft$group %in% rg[g]],
+                                y = ft$intensity[ft$group %in% rg[g]],
+                                #error_y = list(array = ft$intensity_sd, color = '#000000'),
                                 marker = list(color = colors[g]),  width = 0.05,
                                 text = ft$text[ft$group %in% rg[g]],
                                 textposition = "outside", textangle = -90, insidetextanchor = "middle",
@@ -120,13 +111,18 @@ plotComponents <- function(obj = NULL,
                                 name = rg[g])
     }
   } else {
-
-    colnames(ft) <- str_replace_all(colnames(ft), "[[:punct:]]", "")
-    spNames <- str_replace_all(obj@samples$sample[obj@samples$group %in% unique(ft$group)], "[[:punct:]]", "")
+    
+    spInt <- patRoon::as.data.frame(obj@patdata, average = FALSE)
+    spInt <- spInt[spInt$group %in% ft$ID, ]
+    
+    spNames <- obj@samples$sample[obj@samples$group %in% unique(ft$group)]
     names(spNames) <- obj@samples$group[obj@samples$group %in% unique(ft$group)]
 
-    intrange <- c(0, max(ft[, colnames(ft) %in% spNames], na.rm = TRUE) * 1.5)
+    intrange <- c(0, max(spInt[, colnames(spInt) %in% spNames], na.rm = TRUE) * 1.5)
 
+    #add spInt to ft
+    ft <- left_join(ft, spInt[,c("group", spNames)], by = c("ID" = "group"))
+    
     colors <- getColors(length(spNames))
 
     for (s in seq_len(length(spNames))) {

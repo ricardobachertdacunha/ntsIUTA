@@ -104,6 +104,7 @@ importRawData <- function(obj = NULL,
 
 
 
+
 #' @title centroidProfileData
 #' @description Centroiding of profile data with additional possibility
 #' for data smoothing before centroiding and \emph{m/z} refinement.
@@ -151,8 +152,6 @@ importRawData <- function(obj = NULL,
 #'
 #' @importClassesFrom MSnbase OnDiskMSnExp
 #' @importMethodsFrom MSnbase fileNames smooth pickPeaks writeMSData
-#'
-#' @examples
 #'
 centroidProfileData <- function(obj,
                                 halfwindow = 2,
@@ -209,11 +208,12 @@ centroidProfileData <- function(obj,
 
 
 
+
 #' @title extractEIC
 #' @description Extracts an ion chromatogram (EIC) from raw data of a specified \emph{m/z}.
 #'
 #' @param obj An \linkS4class{ntsData} object with one or more files.
-#' @param fileIndex The index of the file/s to extract the centroids or profile data.
+#' @param samples The index or names of the sample/s to extract the centroids or profile data.
 #' @param mz Target \emph{m/z} to the EIC.
 #' @param ppm The mass deviation to extract the data for the EIC in \code{ppm}.
 #' @param rt The retention time in minutes or seconds, depending on the defined \code{rtUnit}, see below.
@@ -238,9 +238,7 @@ centroidProfileData <- function(obj,
 #' @importFrom methods as
 #' @importFrom data.table rbindlist
 #'
-#' @examples
-#'
-extractEIC <- function(obj = NULL, fileIndex = NULL,
+extractEIC <- function(obj = NULL, samples = NULL,
                        mz = NULL, ppm = NULL,
                        rt = NULL, rtWindow = NULL,
                        rtUnit = "sec", msLevel = 1,
@@ -252,8 +250,15 @@ extractEIC <- function(obj = NULL, fileIndex = NULL,
     warning("No raw data found in the MSnExp slot of the ntsData object.
             Use the function importRawData to import data from raw files")
   }
-
-  if (!is.null(fileIndex)) obj <- filterFileFaster(obj, fileIndex)
+  
+  if (is.character(samples)) {
+    if (FALSE %in% (samples %in% obj@samples$sample)) {
+      warning("Given sample names not found in the ntsData object!")
+    }
+    samples <- which(obj@samples$sample %in% samples)
+  }
+  
+  if (!is.null(samples)) obj@MSnExp <- filterFile(obj@MSnExp, file = samples)
 
   mzr <- NULL
 

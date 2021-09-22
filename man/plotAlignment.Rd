@@ -15,6 +15,3 @@ A plot with the retention time alignment differences for each samples.
 \description{
 Plots the results from the retention time alignment across samples.
 }
-\examples{
-
-}

@@ -14,8 +14,6 @@
 #' @importMethodsFrom MSnbase rtime
 #' @importFrom plotly toRGB plot_ly add_trace layout
 #'
-#' @examples
-#'
 plotAlignment <- function(x = features) {
 
   if (x@algorithm == "xcms3") {

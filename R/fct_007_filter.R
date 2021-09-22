@@ -10,9 +10,6 @@
 #'
 #' @importMethodsFrom patRoon as.data.frame 
 #' 
-#' @examples
-#'
-
 filterMinInt <- function(obj, IntThreshold = 500) {
 
   feats <- patRoon::as.data.frame(obj@features)

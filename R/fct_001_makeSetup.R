@@ -172,8 +172,6 @@ setupProject <- function(path = utils::choose.dir(getwd(), "Select or create a p
 #'
 #' @export
 #'
-#' @examples
-#'
 addFiles <- function(newFiles = utils::choose.files(),
                      obj = ntsData,
                      copyFiles = FALSE,
@@ -280,8 +278,6 @@ addFiles <- function(newFiles = utils::choose.files(),
 #'
 #' @export
 #'
-#' @examples
-#'
 addMetadata <- function(sampleInfo, metadata) {
   if (length(sampleInfo) == 0 & length(sampleInfo) != length(metadata)) {
     warning("Please make sure the metadata has the same dimensions as the sample data")
@@ -355,8 +351,6 @@ removeDuplicateNames <- function(newJoint) {
 #' @export
 #'
 #' @importFrom patRoon convertMSFiles
-#'
-#' @examples
 #'
 mzMLconverter <- function(path = getwd(),
                           files = NULL,

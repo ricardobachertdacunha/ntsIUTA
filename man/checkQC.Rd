@@ -6,17 +6,18 @@
 \usage{
 checkQC(
   obj = NULL,
-  targets = utils::choose.files(base::getwd(), "Select the QC screening list"),
+  targets = NULL,
   algorithmPeakPicking = NULL,
   algorithmMakeFeatures = NULL,
+  algorithmAnnotation = NULL,
   paramPeakPicking = NULL,
-  rtAlignment = TRUE,
-  paramAlignment = NULL,
   paramGrouping = NULL,
   recursive = TRUE,
   paramFill = NULL,
+  paramAnnotation = NULL,
   rtWindow = 30,
   ppm = 15,
+  MS2param = MS2param(),
   exportResults = FALSE,
   save = FALSE
 )
@@ -24,15 +25,16 @@ checkQC(
 \arguments{
 \item{obj}{An \linkS4class{ntsData} object, containing QC samples.}
 
-\item{targets}{A \code{data.frame} or a location for a csv
-with details for each standard in the QC samples.
-See details for more information about the required data.frame structure.}
+\item{targets}{The \linkS4class{suspectList} object with the target compounds
+for quality control.}
 
 \item{algorithmPeakPicking}{The algorithm to use for peak picking.
 One of "xcms3" (the default), "xcms", "openms" or "envipick".}
 
 \item{algorithmMakeFeatures}{The algorithm to use for peak alignment and grouping.
 One of "xcms3" (the default), "xcms" or "openms".}
+
+\item{algorithmAnnotation}{The algorithm to use for annotation.}
 
 \item{paramPeakPicking}{List of arguments for the specified algorithm.
 See \code{\link[patRoon]{findFeatures}} for more information.
@@ -41,17 +43,7 @@ with the method parameters for the peak finding.
 See \href{https://rdrr.io/bioc/xcms/man/chromatographic-peak-detection.html}{\code{xcms::findChromPeaks}}
 for more information.}
 
-\item{rtAlignment}{Logical, set to \code{TRUE} (The default) for performing peak alignment before grouping.}
-
-\item{paramAlignment}{Applicable for algorithm "xcms3" only,
-the parameters for the chosen retention time alignment method.
-See documentation of \code{\link[xcms]{adjustRtime}} for more information.
-For alignment with the method \code{PeakGroups}, a list of length two
-should be given, where the first element
-is the pre-grouping parameters using \code{\link[xcms]{groupChromPeaks}}
-and the second element the actual alignment parameters.}
-
-\item{paramGrouping}{he parameters for the chosen grouping method.
+\item{paramGrouping}{The parameters for the chosen grouping method.
 See documentation of \code{\link[xcms]{groupChromPeaks}} or
 \code{\link[patRoon]{groupFeatures}} for more information.}
 
@@ -63,11 +55,16 @@ or \code{ChromPeakAreaParam} containing the parameters
 to apply the recursive integration.
 #' See \code{?\link[xcms]{fillChromPeaks}} for more information.}
 
+\item{paramAnnotation}{The parameters to perform annotation of isotopologues
+and adducts.}
+
 \item{rtWindow}{The retention time deviation, in seconds,
 to screen for the QC target standards. The default is 30 seconds.}
 
 \item{ppm}{The mass deviation, in ppm, to screen for the QC target standards.
 The default is 15 ppm.}
+
+\item{MS2param}{The parameters to extract MS2 data.}
 
 \item{exportResults}{Logical, set to \code{TRUE} for exporting the results to the project folder.}
 
@@ -87,7 +84,4 @@ Function to check QC samples in an \linkS4class{ntsData} object.
 \details{
 The \code{screeningList} template can be obtained as csv via \code{ntsIUTA::getScreeningListTemplate()}.
 Add other details of the template.
-}
-\examples{
-
 }
