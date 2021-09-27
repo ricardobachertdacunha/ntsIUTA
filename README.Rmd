@@ -19,7 +19,7 @@ knitr::opts_chunk$set(
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
 <!-- badges: end -->
 
-The objective of `ntsIUTA` is to facilitate the development and routine use of application driven workflows for non-target screening, using open source tools. The packages `r Githubpkg("rickhelmus/patRoon")`, `r Biocpkg("MSnbase")` and `r Biocpkg("xcms")` play a fundamental role to `ntsIUTA`. Therefore, installation and experience with these packages is recommended.
+The objective of `ntsIUTA` is to facilitate the development and routine use of application driven workflows for non-target screening, using open source tools. The packages [patRoon](https://github.com/rickhelmus/patRoon), [MSnbase](https://www.bioconductor.org/packages/release/bioc/html/MSnbase.html) and [xcms](https://bioconductor.org/packages/release/bioc/html/xcms.html) play a fundamental role to `ntsIUTA`. Therefore, installation and experience with these packages is recommended.
 
 
 ## Installation
@@ -34,7 +34,7 @@ Confirm that [Rtools](https://cran.r-project.org/bin/windows/Rtools/) is install
 writeLines('PATH="${RTOOLS40_HOME}\\usr\\bin;${PATH}"', con = "~/.Renviron")
 ```
 
-`ntsIUTA` largely depends on `r Githubpkg("rickhelmus/patRoon")` package and both have a large number of common dependencies. Therefore, installation of `r Githubpkg("rickhelmus/patRoon")` is recommended before installing `ntsIUTA`. An installation guide for the `r Githubpkg("rickhelmus/patRoon")` package can be found [here](https://rickhelmus.github.io/patRoon/handbook_bd/installation.html). `r Githubpkg("rickhelmus/patRoon")` also provides an [automatic installation script](https://rickhelmus.github.io/patRoon/handbook_bd/automatic-installation-windows-only.html) for Windows users. Alternatively, a  [manual installation guide](https://rickhelmus.github.io/patRoon/handbook_bd/manual-installation.html) is also provided. The most basic steps of the `r Githubpkg("rickhelmus/patRoon")` installation are as follows.
+`ntsIUTA` largely depends on [patRoon](https://github.com/rickhelmus/patRoon) package and both have a large number of common dependencies. Therefore, installation of [patRoon](https://github.com/rickhelmus/patRoon) is recommended before installing `ntsIUTA`. An installation guide for the [patRoon](https://github.com/rickhelmus/patRoon) package can be found [here](https://rickhelmus.github.io/patRoon/handbook_bd/installation.html). [patRoon](https://github.com/rickhelmus/patRoon) also provides an [automatic installation script](https://rickhelmus.github.io/patRoon/handbook_bd/automatic-installation-windows-only.html) for Windows users. Alternatively, a  [manual installation guide](https://rickhelmus.github.io/patRoon/handbook_bd/manual-installation.html) is also provided. The most basic steps of the [patRoon](https://github.com/rickhelmus/patRoon) installation are as follows.
 
 ```{r install_external, eval=FALSE}
 install.packages("remotes")
@@ -46,7 +46,7 @@ BiocManager::install(c("CAMERA", "mzR", "xcms", "Biobase", "MSnbase"))
 
 ```
 
-The code above installs a basic configuration of `r Githubpkg("rickhelmus/patRoon")`. External software, such as [proteowizard](http://proteowizard.sourceforge.net/download.html), [MetFrag](https://ipb-halle.github.io/MetFrag/projects/metfragcl/), needs to be installed and referenced in the `.Rprofile` manually as suggested [here](https://rickhelmus.github.io/patRoon/handbook_bd/installation.html). Alternatively, the automatic installation of `r Githubpkg("rickhelmus/patRoon")` can be used which creates the `.Rprofile-patRoon.R` with all required locations of the external software used in `r Githubpkg("rickhelmus/patRoon")` and consequently `ntsIUTA`.
+The code above installs a basic configuration of [patRoon](https://github.com/rickhelmus/patRoon). External software, such as [proteowizard](http://proteowizard.sourceforge.net/download.html), [MetFrag](https://ipb-halle.github.io/MetFrag/projects/metfragcl/), needs to be installed and referenced in the `.Rprofile` manually as suggested [here](https://rickhelmus.github.io/patRoon/handbook_bd/installation.html). Alternatively, the automatic installation of [patRoon](https://github.com/rickhelmus/patRoon) can be used which creates the `.Rprofile-patRoon.R` with all required locations of the external software used in [patRoon](https://github.com/rickhelmus/patRoon) and consequently `ntsIUTA`.
 
 ## Installation of the ntsIUTA package
 
@@ -57,12 +57,12 @@ remotes::install_github("ricardobachertdacunha/ntsIUTA")
 ```
 
 
-## Information
+<!-- ## Information -->
 
-Loading `ntsIUTA`:
+<!-- Loading `ntsIUTA`: -->
 
 ```{r example}
-library(ntsIUTA)
+
 ```
 
 <!-- See vignettes: -->
