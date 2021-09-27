@@ -7,17 +7,8 @@
 checkQC(
   obj = NULL,
   targets = NULL,
-  algorithmPeakPicking = NULL,
-  algorithmMakeFeatures = NULL,
-  algorithmAnnotation = NULL,
-  paramPeakPicking = NULL,
-  paramGrouping = NULL,
-  recursive = TRUE,
-  paramFill = NULL,
-  paramAnnotation = NULL,
-  rtWindow = 30,
-  ppm = 15,
-  MS2param = MS2param(),
+  rtWindow = NULL,
+  ppm = NULL,
   exportResults = FALSE,
   save = FALSE
 )
@@ -28,43 +19,11 @@ checkQC(
 \item{targets}{The \linkS4class{suspectList} object with the target compounds
 for quality control.}
 
-\item{algorithmPeakPicking}{The algorithm to use for peak picking.
-One of "xcms3" (the default), "xcms", "openms" or "envipick".}
-
-\item{algorithmMakeFeatures}{The algorithm to use for peak alignment and grouping.
-One of "xcms3" (the default), "xcms" or "openms".}
-
-\item{algorithmAnnotation}{The algorithm to use for annotation.}
-
-\item{paramPeakPicking}{List of arguments for the specified algorithm.
-See \code{\link[patRoon]{findFeatures}} for more information.
-For instance, for "xcms3" as \code{algorithm}, \code{param} should be given
-with the method parameters for the peak finding.
-See \href{https://rdrr.io/bioc/xcms/man/chromatographic-peak-detection.html}{\code{xcms::findChromPeaks}}
-for more information.}
-
-\item{paramGrouping}{The parameters for the chosen grouping method.
-See documentation of \code{\link[xcms]{groupChromPeaks}} or
-\code{\link[patRoon]{groupFeatures}} for more information.}
-
-\item{recursive}{Logical, set to \code{TRUE} for applying recursive
-integration for samples with missing peaks.}
-
-\item{paramFill}{An object of class \code{FillChromPeaksParam}
-or \code{ChromPeakAreaParam} containing the parameters
-to apply the recursive integration.
-#' See \code{?\link[xcms]{fillChromPeaks}} for more information.}
-
-\item{paramAnnotation}{The parameters to perform annotation of isotopologues
-and adducts.}
-
 \item{rtWindow}{The retention time deviation, in seconds,
 to screen for the QC target standards. The default is 30 seconds.}
 
 \item{ppm}{The mass deviation, in ppm, to screen for the QC target standards.
 The default is 15 ppm.}
-
-\item{MS2param}{The parameters to extract MS2 data.}
 
 \item{exportResults}{Logical, set to \code{TRUE} for exporting the results to the project folder.}
 

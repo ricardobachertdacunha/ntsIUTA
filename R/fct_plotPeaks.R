@@ -201,6 +201,8 @@ plotPeaks <- function(obj, samples = NULL,
   
   if (!is.null(samples)) obj <- filterFileFaster(obj, samples)
   
+  rtr <- NULL
+  
   if (!is.null(ID)) {
     pki <- obj@peaks[obj@peaks$ID %in% ID, ]
   } else {

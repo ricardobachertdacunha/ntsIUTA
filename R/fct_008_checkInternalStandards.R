@@ -5,10 +5,10 @@
 #' within the \linkS4class{ntsData} object.
 #'
 #' @param obj An \linkS4class{ntsData} object.
-#' @param targets The \linkS4class{suspectList} object with the information for
-#' added internal standards.
+#' @param targets The \linkS4class{suspectList} object with the information of
+#' internal standards to be found.
 #' @param ppm The mass deviation, in ppm, to screen for the internal standards.
-#' The default is 15 ppm.
+#' The default is 10 ppm.
 #' @param rtWindow The retention time deviation, in seconds,
 #' to screen for the internal standards. The default is 30 seconds.
 #' @param MS2param The parameters to extract MS2 information of each internal standard.
@@ -24,10 +24,10 @@
 #' to be used as file name, avoiding overwriting.
 #'
 #' @return An \linkS4class{ntsData} object with results from evaluation of
-#' internal standards in each sample replicate group added to the control slot.
-#' 
+#' internal standards in each sample replicate group added to the IS slot.
+#'
 #' @export
-#' 
+#'
 #' @importFrom checkmate assertClass checkChoice
 #' @importFrom utils read.csv write.csv
 #' @importClassesFrom patRoon featureGroupsScreening
@@ -41,26 +41,29 @@
 #'
 checkIS <- function(obj = NULL,
                     targets = NULL,
-                    ppm = 10,
-                    rtWindow = 30,
-                    MS2param = MS2param(),
+                    ppm = NULL,
+                    rtWindow = NULL,
+                    MS2param = NULL,
                     recoveryFrom = NULL,
                     exportResults = FALSE,
                     save = FALSE) {
-  
+
   assertClass(obj, "ntsData")
-  
+
   assertClass(targets, "suspectList")
-  
-  if (targets@rtUnit != "sec") {
-    warning("The rt should be in seconds!")
-    return(obj)
-  }
-  
+
   if (targets@length == 0) {
     warning("The targets list is empty!")
     return(obj)
   }
+
+  if (is.null(ppm)) ppm <- obj@IS@ppm
+  
+  if (is.null(rtWindow)) rtWindow <- obj@IS@rtWindow
+  
+  if (is.null(MS2param)) MS2param <- obj@parameters@MS2
+  
+  if (is.null(recoveryFrom)) recoveryFrom <- obj@IS@recoveryFrom
   
   if (!("adduct" %in% colnames(targets@data))) {
     adduct <- ifelse(obj@polarity == "positive", "[M+H]+",
@@ -69,11 +72,11 @@ checkIS <- function(obj = NULL,
   } else {
     adduct <- NULL
   }
-  
+
   screen <- screenSuspects(obj@patdata, select(targets@data, -mz),
                            rtWindow = rtWindow, mzWindow = 0.02,
                            adduct = adduct, onlyHits = TRUE)
-  
+
   df <- arrange(patRoon::as.data.frame(screen, average = FALSE), group)
   df <- rename(df, name = susp_name)
   df <- left_join(df, select(targets@data, -mz, -rt), by = "name")
@@ -81,113 +84,125 @@ checkIS <- function(obj = NULL,
   df$d_ppm <- (abs(df$d_mz) / df$mz) * 1E6
   df <- rename(df, rt = ret, ID = group)
   df <- select(df, name, formula, d_ppm, d_rt, ID, mz, rt, everything(), -d_mz)
-  
+
+  ## TODO Idea to add infor from rt and mz variance from peaks in the set
+
+  # pksrt <- obj@peaks[obj@peaks$feature %in% df$ID, ]
+  # pksrt <- pksrt %>% select(feature, rt) %>% group_by(feature) %>% summarize(sd(rt))
+  # colnames(pksrt) <- c("ID", "rt_sd")
+  # df <- left_join(df, pksrt, by = c("ID"))
+  # 
+  # pksmz <- obj@peaks[obj@peaks$feature %in% df$ID, ]
+  # pksmz <- pksmz %>% select(feature, mz) %>% group_by(feature) %>% summarize(sd(rt))
+  # colnames(pksrt) <- c("ID", "rt_sd")
+  # df <- left_join(df, pksrt, by = c("ID")
+
   df <- dplyr::filter(df, d_ppm <= ppm)
   df$d_ppm <- round(df$d_ppm, digits = 1)
   df$d_rt <- round(df$d_rt, digits = 1)
-  
+
   screen <- screen[, df$ID]
-  
+
   #evaluate per replicate group
   ls <- list()
-  
+
   rg <- unique(sampleGroups(obj))
-  
+
   for (g in seq_len(length(rg))) {
-    
+
     sp <- samples(obj)[sampleGroups(obj) %in% rg[g]]
-    
+
     inv_sp <- samples(obj)[!(sampleGroups(obj) %in% rg[g])]
-    
+
     temp <- df[, !(colnames(df) %in% inv_sp)]
-    
+
     temp$av_into <- rowMeans(select(temp, all_of(sp)))
-    
+
     temp <- temp %>% mutate(sd_into = apply(select(., all_of(sp)), 1, sd))
-    
+
     temp$sd_into <- round(temp$sd_into, digits = 1)
-    
+
     temp <- mutate(temp, sd_intop = round(sd_into / av_into * 100, digits = 1))
-    
-    if (is.null(recoveryFrom)) {
-      
-      temp$recovery <- temp$av_into/temp$intControl
-      temp$recovery_sd <- (temp$sd_into/temp$av_into) * temp$recovery
-      
+
+    if (is.null(recoveryFrom) | is.na(recoveryFrom)) {
+
+      temp$recovery <- temp$av_into / temp$intControl
+      temp$recovery_sd <- (temp$sd_into / temp$av_into) * temp$recovery
+
     } else {
-      
+
       intControl <- df[, colnames(df) %in% samples(obj)[which(sampleGroups(obj) == recoveryFrom)]]
       intControl_av <- apply(intControl, MARGIN = 1, mean)
       intControl_sd <- apply(intControl, MARGIN = 1, sd)
-      
-      temp$recovery <- temp$av_into/intControl_av
-      temp$recovery_sd <- ((temp$sd_into/temp$av_into) + (intControl_sd/intControl_av)) * temp$recovery
-      
+
+      temp$recovery <- temp$av_into / intControl_av
+      temp$recovery_sd <- ((temp$sd_into / temp$av_into) + (intControl_sd / intControl_av)) * temp$recovery
+
     }
-    
+
     temp$isoN <- 0
-    
+
     annot <- obj@annotation$comp[(obj@annotation$comp$ID %in% df$ID) & obj@annotation$comp$group %in% rg[g], ]
-    
+
     IDs <- temp$ID
-    
+
     for (f in seq_len(length(IDs))) {
       tempf <- annot$isogroup[annot$ID %in% IDs[f]]
       tempf <- obj@annotation$comp[obj@annotation$comp$isogroup %in% tempf, ]
       temp$isoN[f] <- length(unique(tempf$isoclass)) - 1
     }
-    
+
     MS2 <- extractMS2(screen[which(analyses(screen) == sp), ], param = MS2param)
-    
+
     temp <- mutate(temp,
                    hasFragments_Exp = FALSE,
                    fragments_mz_Exp = NA,
                    fragments_int_Exp = NA,
                    fragments_pre_Exp = NA)
-    
+
     temp$nfrag <- 0
-    
+
     temp$pfrag <- 0
-    
+
     temp$intoscore <- 0
-    
+
     for (i in seq_len(nrow(temp))) {
-      
+
       xgroup <- temp$ID[i]
-      
+
       xname <- temp$name[i]
-      
+
       if (!is.na(xgroup)) {
-        
+
         xMS2 <- MS2[[xgroup]]$MSMS
-        
+
         if (!is.null(xMS2)) {
-          
+
           temp$hasFragments_Exp[i] <- TRUE
           temp$fragments_mz_Exp[i] <- paste(xMS2$mz, collapse = ";")
           temp$fragments_int_Exp <- paste(xMS2$intensity, collapse = ";")
           temp$fragments_pre_Exp <- paste(xMS2$precursor, collapse = ";")
-          
+
           if (temp$hasFragments[i]) {
-            
+
             dbMS2 <- data.frame(mz = as.numeric(unlist(strsplit(temp$fragments_mz[i], split = ";"))),
                                 intensity = as.numeric(unlist(strsplit(temp$fragments_int[i], split = ";"))),
                                 precursor = as.logical(unlist(strsplit(temp$fragments_pre[i], split = ";"))))
-            
+
             xMS2 <- top_n(xMS2, 10, intensity)
             xMS2 <- mutate(xMS2, into_ind = intensity / max(xMS2$intensity))
-            
+
             dbMS2 <- top_n(dbMS2, 10, intensity)
             dbMS2 <- mutate(dbMS2, into_ind = intensity / max(dbMS2$intensity))
-            
+
             combi <- fuzzyjoin::difference_inner_join(xMS2, dbMS2,
                                                       by = c("mz"),
                                                       max_dist = 0.005,
                                                       distance_col = "diff")
-            
+
             temp$nfrag[i] <- nrow(combi)
             temp$pfrag[i] <- nrow(combi) / nrow(dbMS2)
-            
+
             if (temp$nfrag[i] == 1) {
               temp$intoscore[i] <- 1
             } else {
@@ -200,38 +215,44 @@ checkIS <- function(obj = NULL,
         }
       }
     }
-    
+
     temp$pfrag <- round(temp$pfrag, digits = 2)
-    
+
     temp$intoscore <- round(as.numeric(temp$intoscore), digits = 4)
-    
-    ls[[rg[g]]] <- temp 
-    
+
+    ls[[rg[g]]] <- temp
+
   }
+
+  obj@IS@targets <- targets
   
-  obj@control$standards <- targets
+  obj@IS@ppm <- ppm
   
-  obj@control$results <- ls
+  obj@IS@rtWindow <- rtWindow
   
+  obj@IS@recoveryFrom <- recoveryFrom
+
+  obj@IS@results <- ls
+
   if (exportResults) {
-    
+
     results <- paste0(obj@path, "/results")
     if (!dir.exists(results)) dir.create(results)
-    
+
     ls2 <- ls
     for (i in seq_len(length(ls))) ls2[[i]] <- ls2[[i]][, !colnames(ls2[[i]]) %in% samples(obj)] 
     ls2 <- rbindlist(ls2, idcol = "group")
-    
+
     write.csv(ls2, file = paste0(results, "/IS01_df.csv"))
-    
+
     plotis <- plotCheckIS(obj, rtWindow = rtWindow, ppm = ppm)
-    
+
     widths <- c(8,5, rep(5, length(ls)))
-    
+
     ggsave(paste0(results, "/IS02_DeviationsAndRecovery.tiff"),
            plot = plotqc, device = "tiff", path = NULL, scale = 1,
            width = sum(widths), height = 10, units = "cm", dpi = 300, limitsize = TRUE)
-    
+
     plotfp <- plotFeaturePeaks(obj = obj,
                                ID = df$ID,
                                mz = NULL,
@@ -241,14 +262,16 @@ checkIS <- function(obj = NULL,
                                rtWindow = NULL,
                                names = df$name,
                                interactive = TRUE)
-    
+
     saveWidget(partial_bundle(plotfp), file = paste0(results, "/IS03_featurePeaks.html"))
-    
+
   }
-  
+
   return(obj)
-  
+
 }
+
+
 
 
 #' @title plotCheckIS
@@ -264,24 +287,28 @@ checkIS <- function(obj = NULL,
 #' @import ggplot2
 #' @importFrom gridExtra grid.arrange
 #'
-plotCheckIS <- function(obj, rtWindow = 30, ppm = 15) {
-  
-  if (length(obj@control$results) < 1) {
+plotCheckIS <- function(obj, rtWindow = NULL, ppm = NULL) {
+
+  if (length(obj@IS@results) < 1) {
     warning("No IS results found in the ntsdata object.")
     return(obj)
   }
+
+  if (is.null(ppm)) ppm <- obj@IS@ppm
   
-  ls <- obj@control$results
+  if (is.null(rtWindow)) rtWindow <- obj@IS@rtWindow
   
+  ls <- obj@IS@results
+
   maindf <- ls[[1]][, 1:7]
-  
+
   if (nrow(maindf) == 0) {
     warning("IS results empty.")
     return(obj)
-  } 
-  
+  }
+
   grobs <- list()
-  
+
   grobs[["rt"]] <- ggplot(maindf) +
     theme_bw() +
     geom_rect(aes(ymin = -10, ymax = 10, xmin = -Inf, xmax = Inf), fill = "ForestGreen", alpha = 0.05) +
@@ -299,7 +326,7 @@ plotCheckIS <- function(obj, rtWindow = 30, ppm = 15) {
     ylab("RT diff (sec)") +
     ylim(-rtWindow, rtWindow) +
     coord_flip()
-  
+
   grobs[["ppm"]] <- ggplot(maindf) +
     theme_bw() +
     geom_rect(aes(ymin = -Inf, ymax = 5, xmin = -Inf, xmax = Inf), fill = "ForestGreen", alpha = 0.05) +
@@ -315,11 +342,11 @@ plotCheckIS <- function(obj, rtWindow = 30, ppm = 15) {
     ylab("m/z diff (ppm)") +
     ylim(0, ppm) +
     coord_flip()
-  
+
   for (i in seq_len(length(ls))) {
-    
+
     max <- max((ls[[i]]$recovery * 100 + ls[[i]]$recovery_sd * 100) * 1.05)
-    
+
     grobs[[names(ls)[i]]] <- ggplot(data = ls[[i]]) +
       theme_bw() +
       geom_rect(aes(ymin = 50, ymax = 150, xmin = -Inf, xmax = Inf), fill = "ForestGreen", alpha = 0.05) +
@@ -343,9 +370,9 @@ plotCheckIS <- function(obj, rtWindow = 30, ppm = 15) {
       scale_y_continuous(limits = c(0, ifelse(max < 200, 200, max))) +
       coord_flip()
   }
-  
+
   return(grid.arrange(grobs = grobs,
                       ncol = length(grobs),
                       widths = c(8, rep(5, length(grobs) - 1))))
-  
+
 }

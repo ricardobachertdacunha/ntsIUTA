@@ -8,30 +8,20 @@ makeFeatures(
   obj = NULL,
   algorithm = NULL,
   paramGrouping = NULL,
-  recursive = TRUE,
   paramFill = NULL,
   save = TRUE
 )
 }
 \arguments{
-\item{obj}{A \linkS4class{ntsData} object containing peaks
-for one or more samples.}
+\item{obj}{A \linkS4class{ntsData} object containing peaks.}
 
-\item{algorithm}{The algorithm to use for peak alignment and grouping.
-One of "xcms3" (the default) or "openms".
-When "openms" the \pkg{patRoon} package is used.}
+\item{algorithm}{The algorithm to use for peak alignment and grouping.}
 
 \item{paramGrouping}{The parameters for the chosen grouping method.
-See documentation of \code{\link[xcms]{groupChromPeaks}} or
-\code{\link[patRoon]{groupFeatures}} for more information.}
+See \code{\link[patRoon]{groupFeatures}} for more information.}
 
-\item{recursive}{Logical, set to \code{TRUE} for applying recursive
-integration for samples with missing peaks.}
-
-\item{paramFill}{An object of class \code{FillChromPeaksParam}
-or \code{ChromPeakAreaParam} containing the parameters
-to apply the recursive integration.
-#' See \code{?\link[xcms]{fillChromPeaks}} for more information.}
+\item{paramFill}{A list of parameters for recursive integration of missing peaks.
+See \code{\link[xcms]{fillChromPeaks}} for more information.}
 
 \item{save}{Logical, set to \code{TRUE} to save updated
 \linkS4class{ntsData} object in the \strong{rdata} folder.
@@ -51,10 +41,11 @@ in the slot \code{features}.
 \insertRef{xcms3}{ntsIUTA}
 }
 \description{
-The \code{makeFeatures} consists of alignment and grouping of
-chromatographic peaks across samples. The function uses algorithms
-from the package \pkg{xcms} or from \pkg{patRoon} based on "openms".
-Additionally, a recursive integration for samples with missing peaks
-can be applied using the function \code{\link[xcms]{fillChromPeaks}}
-from the \pkg{xcms} package.
+Grouping and alignment of peaks across samples.
+The peak grouping uses the \pkg{patRoon} package and
+the following algorithms are possible: "xcms3", "xcms", "openms".
+See ?\pkg{patRoon} for further information.
+When fill missing parameters (paramFill) are defined
+a recursive integration for samples with missing peaks
+can be applied through the \pkg{xcms} package.
 }

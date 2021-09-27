@@ -4,7 +4,7 @@
 \alias{plotCheckQC}
 \title{plotCheckQC}
 \usage{
-plotCheckQC(obj, rtWindow = 30, ppm = 15)
+plotCheckQC(obj, rtWindow = NULL, ppm = NULL)
 }
 \arguments{
 \item{obj}{obj An \linkS4class{ntsData} object, containing QC samples.}

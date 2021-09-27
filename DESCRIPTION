@@ -20,12 +20,10 @@ Imports:
     shinyWidgets,
     utils,
     tools,
-    patRoon,
     Rdpack,
     dplyr,
     data.table,
     magrittr,
-    xcms,
     BiocParallel,
     parallel,
     CAMERA,
@@ -64,4 +62,6 @@ Suggests:
 VignetteBuilder: knitr
 Depends: 
     R (>= 4.0),
-    ProtGenerics
+    ProtGenerics,
+    xcms,
+    patRoon

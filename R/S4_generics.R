@@ -61,6 +61,42 @@ setGeneric("QC", function(object) standardGeneric("QC"))
 #'
 setGeneric("QC<-", function(object, value) standardGeneric("QC<-"))
 
+#' peakPickingParameters
+#'
+#' @param object An object to add or get peak picking parameters.
+#' @param ... Other method dependent parameters.
+#'
+#' @return A list of parameters or the object with added parameters.
+#'
+setGeneric("peakPickingParameters", function(object, algorithm, param) standardGeneric("peakPickingParameters"))
+
+#' peakGroupingParameters
+#'
+#' @param object An object to add or get peak grouping parameters.
+#' @param ... Other method dependent parameters.
+#'
+#' @return A list of parameters or the object with added parameters.
+#'
+setGeneric("peakGroupingParameters", function(object, algorithm, param) standardGeneric("peakGroupingParameters"))
+
+#' fillMissingParameters
+#'
+#' @param object An object to add or get fill missing parameters.
+#' @param ... Other method dependent parameters.
+#'
+#' @return A list of parameters or the object with added parameters.
+#'
+setGeneric("fillMissingParameters", function(object, algorithm, param) standardGeneric("fillMissingParameters"))
+
+#' annotationParameters
+#'
+#' @param object An object to add or get annotationParameters parameters.
+#' @param ... Other method dependent parameters.
+#'
+#' @return A list of parameters or the object with added parameters.
+#'
+setGeneric("annotationParameters", function(object, algorithm, param) standardGeneric("annotationParameters"))
+
 #' peaks
 #'
 #' @param object An object to extract chromatographic peaks.

@@ -15,10 +15,11 @@ annotateFeatures(
 \arguments{
 \item{obj}{An \linkS4class{ntsData} object with features.}
 
-\item{algorithm}{The algorithm for finding isotopes. Possible values are
-"alteredcamera", "camera" or "ramclustr".}
+\item{algorithm}{The algorithm for finding isotopes.
+Currently, "alteredcamera" in the only possible value.}
 
-\item{param}{The param used for annotation of isotopes and adducts.}
+\item{param}{The param used for annotation of isotopes and adducts.
+See ?AlteredCameraParam for more information.}
 
 \item{excludeBlanks}{Logical, set to \code{TRUE} for excluding
 blank replicate groups from annotation.}
@@ -35,6 +36,6 @@ annotated features.
 }
 \description{
 Group features into components according to co-elution and
-EIC similarities and annotate isotopes and adducts in each component
+EIC similarities. Then, it annotates isotopes and adducts in each component
 per sample replicate group.
 }

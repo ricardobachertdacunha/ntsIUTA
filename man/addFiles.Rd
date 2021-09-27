@@ -15,31 +15,30 @@ addFiles(
 \item{newFiles}{A list of paths for selected mzML or mzXML files.
 The default is a UI to choose the files.}
 
-\item{obj}{A \linkS4class{ntsData} object to add the selected files.}
+\item{obj}{An \linkS4class{ntsData} object to add the selected files.}
 
 \item{copyFiles}{Logical. Set to \code{TRUE} to copied the selected files
-to the \code{path} given in the \linkS4class{ntsData} object.
+to the \code{path} of the \linkS4class{ntsData} object.
 \code{FALSE} will add the original location of the files
-to the \code{samples} table. Note that if duplicate names exist,
-the copied files are renamed or when \code{copyFiles} is \code{FALSE},
-the original files will be renamed.}
+to the \code{samples} table.
+Note that if duplicate names exist, the process is aborted.}
 
 \item{groups}{Optional vector with the same length as \code{newFiles}
 with the identifier/name of each sample replicate group.
 The default is \code{NULL} which attempts  to group the samples using
 the name of the MS files. The groups can always be edited using
-the class method \code{setGroups}.}
+the class method \code{sampleGroups}.}
 }
 \value{
 Returns the \linkS4class{ntsData} object including the added files
 in the \code{samples} slot.
 }
 \description{
-Adds mzML or mzXML files to a \linkS4class{ntsData} object.
+Adds mzML or mzXML files to an \linkS4class{ntsData} object.
 }
 \note{
 When the \linkS4class{ntsData} has files, new files are added
 below in the \code{samples}. If processed data is already present,
 the new files will invalidate the structure.
-Therefore, data processing should be rerun.
+Therefore, data should be processed again.
 }

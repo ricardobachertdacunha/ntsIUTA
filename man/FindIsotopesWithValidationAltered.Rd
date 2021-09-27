@@ -10,7 +10,6 @@ FindIsotopesWithValidationAltered(
   sampleidxs = sampleidxs,
   maxcharge = 3,
   ppm = 40,
-  mzabs = 0.005,
   noise = NULL,
   intval = "maxo",
   validateIsotopePatterns = TRUE
@@ -26,8 +25,6 @@ FindIsotopesWithValidationAltered(
 \item{maxcharge}{Maximum number of possible charges.}
 
 \item{ppm}{The mass deviation, in ppm, allowed for searching isotopes within each component.}
-
-\item{mzabs}{The mass deviation, in \emph{m/z}, allowed for searching isotopes within each component.}
 
 \item{noise}{The overall noise level. When given the sn is calculated based on the given noise level.}
 

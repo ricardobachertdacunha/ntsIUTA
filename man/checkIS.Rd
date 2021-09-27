@@ -7,9 +7,9 @@
 checkIS(
   obj = NULL,
   targets = NULL,
-  ppm = 10,
-  rtWindow = 30,
-  MS2param = MS2param(),
+  ppm = NULL,
+  rtWindow = NULL,
+  MS2param = NULL,
   recoveryFrom = NULL,
   exportResults = FALSE,
   save = FALSE
@@ -18,11 +18,11 @@ checkIS(
 \arguments{
 \item{obj}{An \linkS4class{ntsData} object.}
 
-\item{targets}{The \linkS4class{suspectList} object with the information for
-added internal standards.}
+\item{targets}{The \linkS4class{suspectList} object with the information of
+internal standards to be found.}
 
 \item{ppm}{The mass deviation, in ppm, to screen for the internal standards.
-The default is 15 ppm.}
+The default is 10 ppm.}
 
 \item{rtWindow}{The retention time deviation, in seconds,
 to screen for the internal standards. The default is 30 seconds.}
@@ -44,7 +44,7 @@ to be used as file name, avoiding overwriting.}
 }
 \value{
 An \linkS4class{ntsData} object with results from evaluation of
-internal standards in each sample replicate group added to the control slot.
+internal standards in each sample replicate group added to the IS slot.
 }
 \description{
 Evaluation of internal standards for each sample replicate group

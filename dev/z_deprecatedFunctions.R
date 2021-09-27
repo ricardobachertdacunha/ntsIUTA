@@ -1,5 +1,42 @@
 
 
+#' @title removeDuplicateNamesNOTUSED
+#' @description Removes duplicate sample names to avoid problems during further analysis.
+#'
+#' @param newJoint Original and new samples \code{data.frame} objects collated by \code{rbind}.
+#'
+#' @return Returns the same \code{data.frame} but with duplicate sample names
+#' edited as duplicate sample names are not allowed.
+#'
+#' @importFrom dplyr semi_join
+#' @importFrom stringr str_extract str_pad
+#'
+removeDuplicateNamesNOTUSED <- function(newJoint) {
+  duplicates <- duplicated(newJoint$sample)
+  if (TRUE %in% duplicates) {
+    print(paste("Number of duplicate names found:", length(duplicates[duplicates == TRUE]), sep = " "))
+    for (i in seq_len(length(duplicates))) {
+      if (duplicates[i]) {
+        endOfString <-  stringr::str_extract(newJoint$sample[i], "_[^_]+$")
+        startOfString <-  stringr::str_extract(newJoint$sample[i], paste("^.*(?=(", endOfString, "))", sep = ""))
+        if ((grepl("_[0-9]+", endOfString)) && (!is.na(endOfString))) {
+          endOfString <- as.numeric(stringr::str_extract(endOfString, "[0-9]+")) + 1
+          endOfString <- stringr::str_pad(endOfString, 2, pad = "0")
+          newJoint$sample[i] <- paste(startOfString, endOfString, sep = "_")
+        } else {
+          newJoint$sample[i] <- paste(newJoint$sample[i], "_01", sep = "")
+        }
+      }
+    }
+    duplicates <- duplicated(newJoint$sample)
+    if (TRUE %in% duplicates) {
+      newJoint <- removeDuplicateNames(newJoint)
+    }
+  }
+  return(newJoint)
+}
+
+
 #' @title annotateFeatures_Old
 #'
 #' @description Group features into components according to co-elution and

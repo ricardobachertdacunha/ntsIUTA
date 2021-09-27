@@ -250,14 +250,14 @@ extractEIC <- function(obj = NULL, samples = NULL,
     warning("No raw data found in the MSnExp slot of the ntsData object.
             Use the function importRawData to import data from raw files")
   }
-  
+
   if (is.character(samples)) {
     if (FALSE %in% (samples %in% obj@samples$sample)) {
       warning("Given sample names not found in the ntsData object!")
     }
     samples <- which(obj@samples$sample %in% samples)
   }
-  
+
   if (!is.null(samples)) obj@MSnExp <- filterFile(obj@MSnExp, file = samples)
 
   mzr <- NULL

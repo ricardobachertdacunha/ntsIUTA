@@ -1,38 +1,5 @@
 
 
-### suspectList -----
-
-#' @title suspectList
-#'
-#' @slot data The data.frame listing all the suspects of interest.
-#' @slot length The number of compounds in the suspect list.
-#' @slot rtUnit The general time unit used for the retention time.
-#' The default and recommended is "sec".
-#' @slot comment Optional comment for the suspect list.
-#'
-#' @return An \linkS4class{suspectList} object to be used within screening
-#' workflows of \pkg{ntsIUTA}.
-#'
-#' @export
-#'
-setClass("suspectList",
-  slots = c(
-    path = "character",
-    data = "data.frame",
-    length = "numeric",
-    rtUnit = "character",
-    comment = "character"
-  ),
-  prototype = list(
-    path = character(),
-    data = data.frame(),
-    length = numeric(),
-    rtUnit = character(),
-    comment = character()
-  )
-)
-
-
 #' getSuspectList
 #'
 #' @param path The complete path to load the csv file of the list of suspects.
@@ -88,12 +55,13 @@ getSuspectList <- function(path = NULL, comment = NA_character_) {
              path = path,
              data = sl,
              length = nrow(sl),
-             rtUnit = "sec",
              comment = comment)
 
   return(sl2)
 
 }
+
+
 
 
 #' getSuspectListTemplate
@@ -133,6 +101,8 @@ getSuspectListTemplate <- function(saveTo = NULL) {
 }
 
 
+
+
 #' addMS2Info
 #'
 #' @param wfobj An \linkS4class{ntsSuspectData} object
@@ -150,7 +120,7 @@ getSuspectListTemplate <- function(saveTo = NULL) {
 #'
 #' @return A \linkS4class{suspectList} object with updated MS2 information
 #' for each compound identified in the \linkS4class{ntsSuspectData} object.
-#' 
+#'
 #' @export
 #'
 addMS2Info <- function(wfobj = NULL,
@@ -160,17 +130,17 @@ addMS2Info <- function(wfobj = NULL,
                        updateRT = TRUE,
                        updateIntControl = TRUE,
                        save = TRUE) {
-  
+
   sl <- suspectList@data
-  
+
   df <- wfobj@results
-  
+
   if (length(unique(df$name)) != nrow(df)) {
     warning("Duplicate compound names found. Filter workflow object results,
             keeping with desired correspondence between compuond name and feature ID.")
     return()
   }
-  
+
   if (length(wfobj@data) > 1) {
     if (!is.null(sampleGroup)) {
       pat <- wfobj@data[[sampleGroup]]
@@ -186,46 +156,46 @@ addMS2Info <- function(wfobj = NULL,
       pat <- pat[which(patRoon::analysisInfo(pat)$group == sampleGroup), ]
     }
   }
-  
+
   MS2 <- extractMS2(pat, param = MS2param)
-  
+
   for (i in seq_len(nrow(df))) {
-    
+
     xgroup <- df$ID[i]
-    
+
     xfrag <- MS2[[xgroup]]$MSMS
-    
+
     if (!base::is.null(xfrag)) {
-      
+
       sl$hasFragments[sl$name %in% df$name[i]] <- TRUE
       sl$fragments_mz[sl$name %in% df$name[i]] <- base::paste(xfrag$mz, collapse = ";")
       sl$fragments_int[sl$name %in% df$name[i]] <- base::paste(xfrag$intensity, collapse = ";")
       sl$fragments_pre[sl$name %in% df$name[i]] <- base::paste(xfrag$precursor, collapse = ";")
-      
+
     } else {
-      
+
        sl$hasFragments[sl$name %in% df$name[i]] <- FALSE
-       
+
     }
-    
+
     if (updateRT) sl$rt[sl$name %in% df$name[i]] <- df$rt[i]
-    
+
     if (updateIntControl) {
       samples <- patRoon::analysisInfo(pat)$analysis
       sl$intControl[sl$name %in% df$name[i]] <- apply(df[i, colnames(df) %in% samples], MARGIN = 1, mean)
     }
-    
+
   }
-  
+
   suspectList@data <- sl
 
   if (TRUE == save) utils::write.csv(sl, file = suspectList@path)
-  
+
   if (is.character(save)) {
     utils::write.csv(sl, file = base::paste0(dirname(suspectList@path), "/", save, ".csv"), row.names = FALSE)
     suspectList@path <- base::paste0(dirname(suspectList@path), "/", save, ".csv")
   }
-  
+
 return(suspectList)
-  
+
 }

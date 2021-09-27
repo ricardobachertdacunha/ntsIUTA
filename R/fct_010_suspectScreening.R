@@ -42,6 +42,7 @@ setClass("ntsSuspectData",
 
 
 
+
 #' @title suspectScreening
 #'
 #' @description Method to perform suspect screening from a given
@@ -94,21 +95,20 @@ suspectScreening <- function(obj,
                              withMS2 = TRUE,
                              MS2param = MS2param()) {
 
-  
   assertClass(obj, "ntsData")
-  
+
   assertClass(suspectList, "suspectList")
 
   if (suspectList@rtUnit != "sec") {
     warning("The rt should be in seconds!")
     return(obj)
   }
-    
+
   if (suspectList@length == 0) {
     warning("The suspectList is empty!")
     return(obj)
   }
-  
+
   suspects <- suspectList@data
 
   #selects top 5 or 10 fragment if MS2 data is present for suspects
@@ -142,10 +142,10 @@ suspectScreening <- function(obj,
   }
 
   obj2 <- obj
-  
-  
+
+
   if (!is.null(samples)) obj2 <- filterFileFaster(obj2, samples)
-  
+
   if (excludeBlanks) {
     if (TRUE %in% (sampleGroups(obj2) %in% blanks(obj2))) {
       obj2 <- filterFileFaster(obj2, samples(obj2)[!(sampleGroups(obj2) %in% blanks(obj2))])
@@ -153,12 +153,12 @@ suspectScreening <- function(obj,
   }
 
   rg <- unique(sampleGroups(obj2))
-  
+
   if (!is.null(ID)) {
     obj2@patdata <- obj2@patdata[, ID]
     obj2@features <- obj2@features[obj2@features$ID %in% ID, ]
   }
-  
+
   screen <- screenSuspects(obj2@patdata, select(suspects, -mz),
                            rtWindow = rtWindow, mzWindow = 0.03,
                            adduct = adduct, onlyHits = TRUE)
@@ -170,7 +170,7 @@ suspectScreening <- function(obj,
   df$d_ppm <- (abs(df$d_mz) / df$mz) * 1E6
   df <- dplyr::rename(df, rt = ret, ID = group)
   df <- select(df, name, formula, adduct, ID, mz, rt, everything(), -d_mz, d_ppm, d_rt)
-  
+
   df <- dplyr::filter(df, d_ppm <= ppm)
   df$d_ppm <- round(df$d_ppm, digits = 1)
   df$d_rt <- round(df$d_rt, digits = 1)
@@ -193,7 +193,7 @@ suspectScreening <- function(obj,
     for (g in seq_len(length(rg))) {
 
       temp <- screen[which(obj2@samples$group == rg[g])]
-      
+
       MS2 <- extractMS2(temp, param = MS2param)
 
       # TODO Adduct is [M+H]+ by default but should take the value from screening list

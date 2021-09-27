@@ -14,14 +14,15 @@ recursiveIntegration(
 
 \item{paramFill}{An object of class \code{FillChromPeaksParam} or \code{ChromPeakAreaParam}
 containing the parameters to apply the recursive integration.
-#' See \code{?\link[xcms]{fillChromPeaks}} for more information.}
+See \code{?\link[xcms]{fillChromPeaks}} for more information.}
 }
 \value{
 An \linkS4class{XCMSnExp} object including filled missing peaks.
 }
 \description{
-Recursive integration for samples with missing peaks can be applied
-using the function \code{\link[xcms]{fillChromPeaks}} from the \pkg{xcms} package.
+Recursive integration for samples with missing peaks
+using the function \code{\link[xcms]{fillChromPeaks}}
+from the \pkg{xcms} package.
 }
 \references{
 \insertRef{xcms1}{ntsIUTA}

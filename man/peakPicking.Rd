@@ -9,15 +9,10 @@ peakPicking(obj = NULL, algorithm = NULL, param = NULL, save = TRUE)
 \arguments{
 \item{obj}{An \linkS4class{ntsData} object.}
 
-\item{algorithm}{The algorithm to use for peak picking.
-One of "xcms3" (the default), "xcms", "openms" or "envipick".}
+\item{algorithm}{The algorithm to use for peak picking.}
 
 \item{param}{List of arguments for the specified algorithm.
-See \code{\link[patRoon]{findFeatures}} for more information.
-For instance, for "xcms3" as \code{algorithm}, \code{param} should be given
-with the method parameters for the peak finding.
-See \href{https://rdrr.io/bioc/xcms/man/chromatographic-peak-detection.html}{\code{xcms::findChromPeaks}}
-for more information.}
+See \code{\link[patRoon]{findFeatures}} for more information.}
 
 \item{save}{Logical, set to \code{TRUE} to save updated
 \linkS4class{ntsData} object in the \strong{rdata} folder.
@@ -30,12 +25,13 @@ An \linkS4class{ntsData} object containing a \linkS4class{features}
 object in the slot \code{patdata}.
 }
 \description{
-Finds chromatographic peaks from centroided MS data
-in an \linkS4class{ntsData} object.
-The \code{peakPicking} function can use both \pkg{xcms}
-and \pkg{patRoon} packages, depending on the specified algorithm.
-Possible algorithms are: "xcms3", "xcms", "openms" and "envipick".
-The function arguments depend on the algorithm chosen.
+Finds chromatographic peaks from centroided MS in the
+samples of a given \linkS4class{ntsData} object.
+The peak picking uses the \pkg{patRoon} package and
+the following algorithms are possible:
+"xcms3", "xcms", "openms", "envipick", "sirius", "kpic2", "safd".
+The parameters depend on the algorithm chosen.
+See ?\pkg{patRoon} for further information.
 }
 \references{
 \insertRef{Helmus2021}{ntsIUTA}

@@ -9,7 +9,6 @@
 #' @param sampleidxs The index of samples for the replicate groups of interest.
 #' @param maxcharge Maximum number of possible charges.
 #' @param ppm The mass deviation, in ppm, allowed for searching isotopes within each component.
-#' @param mzabs The mass deviation, in \emph{m/z}, allowed for searching isotopes within each component.
 #' @param noise The overall noise level. When given the sn is calculated based on the given noise level.
 #' @param intval The intensity value to check isotopes. Default and recommended is "maxo", which is the peak height.
 #' @param validateIsotopePatterns Logical, set to \code{TRUE} to validate isotopes using the kegg library.
@@ -34,22 +33,9 @@ FindIsotopesWithValidationAltered <- function(xA = xA,
                                               sampleidxs = sampleidxs,
                                               maxcharge = 3,
                                               ppm = 40,
-                                              mzabs = 0.005,
                                               noise = NULL,
                                               intval = "maxo",
                                               validateIsotopePatterns = TRUE) {
-  
-  
-  
-  # object <- xA
-  # obj <- obj
-  # sampleidxs = sampleidxs
-  # maxcharge = 3
-  # ppm = 40
-  # mzabs = 0.01
-  # noise = 350
-  # intval = "maxo"
-  # validateIsotopePatterns = TRUE
   
   
 ### checks ------------------------------------------------------------------------------------------------
@@ -60,10 +46,6 @@ FindIsotopesWithValidationAltered <- function(xA = xA,
   ## test ppm
   if (!is.numeric(ppm) || ppm < 0)
     stop("Invalid argument 'ppm'. Must be numeric and not negative.\n")
-  ## test mzabs
-  if (!is.numeric(mzabs) || mzabs < 0)
-    stop("Invalid argument 'mzabs'. Must be numeric and not negative.\n")
- 
   
 ### init --------------------------------------------------------------------------------------------------
 
@@ -74,9 +56,6 @@ FindIsotopesWithValidationAltered <- function(xA = xA,
   devppm <- ppm / 1000000
   
   numberOfPeaks <- sum(sapply(object@pspectra, length))
-  
-  if (numberOfPeaks != nrow(obj@features))
-    warning("Features in spectra are not the same number as in the ntsData.")
   
   cat("Generating peak matrix!\n")
   
@@ -94,12 +73,27 @@ FindIsotopesWithValidationAltered <- function(xA = xA,
               sd = sd(intensity),
               sn = mean(sn, na.rm = TRUE))
   
-  peaks$sd[is.na(peaks$sd)] <- 0
+  if (numberOfPeaks == nrow(obj@features)) {
+    
+    ftID <- dplyr::left_join(ftID, peaks, by = c("ID" = "feature"))
+    
+  } else {
+    
+    ## when a single sample is used, meaning the loss of info across samples
+    #thus the unique peaks are used instead.
+    ftID <- dplyr::left_join(peaks, ftID, by = c("feature" = "ID"))
+    
+    ftID <- left_join(as.data.frame(object@groupInfo[, c("mz","rt")]), ftID, by = c("mz","rt"))
+    
+  }
   
-  peaks$sn[is.nan(peaks$sn)] <- 0
+  ftID$int[is.na(ftID$int)] <- 0
   
-  ftID <- dplyr::left_join(ftID, peaks, by = c("ID" = "feature"))
+  ftID$sd[is.na(peaks$sd)] <- 0
   
+  ftID$sn[is.nan(peaks$sn)] <- 0
+  
+  #when mz is not available due to the peaks not being present
   for (i in seq_len(nrow(ftID))) {
     if (is.na(ftID$mz[i])) {
       ftID[i, c("ID", "mz", "rt")] <- obj@features[obj@features$ID %in% ftID$ID[i], c("ID", "mz", "rt"), drop = TRUE]
@@ -136,7 +130,7 @@ FindIsotopesWithValidationAltered <- function(xA = xA,
     
     
 ### calculate isotopes ----------------------------------------------------------------------------------
-
+    
     isoMatrixForPS.list <- findIsotopesForPSAltered(
       peakIndeces,
       mzValues = ftID$mz[peakIndeces],

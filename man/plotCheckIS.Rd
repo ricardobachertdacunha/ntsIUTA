@@ -4,7 +4,7 @@
 \alias{plotCheckIS}
 \title{plotCheckIS}
 \usage{
-plotCheckIS(obj, rtWindow = 30, ppm = 15)
+plotCheckIS(obj, rtWindow = NULL, ppm = NULL)
 }
 \arguments{
 \item{obj}{obj An \linkS4class{ntsData} object.}
