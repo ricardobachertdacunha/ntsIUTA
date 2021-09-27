@@ -5,29 +5,26 @@
 \title{FindIsotopesWithValidationAltered}
 \usage{
 FindIsotopesWithValidationAltered(
-  object,
-  featData = featData,
+  xA = xA,
+  obj = obj,
   sampleidxs = sampleidxs,
   maxcharge = 3,
-  ppm = 50,
-  mzabs = 0.01,
+  ppm = 40,
   noise = NULL,
   intval = "maxo",
   validateIsotopePatterns = TRUE
 )
 }
 \arguments{
-\item{object}{An \linkS4class{xsAnnotate} object.}
+\item{xA}{An \linkS4class{xsAnnotate} object.}
 
-\item{featData}{An \linkS4class{XCMSnExp} object containing features.}
+\item{obj}{An \linkS4class{ntsData} object containing features.}
 
 \item{sampleidxs}{The index of samples for the replicate groups of interest.}
 
 \item{maxcharge}{Maximum number of possible charges.}
 
 \item{ppm}{The mass deviation, in ppm, allowed for searching isotopes within each component.}
-
-\item{mzabs}{The mass deviation, in \emph{m/z}, allowed for searching isotopes within each component.}
 
 \item{noise}{The overall noise level. When given the sn is calculated based on the given noise level.}
 
@@ -40,11 +37,6 @@ An \linkS4class{xsAnnotate} object with annotated isotopes.
 }
 \description{
 Altered version of the \code{findIsotopesWithValidation} function from \code{CAMERA} package.
-}
-\examples{
-
-
-
 }
 \references{
 \insertRef{CAMERA}{ntsIUTA}

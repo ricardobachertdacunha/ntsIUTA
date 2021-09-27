@@ -20,6 +20,3 @@ Adds additional information to the sampleInfo \code{data.frame}. For instance,
 additional information could be concentration data or other known properties or classifiers for each sample in the sampleInfo \code{data.frame}.
 The added metadata can then be used for inferential and statistical analyses.
 }
-\examples{
-
-}

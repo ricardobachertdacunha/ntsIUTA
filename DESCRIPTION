@@ -1,6 +1,6 @@
 Package: ntsIUTA
 Title: Non-target Screening IUTA
-Version: 0.0.1
+Version: 0.0.2
 Authors@R: person('Ricardo', 'Cunha', email = 'cunha@iuta.de', role = c('cre', 'aut'))
 Maintainer: Ricardo Cunha <cunha@iuta.de>
 Description: The ntsIUTA package is a tool for processing chromatographically separated mass spectral (MS) data, focusing on promoting routine application of Non-target Screening workflows.
@@ -20,12 +20,11 @@ Imports:
     shinyWidgets,
     utils,
     tools,
-    patRoon,
     Rdpack,
     dplyr,
+    plyr,
     data.table,
     magrittr,
-    xcms,
     BiocParallel,
     parallel,
     CAMERA,
@@ -46,11 +45,14 @@ Imports:
     pkgload,
     Biobase,
     BiocGenerics,
-    MSnbase
+    MSnbase,
+    checkmate,
+    pheatmap,
+    rlang
 Encoding: UTF-8
 LazyData: true
 RdMacros: Rdpack
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 URL: https://github.com/ricardobachertdacunha/ntsIUTA.git
 BugReports: https://github.com/ricardobachertdacunha/ntsIUTA.git/issues
 Suggests:
@@ -61,4 +63,6 @@ Suggests:
 VignetteBuilder: knitr
 Depends: 
     R (>= 4.0),
-    ProtGenerics
+    ProtGenerics,
+    xcms,
+    patRoon

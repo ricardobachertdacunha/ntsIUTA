@@ -4,21 +4,17 @@
 \alias{getColors}
 \title{getColors}
 \usage{
-getColors(x, which = c("groups", "samples"))
+getColors(x, which = c("samples", "sampleGroups", "groups"))
 }
 \arguments{
-\item{x}{An \linkS4class{OnDiskMSnExp} object with one or more files or the number of colors to be produced.}
+\item{x}{An \linkS4class{ntsData} object with one or more files or the number of colours to be produced.}
 
-\item{which}{Possible entries are \code{groups} and \code{samples} for getting group or samples colors, respectively.}
+\item{which}{Possible entries are \code{samples}, \code{sampleGroups} and \code{groups} for getting
+individual sample, sample replicate group and individual group colours, respectively.}
 }
 \value{
-A vector of colors names according to the given \linkS4class{OnDiskMSnExp} object.
+A vector of colours, named according to a \linkS4class{ntsData} object if given.
 }
 \description{
 getColors
-}
-\examples{
-
-
-
 }

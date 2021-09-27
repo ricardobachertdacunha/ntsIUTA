@@ -1,0 +1,2 @@
+"name","formula","neutralMass","SMILES","InChIKey","adduct","mz","rt","intControl","logP","comment","hasFragments","fragments_mz","fragments_int","fragments_formula","fragments_pre"
+"Carbamazepine","C15H12N2O",236.094955,"c1ccc2c(c1)C=Cc3ccccc3N2C(=N)O","FFGPTBGBLSHEPO-UHFFFAOYSA-N","[M+H]+",237.102231,"","",0.79,"",FALSE,"","","",""

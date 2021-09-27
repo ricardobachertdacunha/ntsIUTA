@@ -5,49 +5,60 @@
 \title{plotFeatures}
 \usage{
 plotFeatures(
-  x = patData,
-  fileIndex = NULL,
-  features = NULL,
+  obj,
+  samples = NULL,
+  ID = NULL,
   mz = NULL,
-  ppm = 5,
+  ppm = 20,
   rt = NULL,
-  rtWindow = 1,
-  rtUnit = "min",
-  title = NULL,
-  plotBy = c("samples")
+  rtWindow = NULL,
+  rtUnit = "sec",
+  msLevel = 1,
+  colorBy = "features",
+  interactive = TRUE
 )
 }
 \arguments{
-\item{x}{An \linkS4class{XCMSnExp} or \linkS4class{featureGroups} object with one or more files and grouped peaks.}
+\item{obj}{An \linkS4class{ntsData} object.}
 
-\item{fileIndex}{The index of the file/s to extract the centroids or profile data.}
+\item{samples}{The index or name of the sample/s.
+The default is \code{NULL} and all samples are used.}
 
-\item{features}{The identifier of the features of interest.}
+\item{ID}{The identifier of the features of interest.
+When not \code{NULL}, overwrites any given \code{mz} and \code{rt} value.}
 
-\item{mz}{Optional target \emph{m/z} to find features using the mass deviation specified by the \code{ppm} parameter.}
+\item{mz}{Optional target \emph{m/z} to find features using
+the mass deviation specified by the \code{ppm} parameter.}
 
-\item{ppm}{The mass deviation to extract the features when \code{mz} is specified.}
+\item{ppm}{The mass deviation to extract the features
+when \code{mz} is specified.}
 
-\item{rt}{The retention time in minutes or seconds, depending on the defined \code{rtUnit}, see below. Only used when \code{mz} is specified.}
+\item{rt}{The retention time in minutes or seconds,
+depending on the defined \code{rtUnit}, see below.
+Only used when \code{mz} is specified.}
 
-\item{rtWindow}{The time deviation to collect features. The time unit is the defined by \code{rtUnit}.
-A time interval can be given with a length 2 vector, defining the minimum and maximum retention time.}
+\item{rtWindow}{The time deviation to collect features.
+The time unit is the defined by \code{rtUnit}.
+A time interval can be given with a length 2 vector,
+defining the minimum and maximum retention time.}
 
-\item{rtUnit}{Possible entries are \code{min} or \code{sec}. The default is \code{min}.}
+\item{rtUnit}{Possible entries are \code{min} or \code{sec}.
+The default is \code{min}.}
 
-\item{title}{The title for the plot, optional.}
+\item{msLevel}{The MS level to extract the data.
+For the moment, only 1 is possible.}
 
-\item{plotBy}{The grouping for the plot. Possible are "samples", "replicates" and "features"
-for ploting by individual samples, relpicate samples or features, respectively. The default is "samples".}
+\item{colorBy}{Possible values are \code{"features"},
+\code{"samples"} or \code{sampleGroups} (the default),
+for colouring by samples or sample replicate groups respectively.}
+
+\item{interactive}{Logical, set to \code{TRUE} to use
+the \pkg{plotly} instead of \pkg{ggplot2}. The default is \code{TRUE}.}
 }
 \value{
-An iterative plot.
+A feature/s plot produced through \pkg{gglpot2} for interactive
+\code{FALSE} or an interactive plot through the \pkg{plotly}.
 }
 \description{
-Iterative plot for features from an \linkS4class{XCMSnExp} or \linkS4class{featureGroups} containing grouped peaks.
-}
-\examples{
-
-
-
+Method for plotting features from a \linkS4class{ntsData} object.
 }

@@ -5,46 +5,60 @@
 \title{plotRawChrom}
 \usage{
 plotRawChrom(
-  raw = rawData,
-  fileIndex = NULL,
+  obj,
+  samples = NULL,
   mz = NULL,
   ppm = 20,
   rt = NULL,
   rtWindow = NULL,
   rtUnit = "sec",
   msLevel = 1,
-  type = "tic"
+  type = "tic",
+  colorBy = "sampleGroups",
+  interactive = FALSE
 )
 }
 \arguments{
-\item{raw}{An \linkS4class{OnDiskMSnExp} object with one or more files.}
+\item{obj}{An \linkS4class{ntsData} object with one or more files.}
 
-\item{fileIndex}{The index of the file/s to extract the centroids or profile data.}
+\item{samples}{The index or names of the sample/s to extract the data.}
 
-\item{mz}{Optional target \emph{m/z} to obtain an extracted ion chromatogram (EIC).
-When not \code{NULL} (the default), EIC is always returned.}
+\item{mz}{Optional target \emph{m/z} to obtain an EIC.
+Note that when not \code{NULL} (the default), EIC is always returned.}
 
-\item{ppm}{The mass deviation to extract the data for the EIC in \code{ppm}.}
+\item{ppm}{The mass deviation to extract the data for the EIC, in \code{ppm}.}
 
-\item{rt}{The retention time in minutes or seconds, depending on the defined \code{rtUnit}, see below.}
+\item{rt}{The retention time in minutes or seconds,
+depending on the defined \code{rtUnit}, see below.}
 
-\item{rtWindow}{The time deviation to collect centroids or profile data. The time unit is the defined by \code{rtUnit}.
-A time interval can be given with a length 2 vector, defining the minimum and maximum retention time.}
+\item{rtWindow}{The time window or deviation to collect the data.
+The time unit is defined by \code{rtUnit}.
+A time interval can be given with a length 2 vector,
+defining the minimum and maximum retention time.
+A vector of length 1 is assumed as a deviation of a given \code{rt}.}
 
-\item{rtUnit}{Possible entries are \code{min} or \code{sec}. The default is \code{sec}.}
+\item{rtUnit}{Possible entries are \code{sec} (the default) or \code{min}.}
 
-\item{msLevel}{The MS level to extract the data. For the momment, only 1 is possible.}
+\item{msLevel}{The MS level to extract the data.
+For the moment, only 1 is possible.}
 
-\item{type}{The type of chromatogram. Possible entries are "bpc" for base peak chromatogram or "tic" for total ion chromatogram.
-The default is "tic". If \code{mz} is specified (not \code{NULL}), the type is set automatically to EIC.}
+\item{type}{The type of chromatogram.
+Possible entries are "bpc" for base peak chromatogram
+or "tic" for total ion chromatogram.
+The default is "tic". If \code{mz} is specified (not \code{NULL}),
+the type is set automatically to EIC.}
+
+\item{colorBy}{Possible values are \code{"samples"} or \code{sampleGroups}
+(the default), for colouring by samples or sample replicate groups respectively.}
+
+\item{interactive}{Logical, set to \code{TRUE} to use
+the \pkg{plotly} instead of \pkg{ggplot2}. The default is \code{FALSE}.}
 }
 \value{
-An iterative plot for inspection of the raw data in the given \linkS4class{OnDiskMSnExp} object.
+A plot for inspection of the raw data
+in the given \linkS4class{ntsData} object.
 }
 \description{
-Plots total, base and extracted ion chromatograms (TIC, BPC and EIC, respectively) of an \linkS4class{OnDiskMSnExp} object,
-using the \pkg{plotly} package to procude an iteractive plot.
-}
-\examples{
-
+A method for plotting total, base and extracted ion chromatograms
+(TIC, BPC and EIC, respectively) of an \linkS4class{ntsData} object.
 }

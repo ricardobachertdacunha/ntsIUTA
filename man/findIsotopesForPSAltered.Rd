@@ -8,6 +8,7 @@ findIsotopesForPSAltered(
   peakIndeces = peakIndeces,
   mzValues = mzValues,
   intValues = intValues,
+  sdValues = sdValues,
   snValues = snValues,
   maxcharge = maxcharge,
   devppm = devppm,
@@ -21,6 +22,8 @@ findIsotopesForPSAltered(
 \item{mzValues}{\emph{m/z} mzvalues of peaks.}
 
 \item{intValues}{Intensity values of peaks.}
+
+\item{sdValues}{Intensity standard deviation of the peaks.}
 
 \item{snValues}{Signal-to-noise ration of the peaks.}
 
@@ -37,11 +40,6 @@ A list of isotopic annotation for the given peaks.
 }
 \description{
 Function used within \code{FindIsotopesWithValidationAltered}.
-}
-\examples{
-
-
-
 }
 \references{
 \insertRef{CAMERA}{ntsIUTA}

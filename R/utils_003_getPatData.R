@@ -14,8 +14,6 @@
 #'
 #' @export
 #'
-#' @examples
-#'
 getPatData <- function(featData, sampleInfo, save = FALSE, projPath = setup$projPath) {
 
   patSampleInfo <- sampleInfo[sampleInfo$sample %in% featData$sample_name, ]

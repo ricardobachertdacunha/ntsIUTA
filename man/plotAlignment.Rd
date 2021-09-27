@@ -4,7 +4,7 @@
 \alias{plotAlignment}
 \title{plotAlignment}
 \usage{
-plotAlignment(x = featData)
+plotAlignment(x = features)
 }
 \arguments{
 \item{x}{The \linkS4class{XCMSnExp} object obtained from the \code{\link{makeFeatures}} function.}
@@ -14,9 +14,4 @@ A plot with the retention time alignment differences for each samples.
 }
 \description{
 Plots the results from the retention time alignment across samples.
-}
-\examples{
-
-
-
 }

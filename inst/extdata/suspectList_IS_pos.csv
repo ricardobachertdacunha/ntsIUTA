@@ -1,0 +1,11 @@
+name,formula,neutralMass,SMILES,InChIKey,adduct,mz,rt,intControl,logP,comment,hasFragments,fragments_mz,fragments_int,fragments_formula,fragments_pre
+Cyclophosphamide_d6,C7H9D6Cl2N2O2P,266.0625,,,[M+H]+,267.0698,715.2,92085.66667,,,FALSE,,,,
+Ibuprofen_d3,C13H15O2D3,209.1495,,,[M+H]+,210.1568,1108.2,12925.66667,,,FALSE,,,,
+Diclophenac_d4,C14H7Cl2NO2D4,299.0418,,,[M+H]+,300.0491,1127.4,40874,,,FALSE,,,,
+Metoprolol_d7,C15H18D7NO3,274.2274,,,[M+H]+,275.2347,622.2,2489827,,,FALSE,,,,
+Sulfamethoxazol_d4,C10D4H7N3O3S,257.0772,,,[M+H]+,258.0845,682.8,220641.3333,,,FALSE,,,,
+Isoproturon_d6,C12H12D6N2O,212.1796,,,[M+H]+,213.1869,928.2,2209802.667,,,FALSE,,,,
+Diuron_d6,C9H4D6Cl2N2O,238.0547,,,[M+H]+,239.062,937.2,239148.6667,,,FALSE,,,,
+Carbamazepin_d10,C15H2N2OD10,246.1577,,,[M+H]+,247.165,839.4,859770.3333,,,FALSE,,,,
+Clarithromycin_d3,C38H66D3NO13,750.4957,,,[M+H]+,751.503,889.2,21956.66667,,,FALSE,,,,
+Naproxen_d3,C14H11D3O3,233.1131,,,[M+H]+,234.1204,990.0,5291.333333,,,FALSE,,,,

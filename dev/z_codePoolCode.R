@@ -1,23 +1,21 @@
 
 
-library(ntsIUTA)
+# library(ntsIUTA)
 
-projPath <- system.file(package = "ntsIUTA", dir = "extdata")
-sampleInfo <- setupProject(projPath, save = FALSE, makeNewProject = FALSE)
-sampleInfo <- sampleInfo[1:6, ]
+# projPath <- system.file(package = "ntsIUTA", dir = "extdata")
+# sampleInfo <- setupProject(projPath, save = FALSE, makeNewProject = FALSE)
+# sampleInfo <- sampleInfo[1:6, ]
 
-rawData <- importRawData(sampleInfo,
-                         rtFilter = c(13, 17),
-                         timeUnit = "min",
-                         centroidedData = NA,
-                         removeEmptySpectra = TRUE,
-                         save = FALSE)
+# rawData <- importRawData(sampleInfo,
+#                          rtFilter = c(13, 17),
+#                          timeUnit = "min",
+#                          centroidedData = NA,
+#                          removeEmptySpectra = TRUE,
+#                          save = FALSE)
 
-EIC_diuron <- ntsIUTA::extractEIC(rawData, fileIndex = 4, mz = 233.0243, ppm = 20)
+# EIC_diuron <- ntsIUTA::extractEIC(rawData, fileIndex = 4, mz = 233.0243, ppm = 20)
 
-plotRawChrom(rawData, fileIndex = 4, type = "tic", mz = 233.0243, ppm = 20, rt = 15, rtWindow = 2, rtUnit = "min")
-
-
+# plotRawChrom(rawData, fileIndex = 4, type = "tic", mz = 233.0243, ppm = 20, rt = 15, rtWindow = 2, rtUnit = "min")
 
 # projPath <- system.file(package = "ntsIUTA", dir = "extdata")
 
@@ -104,6 +102,41 @@ plotRawChrom(rawData, fileIndex = 4, type = "tic", mz = 233.0243, ppm = 20, rt =
 
 ### Code -----
 
+# TODO make function to add MS2 data to a screening list, based on suspect screening workflow.
+
+#add MS2 to screening list, adds intensity at 10ng/ml to respective column and adds mz corresponding to the polarity for MS2 matching
+# for (i in 1:base::nrow(qcdf)) {
+#   xgroup <- qcdf$group[i]
+#   xfrag <- MS2[[xgroup]]$MSMS
+# 
+#   if (!base::is.null(xfrag)) {
+#     sl$hasMS2[sl$name %in% qcdf$name[i]] <- TRUE
+#     sl$mzMS2[sl$name %in% qcdf$name[i]] <- base::paste(xfrag$mz, collapse = ";")
+#     sl$intMS2[sl$name %in% qcdf$name[i]] <- base::paste(xfrag$intensity, collapse = ";")
+#     sl$preMS2[sl$name %in% qcdf$name[i]] <- base::paste(xfrag$precursor, collapse = ";")
+#   }
+# 
+#   sl$int10[sl$name %in% qcdf$name[i]] <- qcdf$av_into[i]
+#   sl$rt[sl$name %in% qcdf$name[i]] <- qcdf$ret[i]/60
+#   sl$mz[sl$name %in% qcdf$name[i]] <- sl$neutralMass[sl$name %in% qcdf$name[i]] +  base::ifelse(polarity == "positive", 1.007276, -1.007276)
+# }
+# 
+# utils::write.csv(sl, file = base::paste0(projPath,"/ScreeningList_QC_ntsIUTA_MS2_pos.csv"))
+
+
+
+
+
+
+
+
+
+#' For \pkg{patRoon} the rawData should be the \code{sampleInfo} returning the respectives    and returns a \code{list} of \linkS4class{XCMSnExp}
+#' objects for each replicate sample group as defined in the \code{\link{setupProject}} function.
+#' The \linkS4class{XCMSnExp} objects can be conconated via \code{c()} function of the \pkg{xcms} package.
+#' We separate the peaks from each replicate group to facilitate workflows that include multi-project cross-analysis.
+#' The peak picking uses the function \code{\link[xcms]{chromatographic-peak-detection}} from the \pkg{xcms} package.
+#' Different methods for peak picking can be used. For more information, see documentation of \code{\link[xcms]{chromatographic-peak-detection}}.
 
 # sampleInfo <- ntsIUTA::setupProject(save = FALSE)
 # View(sampleInfo)

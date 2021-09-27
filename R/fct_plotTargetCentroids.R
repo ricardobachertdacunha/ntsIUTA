@@ -1,54 +1,50 @@
 
 
-
 #' @title plotTargetCentroids
-#' @description Plot centroids or profile data for a target compound using expected \emph{m/z}, retention time and respective deviations.
+#' @description Plot centroids or profile data for a target compound
+#' using expected \emph{m/z}, retention time and respective deviations.
 #'
-#' @param raw An \linkS4class{OnDiskMSnExp} object with one or more MS files.
-#' @param fileIndex The index of the file/s to extract the centroids or profile data.
-#' @param mz The target \emph{m/z}. Note that \code{m/z} is not the expected monoisotopic mass but the expected adduct (\emph{i.e.} \code{[M+H]+}).
-#' @param ppm The mass deviation to extract centroids in \code{ppm}. The default is set to 20 ppm.
-#' @param rt The expected retention time in minutes or seconds, depending on the defined \code{rtUnit}, see below.
-#' @param rtWindow The time deviation to collect centroids or profile data. The time unit is the defined by \code{rtUnit}.
+#' @param obj An \linkS4class{ntsData} object with one or more MS files.
+#' @param samples The index or names of the sample/s to extract the centroids or profile data.
+#' @param mz The target \emph{m/z}. Note that \code{m/z} is not the expected
+#' monoisotopic mass but the expected adduct (\emph{i.e.} \code{[M+H]+}).
+#' @param ppm The mass deviation to extract centroids in \code{ppm}.
+#' The default is set to 20 ppm.
+#' @param rt The expected retention time in minutes or seconds,
+#' depending on the defined \code{rtUnit}, see below.
+#' @param rtWindow The time deviation to collect centroids or profile data.
+#' The time unit is the defined by \code{rtUnit}.
 #' It is recommended a minimum of 1 minute.
-#' @param rtUnit Possible entries are \code{min} or \code{sec}. The default is \code{sec}.
+#' @param rtUnit Possible entries are \code{min} or \code{sec}.
+#' The default is \code{sec}.
 #' @param title Optional title for the plot/s.
-#' @param plotTargetMark Logical, set to TRUE, the defaulft, to plot a target mark with +/- 5 ppm and +/- 10 seconds deviation.
+#' @param plotTargetMark Logical, set to TRUE, the defaulft, to plot a
+#' target mark with +/- 5 ppm and +/- 10 seconds deviation.
 #'
-#' @return An iterative plot of the centroids for the requested target based on given \code{mz}.
+#' @return An iterative plot of the centroids for the requested
+#' target based on given \code{mz}.
 #'
 #' @export
 #'
 #' @importClassesFrom MSnbase OnDiskMSnExp
-#' @importMethodsFrom MSnbase filterFile filterMz filterMsLevel filterRt fileNames
+#' @importMethodsFrom MSnbase filterFile filterMz filterMsLevel filterRt
 #' @importFrom methods as
 #' @importFrom grDevices colorRamp
 #' @importFrom plotly plot_ly layout add_annotations toRGB subplot hide_colorbar hide_legend
 #'
-#' @examples
-#'
-plotTargetCentroids <- function(raw = rawData, fileIndex = 1,
+plotTargetCentroids <- function(obj = NULL,
+                                samples = NULL,
                                 mz = NULL, ppm = 20,
                                 rt = NULL, rtWindow = NULL,
                                 rtUnit = "min", title = NULL,
                                 plotTargetMark = TRUE) {
-
-  # raw = rawData
-  # fileIndex = 1
-  # mz <- 233.0243
-  # rt <- 15.6809
-  # rtUnit = "min"
-  # ppm <- 20
-  # rtWindow = 1
-  # title = NULL
-  # plotTargetMark = TRUE
-
-  if (!is.null(fileIndex)) raw <- filterFile(raw, fileIndex)
+  
+  if (!is.null(samples)) obj <- filterFileFaster(obj, samples)
 
   if (is.null(mz)) return(cat("Target mz should be defined!"))
 
-  df <- extractEIC(raw = raw,
-                   fileIndex = NULL,
+  df <- extractEIC(obj = obj,
+                   samples = NULL,
                    mz = mz, ppm = ppm,
                    rt = rt, rtWindow = rtWindow,
                    rtUnit = rtUnit, msLevel = 1,
@@ -58,12 +54,12 @@ plotTargetCentroids <- function(raw = rawData, fileIndex = 1,
   if (rtUnit == "min") if (!is.null(rtWindow)) rtWindow <- rtWindow * 60
 
   if (is.null(title)) {
-    fns <- basename(fileNames(raw))
+    fns <- basename(obj@samples$file)
   } else {
-    fns <- rep(title, length(fileNames(raw)))
+    fns <- rep(title, length(obj@samples$file))
   }
 
-  sNames <- raw$sample_name
+  sNames <- obj@samples$sample
   rtmin <- min(df$rt, na.rm = TRUE)
   rtmax <- max(df$rt, na.rm = TRUE)
   mzmin <- min(df$mz, na.rm = TRUE)
@@ -81,7 +77,9 @@ plotTargetCentroids <- function(raw = rawData, fileIndex = 1,
 
   colors <- colorRamp(c("#383E47", "#5E8CAA", "#16B9E5", "#16E5C9", "#16E54C"))
 
-  line <- list(type = "line", line = list(color = "red", dash = "dash", width = 0.5), xref = "x", yref = "y")
+  line <- list(type = "line",
+               line = list(color = "red", dash = "dash", width = 0.5),
+               xref = "x", yref = "y")
 
   plotList <- list()
   vline1 <- list()
@@ -106,7 +104,7 @@ plotTargetCentroids <- function(raw = rawData, fileIndex = 1,
                   type = "scatter", mode = "markers", color = temp$i, colors = colors,
                   marker = list(size = 8, line = list(color = "white", width = 0.5)), name = paste0(s, "p1"))
 
-    p1 <- p1 %>% layout(shapes = c(vline1, line))
+    if (plotTargetMark) p1 <- p1 %>% layout(shapes = c(vline1, line))
 
     p1 <- p1 %>% add_annotations(text = sNames[s], x = 0.05, y = 1, yref = "paper", xref = "paper",
                                  xanchor = "left", yanchor = "bottom", align = "center",
@@ -116,7 +114,7 @@ plotTargetCentroids <- function(raw = rawData, fileIndex = 1,
                   type = "scatter", mode = "markers", color = temp$i, colors = colors,
                   marker = list(size = 8, line = list(color = "white", width = 0.5)), name = paste0(s, "p2"))
 
-    p2 <- p2 %>% layout(shapes = list(c(vline2, line), c(hline, line), rect))
+    if (plotTargetMark) p2 <- p2 %>% layout(shapes = list(c(vline2, line), c(hline, line), rect))
 
     plotList[[paste0("p1", s)]] <- p1
     plotList[[paste0("p2", s)]] <- p2

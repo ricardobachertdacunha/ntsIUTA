@@ -1,139 +1,292 @@
 
 
-
-
-#' @title makeFeatures
-#' @description The \code{makeFeatures} consists of alignment and grouping of chromatographic peaks across samples.
-#' The function uses methods from the package \pkg{xcms}, specifically \code{\link[xcms]{adjustRtime}} and \code{\link[xcms]{groupChromPeaks}}
-#' methods. The input is a \linkS4class{XCMSnExp} object or a \code{list} of \linkS4class{XCMSnExp} objects
-#' named with the given sample replicate group during the \code{setup}. If the input is a \code{list}, \linkS4class{XCMSnExp} objects
-#' are concatenated to produce a merged \linkS4class{XCMSnExp} object,
-#' containing features (\emph{i.e.} grouped chromatographic peaks across samples).
-#'
-#' @param peaksData A \linkS4class{XCMSnExp} object or a \code{list} of \linkS4class{XCMSnExp} objects named according to the 
-#' sample replicate group represented by each \linkS4class{XCMSnExp} object as obtained by \code{\link{peakPicking}}.
-#' @param paramPreGrouping If \code{\link[xcms]{adjustRtime}} is preformed with the method \code{PeakGroups},
-#' a pre-grouping of peaks is required for alignment. The \code{paramPreGrouping} is the parameters obtained by the selected grouping method.
-#' See documentation of \code{\link[xcms]{groupChromPeaks}} for more information.
-#' @param paramAlignment The parameters for the chosen alignment method. See documentation of \code{\link[xcms]{adjustRtime}} for more information.
-#' @param paramGrouping The parameters for the chosen grouping method.
-#' See documentation of \code{\link[xcms]{groupChromPeaks}} for more information.
-#' @param ppmForFillingGroups The mass (in ppm) to expand the \emph{mz} for filling missing peaks in incomplete features.
-#' See \code{\link[xcms]{fillChromPeaks}} for more information.
-#' @param save Logical, set to \code{TRUE} to save the generated \code{XCMSnExp} object in the disk.
-#' @param projPath The \code{projPath} directory as defined in the \code{setup} object.
-#' @param maxMultiProcess Logical, set to \code{TRUE} to enable max parallel processing. Changes the number of workers to the maximum available.
-#'
-#' @return An \linkS4class{XCMSnExp} containing features which are grouped and aligned peaks across samples.
+#' makeFeatures
 #' 
+#' @description Grouping and alignment of peaks across samples.
+#' The peak grouping uses the \pkg{patRoon} package and
+#' the following algorithms are possible: "xcms3", "xcms", "openms".
+#' See ?\pkg{patRoon} for further information.
+#' When fill missing parameters (paramFill) are defined
+#' a recursive integration for samples with missing peaks
+#' can be applied through the \pkg{xcms} package.
+#'
+#' @param obj A \linkS4class{ntsData} object containing peaks.
+#' @param algorithm The algorithm to use for peak alignment and grouping.
+#' @param paramGrouping The parameters for the chosen grouping method.
+#' See \code{\link[patRoon]{groupFeatures}} for more information.
+#' @param paramFill A list of parameters for recursive integration of missing peaks.
+#' See \code{\link[xcms]{fillChromPeaks}} for more information.
+#' @param save Logical, set to \code{TRUE} to save updated
+#' \linkS4class{ntsData} object in the \strong{rdata} folder.
+#' Note that \code{TRUE} overwrites the existing \linkS4class{ntsData} object.
+#' Optionally, a character string can be given instead of \code{TRUE}
+#' to be used as file name, avoiding overwriting.
+#'
+#' @return An \linkS4class{ntsData} object
+#' containing peaks aligned and grouped as features across samples accessible
+#' in the slot \code{features}.
+#'
 #'  @references
+#' \insertRef{Helmus2021}{ntsIUTA}
 #' \insertRef{xcms1}{ntsIUTA}
 #' \insertRef{xcms2}{ntsIUTA}
 #' \insertRef{xcms3}{ntsIUTA}
-#' 
-#' @export
-#' 
-#' @importFrom BiocParallel registered SnowParam register bpparam
-#' @importFrom parallel detectCores
-#' @importFrom xcms sampleGroups groupChromPeaks adjustRtime fillChromPeaks ChromPeakAreaParam
 #'
-#' @examples
-#' 
-#' 
-#' 
-makeFeatures <- function(peaksData = peaksData,
-                         paramPreGrouping = instParam$preGrouping,
-                         paramAlignment = instParam$alignment,
-                         paramGrouping = instParam$grouping,
-                         ppmForFillingGroups = 5,
-                         save = TRUE, projPath = setup$projPath, maxMultiProcess = TRUE) {
+#' @export
+#'
+#' @importFrom checkmate assertClass testChoice
+#' @importClassesFrom patRoon featureGroups
+#' @importClassesFrom xcms XCMSnExp
+#' @importFrom patRoon groupFeatures getXCMSnExp importFeaturesXCMS3 groupFeatIndex
+#' @importMethodsFrom patRoon as.data.table as.data.frame
+#' @importMethodsFrom xcms groupChromPeaks adjustRtime fillChromPeaks featureDefinitions
+#' @importFrom dplyr select rename everything
+#' @importFrom data.table rbindlist
+#'
+makeFeatures <- function(obj = NULL,
+                         algorithm = NULL,
+                         paramGrouping = NULL,
+                         paramFill = NULL,
+                         save = TRUE) {
+
+  assertClass(obj, "ntsData")
+
+  x <- obj@patdata
+
+  if (is.null(algorithm)) algorithm <- peakGroupingParameters(obj)@algorithm
   
-  #Examples
-  #setup <- ntsIUTA::makeSetup(projPath = system.file(package = "ntsIUTA", dir = "extdata"), save = FALSE)
-  # setup$sampleInfo[1:3,"group"] <- "Sample"
-  # rawDataExample <- ntsIUTA::importRawData(setup$sampleInfo[1:3,], save = FALSE, centroidedData = TRUE)
-  # peaksDataExample <- ntsIUTA::peakPicking(rawDataExample, param = param, save = FALSE)
-  # paramList <- paramListExample
-  # instParam <- getInstParam(paramList)
-  # peaksDataExample <- ntsIUTA::peakPicking(rawDataExample, param = instParam$PP, save = FALSE)
-  # featDataExample <- ntsIUTA::makeFeatures(peaksDataExample, paramPreGrouping = instParam$preGrouping, paramAlignment = instParam$alignment, paramGrouping = instParam$grouping, save = FALSE)
-  # featDataExample
+  if (is.null(paramGrouping)) paramGrouping <- peakGroupingParameters(obj)@param
   
+  if (is.null(paramFill)) paramFill <- fillMissingParameters(obj)@param
   
+  if (is.na(algorithm)) {
+    warning("Peak grouping algorihtm not defined!")
+    return(obj)
+  }
   
-  # require(xcms)
-  # require(BiocParallel)
-  # require(parallel)
-  # require(grDevices)
-  # require(RColorBrewer)
-  # require(dplyr)
-  # require(graphics)
-  
-  #Enable full parallel processing
-  if (maxMultiProcess)
-  {
-    snow <- BiocParallel::registered("SnowParam")
-    if (snow$workers < parallel::detectCores())
-    {
-      snow <- BiocParallel::SnowParam(workers = parallel::detectCores(), type = "SOCK", exportglobals = FALSE)
-      BiocParallel::register(snow, default = TRUE)
+  if (algorithm == "xcms3") {
+      paramGrouping$groupParam@sampleGroups <- x@analysisInfo$group
+    if (paramGrouping$rtalign) {
+      paramGrouping$preGroupParam@sampleGroups <- x@analysisInfo$group
     }
   }
   
+  ag <- list(obj = x, algorithm = algorithm)
   
-  #Concatenation for peaksData objects before grouping
-  if (base::class(peaksData) == "XCMSnExp")
-  {
-    peaksDataUnified <- peaksData
-  } else {
+  x <- do.call(groupFeatures, c(ag, paramGrouping, verbose = TRUE))
+  
+  
+  if (length(paramFill) > 0) {
     
-    if (base::length(peaksData) == 1)
-    {peaksDataUnified <- peaksData[[1]]}
-    else {peaksDataUnified <- base::do.call(c, base::unlist(peaksData, recursive = FALSE))}
+    if (class(x) != "XCMSnExp") x <- getXCMSnExp(x)
     
+    if (is.list(paramFill)) paramFill <- paramFill[[1]]
+    
+    x <- recursiveIntegration(XCMSfeatures = x, paramFill = paramFill)
+
+    sinfo <- data.frame(path = dirname(fileNames(x)),
+                        analysis = x$sample_name,
+                        group = x$sample_group,
+                        blank = obj@patdata@analysisInfo$blank)
+    
+    sinfo$blank[is.na(sinfo$blank)] <- ""
+    
+    x <- importFeatureGroupsXCMS3(x, sinfo)
+
   }
   
-  if (base::length(peaksDataUnified$sample_name) > 1) {
-    
-    #Pregrouping necessary for alignment with PeakGroups method from xcms
-    if(base::class(paramAlignment) == "PeakGroupsParam")
-    {
-      xcms::sampleGroups(paramPreGrouping) <- peaksDataUnified$sample_group
-      featData <- xcms::groupChromPeaks(peaksDataUnified, param = paramPreGrouping)
-    }
-    
-    
-    featData <- xcms::adjustRtime(featData, msLevel = 1, param = paramAlignment)
-    
-    xcms::sampleGroups(paramGrouping) <- peaksDataUnified$sample_group
-    featData <- xcms::groupChromPeaks(featData, param = paramGrouping)
-    
-  } else {
-    
-    xcms::sampleGroups(paramGrouping) <- peaksDataUnified$sample_group
-    featData <- xcms::groupChromPeaks(peaksDataUnified, param = paramGrouping)
-    
-  }
+  obj <- peakGroupingParameters(obj, algorithm = algorithm, param = paramGrouping)
   
-  #Fill missing peaks in feature groups
-  #Old parameter used: FillChromPeaksParam(ppm = ppmForFillingGroups)
-  featData <- base::suppressWarnings(xcms::fillChromPeaks(featData, param = xcms::ChromPeakAreaParam(),
-                                                          BPPARAM = BiocParallel::bpparam("SnowParam")))
+  obj <- fillMissingParameters(obj, algorithm = "xcms3", param = paramFill)
+
+  obj@patdata <- x
+
+  obj <- buildPeakList(obj)
   
-  #TODO add optinally to apply correction of retention time, avoiding another function from xcms
-  # if (length(peaksDataUnified$sample_name) > 1) {
-  #   featData <- xcms::applyAdjustedRtime(featData)
-  # }
-  
-  if (save)
-  {
-    rData <- base::paste0(projPath,"\\rData")
-    if (!base::dir.exists(rData)) base::dir.create(rData)
-    base::saveRDS(featData, file = base::paste0(rData,"\\featData.rds"))
-  }
-  
-  return(featData)
+  obj <- buildFeatureList(obj)
+
+  if (save) saveObject(obj = obj)
+
+  if (is.character(save)) saveObject(obj = obj, filename = save)
+
+  return(obj)
+
 }
 
 
 
+
+#' recursiveIntegration
+#'
+#' @description Recursive integration for samples with missing peaks
+#' using the function \code{\link[xcms]{fillChromPeaks}}
+#' from the \pkg{xcms} package.
+#'
+#' @param XCMSfeatures An \linkS4class{XCMSnExp} object containing features.
+#' @param paramFill An object of class \code{FillChromPeaksParam} or \code{ChromPeakAreaParam}
+#' containing the parameters to apply the recursive integration.
+#' See \code{?\link[xcms]{fillChromPeaks}} for more information.
+#'
+#' @return An \linkS4class{XCMSnExp} object including filled missing peaks.
+#'
+#' @references
+#' \insertRef{xcms1}{ntsIUTA}
+#' \insertRef{xcms2}{ntsIUTA}
+#' \insertRef{xcms3}{ntsIUTA}
+#'
+#' @importMethodsFrom xcms fillChromPeaks
+#' @importClassesFrom xcms ChromPeakAreaParam FillChromPeaksParam
+#'
+recursiveIntegration <- function(XCMSfeatures = XCMSfeatures,
+                                 paramFill = xcms::ChromPeakAreaParam()) {
+
+  XCMSfeatures <- suppressWarnings(xcms::fillChromPeaks(XCMSfeatures, param = paramFill))
+
+  return(XCMSfeatures)
+
+}
+
+
+
+
+#' buildFeatureList
+#'
+#' @param obj An \linkS4class{ntsData} object.
+#'
+#' @return An \linkS4class{ntsData} object with updated features slot.
+#'
+#' @importMethodsFrom patRoon as.data.frame
+#' @importFrom dplyr select everything
+#' @importFrom stats na.omit
+#'
+buildFeatureList <- function(obj) {
+
+  pat <- obj@patdata
+
+  feat <- patRoon::as.data.frame(pat, average = TRUE)
+
+  feat <- rename(feat, rt = ret, ID = group)
+
+  rgs <- obj@samples$group
+
+  rg <- unique(rgs)
+
+  sp <- obj@samples$sample
+
+  names(rgs) <- sp
+
+  for (i in seq_len(length(rg))) {
+    feat[, paste0(rg[i], "_sd%")] <- apply(
+      X = patRoon::as.data.table(pat, average = FALSE)[, .SD, .SDcols = sp[rgs == rg[i]]],
+      MARGIN = 1, function(x) {
+        round(ifelse(sd(x) != 0, (sd(x) / mean(x)) * 100, NA), digits = 0)})
+  }
+
+  pl <- obj@peaks
+
+  index <- lapply(seq_len(nrow(feat)), function(h) pl$ID[pl$feature %in% feat$ID[h]])
+
+  names(index) <- feat$ID
+
+  feat$mzmin <- unlist(lapply(index, function(h) min(pl[na.omit(h), "mzmin", drop = TRUE])))
+  feat$mzmax <- unlist(lapply(index, function(h) max(pl[na.omit(h), "mzmax", drop = TRUE])))
+  feat$rtmin <- unlist(lapply(index, function(h) min(pl[na.omit(h), "rtmin", drop = TRUE])))
+  feat$rtmax <- unlist(lapply(index, function(h) max(pl[na.omit(h), "rtmax", drop = TRUE])))
+
+  feat$dppm <- round(((feat$mzmax - feat$mzmin) / feat$mz) * 1E6, digits = 1)
+
+  feat$width <- round(feat$rtmax - feat$rtmin, digits = 0)
+
+  feat$pIdx <- I(index)
+
+  pl$group <- factor(pl$group, levels = rg)
+
+  feat$npeaks <- I(lapply(index, function(h) {as.data.frame(table(pl$group[na.omit(h)]))$Freq}))
+
+  feat$hasFilled <- unlist(lapply(index, function(x) {
+    1 %in% pl[na.omit(x), "is_filled"]
+  }))
+
+  feat <- select(feat, ID, mz, rt, dppm, width, everything())
+
+  obj@features <- feat
+
+  return(obj)
+
+}
+
+
+
+
+#' updateFeatureList
+#'
+#' @param obj An \linkS4class{ntsData} object.
+#'
+#' @return An \linkS4class{ntsData} object with updated features slot.
+#'
+#' @importMethodsFrom patRoon as.data.frame
+#' @importFrom dplyr select everything
+#' @importFrom stats na.omit
+#'
+updateFeatureList <- function(obj) {
+
+  pat <- obj@patdata
+
+  feat <- patRoon::as.data.frame(pat, average = TRUE)
+
+  feat <- rename(feat, rt = ret, ID = group)
+
+  rgs <- obj@samples$group
+
+  rg <- unique(rgs)
+
+  sp <- obj@samples$sample
+
+  names(rgs) <- sp
+
+  for (i in seq_len(length(rg))) {
+    feat[, paste0(rg[i], "_sd%")] <- apply(
+      X = patRoon::as.data.table(pat, average = FALSE)[, .SD, .SDcols = sp[rgs == rg[i]]],
+      MARGIN = 1, function(x) {
+        round(ifelse(sd(x) != 0, (sd(x) / mean(x)) * 100, NA), digits = 0)})
+  }
+
+  pl <- obj@peaks
+
+  index <- lapply(seq_len(nrow(feat)), function(h) pl$ID[pl$feature %in% feat$ID[h]])
+
+  names(index) <- feat$ID
+
+  # TODO Issue, takes longer than buildFeatureList because the indices are not ordered
+  feat$mzmin <- unlist(lapply(index, function(h) min(pl$mzmin[pl$ID %in% na.omit(h)])))
+  feat$mzmax <- unlist(lapply(index, function(h) max(pl$mzmax[pl$ID %in% na.omit(h)])))
+  feat$rtmin <- unlist(lapply(index, function(h) min(pl$rtmin[pl$ID %in% na.omit(h)])))
+  feat$rtmax <- unlist(lapply(index, function(h) max(pl$rtmax[pl$ID %in% na.omit(h)])))
+
+  feat$dppm <- round(((feat$mzmax - feat$mzmin) / feat$mz) * 1E6, digits = 1)
+
+  feat$width <- round(feat$rtmax - feat$rtmin, digits = 0)
+
+  feat$pIdx <- I(index)
+
+  pl$group <- factor(pl$group, levels = rg)
+
+  feat$npeaks <- I(lapply(index, function(h) {as.data.frame(table(pl$group[na.omit(h)]))$Freq}))
+
+  feat$hasFilled <- unlist(lapply(index, function(x) {
+    1 %in% pl[na.omit(x), "is_filled"]
+  }))
+
+  feat <- select(feat, ID, mz, rt, dppm, width, everything())
+
+  featOld <- obj@features
+
+  featOld <- featOld[, c("ID", colnames(featOld)[!colnames(featOld) %in% colnames(feat)])]
+
+  feat <- left_join(feat, featOld, by = "ID")
+
+  obj@features <- feat
+
+  return(obj)
+
+}

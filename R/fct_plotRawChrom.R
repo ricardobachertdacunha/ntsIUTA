@@ -1,63 +1,78 @@
 
 
 #' @title plotRawChrom
-#' @description Plots total, base and extracted ion chromatograms (TIC, BPC and EIC, respectively) of an \linkS4class{OnDiskMSnExp} object,
-#' using the \pkg{plotly} package to procude an iteractive plot.
+#' @description A method for plotting total, base and extracted ion chromatograms
+#' (TIC, BPC and EIC, respectively) of an \linkS4class{ntsData} object.
 #'
-#' @param raw An \linkS4class{OnDiskMSnExp} object with one or more files.
-#' @param fileIndex The index of the file/s to extract the centroids or profile data.
-#' @param mz Optional target \emph{m/z} to obtain an extracted ion chromatogram (EIC).
-#' When not \code{NULL} (the default), EIC is always returned.
-#' @param ppm The mass deviation to extract the data for the EIC in \code{ppm}.
-#' @param rt The retention time in minutes or seconds, depending on the defined \code{rtUnit}, see below.
-#' @param rtWindow The time deviation to collect centroids or profile data. The time unit is the defined by \code{rtUnit}.
-#' A time interval can be given with a length 2 vector, defining the minimum and maximum retention time.
-#' @param rtUnit Possible entries are \code{min} or \code{sec}. The default is \code{sec}.
-#' @param msLevel The MS level to extract the data. For the momment, only 1 is possible.
-#' @param type The type of chromatogram. Possible entries are "bpc" for base peak chromatogram or "tic" for total ion chromatogram.
-#' The default is "tic". If \code{mz} is specified (not \code{NULL}), the type is set automatically to EIC.
+#' @param obj An \linkS4class{ntsData} object with one or more files.
+#' @param samples The index or names of the sample/s to extract the data.
+#' @param mz Optional target \emph{m/z} to obtain an EIC.
+#' Note that when not \code{NULL} (the default), EIC is always returned.
+#' @param ppm The mass deviation to extract the data for the EIC, in \code{ppm}.
+#' @param rt The retention time in minutes or seconds,
+#' depending on the defined \code{rtUnit}, see below.
+#' @param rtWindow The time window or deviation to collect the data.
+#' The time unit is defined by \code{rtUnit}.
+#' A time interval can be given with a length 2 vector,
+#' defining the minimum and maximum retention time.
+#' A vector of length 1 is assumed as a deviation of a given \code{rt}.
+#' @param rtUnit Possible entries are \code{sec} (the default) or \code{min}.
+#' @param msLevel The MS level to extract the data.
+#' For the moment, only 1 is possible.
+#' @param type The type of chromatogram.
+#' Possible entries are "bpc" for base peak chromatogram
+#' or "tic" for total ion chromatogram.
+#' The default is "tic". If \code{mz} is specified (not \code{NULL}),
+#' the type is set automatically to EIC.
+#' @param colorBy Possible values are \code{"samples"} or \code{sampleGroups}
+#' (the default), for colouring by samples or sample replicate groups respectively.
+#' @param interactive Logical, set to \code{TRUE} to use
+#' the \pkg{plotly} instead of \pkg{ggplot2}. The default is \code{FALSE}.
 #'
-#' @return An iterative plot for inspection of the raw data in the given \linkS4class{OnDiskMSnExp} object.
+#' @return A plot for inspection of the raw data
+#' in the given \linkS4class{ntsData} object.
 #'
 #' @export
 #'
-#' @importMethodsFrom MSnbase filterFile
 #' @importFrom plotly toRGB plot_ly add_trace layout
 #' @importFrom dplyr group_by arrange top_n summarize
+#' @importFrom checkmate assertSubset assertClass
 #'
-#' @examples
-#'
-plotRawChrom <- function(raw = rawData, fileIndex = NULL,
+plotRawChrom <- function(obj,
+                         samples = NULL,
                          mz = NULL, ppm = 20,
                          rt = NULL, rtWindow = NULL,
                          rtUnit = "sec",
-                         msLevel = 1, type = "tic") {
+                         msLevel = 1,
+                         type = "tic",
+                         colorBy = "sampleGroups",
+                         interactive = FALSE) {
 
-  # raw = rawData
-  # fileIndex = NULL
-  # mz <- c(233.0243)
-  # rt <- NULL
-  # rtUnit = "min"
-  # ppm <- 20
-  # rtWindow = NULL
-  # msLevel = 1
+  assertClass(obj, "ntsData")
+
+  assertSubset(rtUnit, c("sec", "min"))
+
+  assertSubset(type, c("tic", "bpc"))
+
+  assertSubset(colorBy, c("samples", "sampleGroups"))
 
   if (!is.null(mz) && length(mz) == 1) {
     if (!is.null(ppm)) ppm <- 20
     main <- paste0("EIC of ", round(mz, digits = 4), " +/- ", round(ppm, digits = 0), " ppm")
     type <- "eic"
   } else {
-    main <- toupper(type)
+    if (!is.null(mz) && length(mz) == 2) {
+      main <- paste0("EIC for ", round(mz[1], digits = 4), "to ", round(mz[2], digits = 4))
+      type <- "eic"
+    } else {
+      main <- toupper(type)
+    }
   }
+  
+  if (!is.null(samples)) obj <- filterFileFaster(obj, samples)
 
-  if (!is.null(fileIndex)) {
-    raw <- filterFile(raw, fileIndex)
-  }
-
-  colors <- getColors(raw, "samples")
-
-  df <- extractEIC(raw = raw,
-                   fileIndex = NULL,
+  df <- extractEIC(obj = obj,
+                   samples = NULL,
                    mz = mz, ppm = ppm,
                    rt = rt, rtWindow = rtWindow,
                    rtUnit = rtUnit, msLevel = 1,
@@ -81,41 +96,66 @@ plotRawChrom <- function(raw = rawData, fileIndex = NULL,
   }
 
   for (i in seq_len(length(unique(df$file)))) {
-    df[df$file == i, "file"] <- raw$sample_name[i]
+    df[df$file == i, "file"] <- samples(obj)[i]
   }
 
-  title <- list(text = main, x = 0.1, y = 0.98, font = list(size = 14, color = "black"))
+  cl <- getColors(obj, which = colorBy)
 
-  xaxis <- list(linecolor = toRGB("black"), 
-                linewidth = 2, title = "Retention Time (sec.)",
-                titlefont = list(size = 12, color = "black"))
+  if (!interactive) {
 
-  yaxis <- list(linecolor = toRGB("black"),
-                linewidth = 2, title = "Intensity",
-                titlefont = list(size = 12, color = "black"))
+    plot <- ggplot(data = df, aes(x = rt, y = i, color = file)) +
+      geom_line(size = 0.5) +
+      scale_color_manual(values = cl) +
+      ggtitle(main) +
+      theme_bw() +
+      ylab("Intensity") +
+      xlab("Retention Time") +
+      theme(legend.title = element_blank())
 
-  plot <- plot_ly(df,
-                  x = df[df$file == raw$sample_name[1], "rt"],
-                  y = df[df$file == raw$sample_name[1], "i"],
-                  type = "scatter", mode = "lines+markers",
-                  line = list(width = 0.5, color = unname(getColors(raw, "samples")[1])),
-                  marker = list(size = 2, color = unname(getColors(raw, "samples")[1])),
-                  name = raw$sample_name[1])
+  } else {
 
-  if (length(unique(df$file)) > 1) {
-    for (i in 2:length(unique(df$file))) {
-      plot  <- plot %>% add_trace(df,
-                                  x = df[df$file == raw$sample_name[i], "rt"],
-                                  y = df[df$file == raw$sample_name[i], "i"],
-                                  type = "scatter", mode = "lines+markers",
-                                  line = list(width = 0.5, color = unname(getColors(raw, "samples")[i])),
-                                  marker = list(size = 2, color = unname(getColors(raw, "samples")[i])),
-                                  name = raw$sample_name[i])
+    title <- list(text = main, x = 0.1, y = 0.98, font = list(size = 14, color = "black"))
+
+    xaxis <- list(linecolor = toRGB("black"),
+                  linewidth = 2, title = "Retention Time (sec.)",
+                  titlefont = list(size = 12, color = "black"))
+
+    yaxis <- list(linecolor = toRGB("black"),
+                  linewidth = 2, title = "Intensity",
+                  titlefont = list(size = 12, color = "black"))
+
+    plot <- plot_ly(df,
+                    x = df[df$file == samples(obj)[1], "rt"],
+                    y = df[df$file == samples(obj)[1], "i"],
+                    type = "scatter", mode = "lines+markers",
+                    line = list(width = 0.5, color = unname(cl[1])),
+                    marker = list(size = 2, color = unname(cl[1])),
+                    name = samples(obj)[1],
+                    text = round(df[df$file == samples(obj)[1], "mz"], digits = 4),
+                    hovertemplate = paste("<i>m/z</i>: %{text}",
+                                          "<br>rt: %{x}<br>",
+                                          "Int: %{y}"))
+
+    if (length(unique(df$file)) > 1) {
+      for (i in 2:length(unique(df$file))) {
+        plot  <- plot %>% add_trace(df,
+                                    x = df[df$file == samples(obj)[i], "rt"],
+                                    y = df[df$file == samples(obj)[i], "i"],
+                                    type = "scatter", mode = "lines+markers",
+                                    line = list(width = 0.5, color = unname(cl[i])),
+                                    marker = list(size = 2, color = unname(cl[i])),
+                                    name = samples(obj)[i],
+                                    text = round(df[df$file == samples(obj)[i], "mz"], digits = 4),
+                                    hovertemplate = paste("<i>m/z</i>: %{text}",
+                                                          "<br>rt: %{x}<br>",
+                                                          "Int: %{y}"))
+      }
     }
-  }
 
-  plot <- plot %>% layout(legend = list(title = list(text = "<b> Sample: </b>")),
-                          xaxis = xaxis, yaxis = yaxis, title = title)
+    plot <- plot %>% layout(legend = list(title = list(text = "<b> Sample: </b>")),
+                            xaxis = xaxis, yaxis = yaxis, title = title)
+
+  }
 
   return(plot)
 

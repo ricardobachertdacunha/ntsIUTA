@@ -5,50 +5,48 @@
 \title{checkIS}
 \usage{
 checkIS(
-  x = NULL,
-  xPat = NULL,
-  polarity = "positive",
-  screeningList = utils::choose.files(base::getwd(), "Select the QC screening list"),
-  ppmWindow = 15,
-  rtWindow = 30,
-  plot = TRUE,
-  save = TRUE,
-  projPath = setup$projPath
+  obj = NULL,
+  targets = NULL,
+  ppm = NULL,
+  rtWindow = NULL,
+  MS2param = NULL,
+  recoveryFrom = NULL,
+  exportResults = FALSE,
+  save = FALSE
 )
 }
 \arguments{
-\item{x}{A \linkS4class{XCMSnExp} object.}
+\item{obj}{An \linkS4class{ntsData} object.}
 
-\item{xPat}{Alternatively, a \linkS4class{featureGroups} object.}
+\item{targets}{The \linkS4class{suspectList} object with the information of
+internal standards to be found.}
 
-\item{polarity}{The polarity for the search. Possible values are \code{positive} or \code{negative}.}
+\item{ppm}{The mass deviation, in ppm, to screen for the internal standards.
+The default is 10 ppm.}
 
-\item{screeningList}{A \code{data.frame} with details from each internal standard in the samples.
-See details for more information about the required data.frame structure.}
+\item{rtWindow}{The retention time deviation, in seconds,
+to screen for the internal standards. The default is 30 seconds.}
 
-\item{ppmWindow}{The mass deviation, in ppm, allowed to screen for internal standards.}
+\item{MS2param}{The parameters to extract MS2 information of each internal standard.}
 
-\item{rtWindow}{The retention time deviation, in seconds, allowed to screen for internal standards.}
+\item{recoveryFrom}{A character vector with the name of the sample replicate group
+to use for calculating the recovery.
+The default is \code{NULL} to use the intControl in the \linkS4class{suspectList}.}
 
-\item{plot}{Logical, set to \code{TRUE} for plotting the results.}
+\item{exportResults}{Logical, set to \code{TRUE} for exporting the results
+to the project folder.}
 
-\item{save}{Logical, set to \code{TRUE} for storing  the generated IS object in the rData folder.}
-
-\item{projPath}{The \code{projPath} directory as defined in the \code{setup} object.}
+\item{save}{Logical, set to \code{TRUE} to save updated
+\linkS4class{ntsData} object in the \strong{rdata} folder.
+Note that \code{TRUE} overwrites the existing \linkS4class{ntsData} object.
+Optionally, a character string can be given instead of \code{TRUE}
+to be used as file name, avoiding overwriting.}
 }
 \value{
-A \code{list} containing the plots and a data.frame with the summary of the
-retention time, mass and intensity deviations as well as the quality of the MS2 data for each internal standard found.
+An \linkS4class{ntsData} object with results from evaluation of
+internal standards in each sample replicate group added to the IS slot.
 }
 \description{
-Evaluation of internal standards for samples within a given \linkS4class{XCMSnExp} or \linkS4class{featureGroups} object.
-}
-\details{
-The \code{screeningList} template can be obtained as csv via \code{ntsIUTA::getScreeningListTemplate()}.
-Add other details of the template.
-}
-\examples{
-
-
-
+Evaluation of internal standards for each sample replicate group
+within the \linkS4class{ntsData} object.
 }
