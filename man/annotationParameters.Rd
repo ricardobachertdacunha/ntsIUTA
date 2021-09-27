@@ -9,7 +9,9 @@ annotationParameters(object, algorithm, param)
 \arguments{
 \item{object}{An object to add or get annotationParameters parameters.}
 
-\item{...}{Other method dependent parameters.}
+\item{algorithm}{Algorithm for the set of parameters.}
+
+\item{param}{List of parameters.}
 }
 \value{
 A list of parameters or the object with added parameters.

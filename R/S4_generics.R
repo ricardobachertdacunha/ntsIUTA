@@ -64,7 +64,8 @@ setGeneric("QC<-", function(object, value) standardGeneric("QC<-"))
 #' peakPickingParameters
 #'
 #' @param object An object to add or get peak picking parameters.
-#' @param ... Other method dependent parameters.
+#' @param algorithm Algorithm for the set of parameters.
+#' @param param List of parameters.
 #'
 #' @return A list of parameters or the object with added parameters.
 #'
@@ -73,7 +74,8 @@ setGeneric("peakPickingParameters", function(object, algorithm, param) standardG
 #' peakGroupingParameters
 #'
 #' @param object An object to add or get peak grouping parameters.
-#' @param ... Other method dependent parameters.
+#' @param algorithm Algorithm for the set of parameters.
+#' @param param List of parameters.
 #'
 #' @return A list of parameters or the object with added parameters.
 #'
@@ -82,7 +84,8 @@ setGeneric("peakGroupingParameters", function(object, algorithm, param) standard
 #' fillMissingParameters
 #'
 #' @param object An object to add or get fill missing parameters.
-#' @param ... Other method dependent parameters.
+#' @param algorithm Algorithm for the set of parameters.
+#' @param param List of parameters.
 #'
 #' @return A list of parameters or the object with added parameters.
 #'
@@ -91,7 +94,8 @@ setGeneric("fillMissingParameters", function(object, algorithm, param) standardG
 #' annotationParameters
 #'
 #' @param object An object to add or get annotationParameters parameters.
-#' @param ... Other method dependent parameters.
+#' @param algorithm Algorithm for the set of parameters.
+#' @param param List of parameters.
 #'
 #' @return A list of parameters or the object with added parameters.
 #'

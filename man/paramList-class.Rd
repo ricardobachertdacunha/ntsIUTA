@@ -18,8 +18,6 @@ paramList
 
 \item{\code{peakGrouping}}{A paramSet object for grouping peaks across samples.}
 
-\item{\code{recursive}}{Logical, set to \code{TRUE} for performing recursive peaks integration after grouping.}
-
 \item{\code{fillMissing}}{A paramSet object for performing recursive peak integration.}
 
 \item{\code{annotation}}{A paramSet object for annotation of peaks and features in the \linkS4class{ntsData} object}

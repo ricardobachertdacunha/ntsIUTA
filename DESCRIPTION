@@ -22,6 +22,7 @@ Imports:
     tools,
     Rdpack,
     dplyr,
+    plyr,
     data.table,
     magrittr,
     BiocParallel,

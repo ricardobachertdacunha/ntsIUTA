@@ -204,6 +204,7 @@ FindIsotopesWithValidationAltered <- function(xA = xA,
 #' @param mzValues \emph{m/z} mzvalues of peaks.
 #' @param intValues Intensity values of peaks.
 #' @param snValues Signal-to-noise ration of the peaks.
+#' @param sdValues Intensity standard deviation of the peaks. 
 #' @param maxcharge Maximum charge allowed.
 #' @param devppm Maximum mass deviation, in ppm.
 #' @param mzabs Maximum mass deviation, in \emph{m/z}.

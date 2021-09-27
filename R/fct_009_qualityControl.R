@@ -93,8 +93,6 @@ checkQC <- function(
     adduct <- NULL
   }
 
-  require(xcms)
-
   screen <- screenSuspects(data@patdata, select(targets@data, -mz),
                            rtWindow = rtWindow, mzWindow = 0.02,
                            adduct = adduct, onlyHits = TRUE)

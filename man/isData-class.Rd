@@ -14,22 +14,14 @@ isData
 \section{Slots}{
 
 \describe{
-\item{\code{samples}}{A data.frame listing the QC samples.}
-
 \item{\code{targets}}{A \linkS4class{suspectList} object with the QC target compounds.}
-
-\item{\code{rtWindow}}{The retention time window, in seconds, to look for target compounds.}
 
 \item{\code{ppm}}{The mass window, in ppm, to look for target compounds.}
 
-\item{\code{MSnExp}}{An \linkS4class{OnDiskMSnExp} object with QC raw data.}
+\item{\code{rtWindow}}{The retention time window, in seconds, to look for target compounds.}
 
-\item{\code{patdata}}{A \linkS4class{features} or \linkS4class{featureGroups}
-object derived from the basic NTS workflow (peak picking, alignment and grouping).}
-
-\item{\code{peaks}}{A data.frame containing the peak information for each QC sample.}
-
-\item{\code{features}}{A data.frame with the features information.}
+\item{\code{recoveryFrom}}{A character object with the name of the sample replicate group
+used for recovery evaluation.}
 
 \item{\code{results}}{A data frame with the QC results summary.}
 }}

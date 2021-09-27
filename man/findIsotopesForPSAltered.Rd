@@ -23,6 +23,8 @@ findIsotopesForPSAltered(
 
 \item{intValues}{Intensity values of peaks.}
 
+\item{sdValues}{Intensity standard deviation of the peaks.}
+
 \item{snValues}{Signal-to-noise ration of the peaks.}
 
 \item{maxcharge}{Maximum charge allowed.}

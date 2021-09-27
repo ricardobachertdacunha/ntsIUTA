@@ -143,7 +143,6 @@ setClass("MS2param",
 #'
 #' @slot peakPicking A paramSet object for performing peak picking.
 #' @slot peakGrouping A paramSet object for grouping peaks across samples.
-#' @slot recursive Logical, set to \code{TRUE} for performing recursive peaks integration after grouping.
 #' @slot fillMissing A paramSet object for performing recursive peak integration.
 #' @slot annotation A paramSet object for annotation of peaks and features in the \linkS4class{ntsData} object
 #' @slot MS2 An \linkS4class{MS2param} object with settings for extraction of MS2 data.
@@ -228,15 +227,11 @@ setClass("qcData",
 
 #' @title isData
 #'
-#' @slot samples A data.frame listing the QC samples.
 #' @slot targets A \linkS4class{suspectList} object with the QC target compounds.
-#' @slot rtWindow The retention time window, in seconds, to look for target compounds.
 #' @slot ppm The mass window, in ppm, to look for target compounds.
-#' @slot MSnExp An \linkS4class{OnDiskMSnExp} object with QC raw data.
-#' @slot patdata A \linkS4class{features} or \linkS4class{featureGroups}
-#' object derived from the basic NTS workflow (peak picking, alignment and grouping).
-#' @slot peaks A data.frame containing the peak information for each QC sample.
-#' @slot features A data.frame with the features information.
+#' @slot rtWindow The retention time window, in seconds, to look for target compounds.
+#' @slot recoveryFrom A character object with the name of the sample replicate group
+#' used for recovery evaluation.
 #' @slot results A data frame with the QC results summary.
 #'
 #' @return A \linkS4class{qcData} object to store the QC parameters, data and results
