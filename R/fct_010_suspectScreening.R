@@ -99,11 +99,6 @@ suspectScreening <- function(obj,
 
   assertClass(suspectList, "suspectList")
 
-  if (suspectList@rtUnit != "sec") {
-    warning("The rt should be in seconds!")
-    return(obj)
-  }
-
   if (suspectList@length == 0) {
     warning("The suspectList is empty!")
     return(obj)

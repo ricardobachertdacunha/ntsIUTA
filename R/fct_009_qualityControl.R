@@ -164,17 +164,17 @@ checkQC <- function(
             dbMS2 <- data.frame(mz = as.numeric(unlist(strsplit(ms2df$fragments_mz[i], split = ";"))),
                                 intensity = as.numeric(unlist(strsplit(ms2df$fragments_int[i], split = ";"))),
                                 precursor = as.logical(unlist(strsplit(ms2df$fragments_pre[i], split = ";"))))
-
+            
+            
             xMS2 <- top_n(xMS2, 10, intensity)
             xMS2 <- mutate(xMS2, into_ind = intensity / max(xMS2$intensity))
-
+            
             dbMS2 <- top_n(dbMS2, 10, intensity)
             dbMS2 <- mutate(dbMS2, into_ind = intensity / max(dbMS2$intensity))
-
-            combi <- fuzzyjoin::difference_inner_join(xMS2, dbMS2,
-                                                      by = c("mz"),
-                                                      max_dist = 0.005,
-                                                      distance_col = "diff")
+            
+            combi <- fuzzyjoin::difference_inner_join(xMS2, dbMS2, by = c("mz"), max_dist = 0.02, distance_col = "diff")
+            combi$diff <- (combi$diff/combi$mz.x) * 1E6
+            combi <- combi[combi$diff < 10, ] #remove entries with max diff of 10 ppm
 
             df$nfrag[i] <- nrow(combi)
             df$pfrag[i] <- nrow(combi) / nrow(dbMS2)
@@ -232,13 +232,13 @@ checkQC <- function(
            width = 17, height = 10, units = "cm", dpi = 300, limitsize = TRUE)
 
     plotfp <- plotFeaturePeaks(obj = data,
-                               ID = obj@QC$results$ID,
+                               ID = obj@QC@results$ID,
                                mz = NULL,
                                rt = NULL,
                                rtUnit = "min",
                                ppm = NULL,
                                rtWindow = NULL,
-                               names = obj@QC$results$name,
+                               names = obj@QC@results$name,
                                interactive = TRUE)
 
     saveWidget(partial_bundle(plotfp), file = paste0(results, "/QC03_featurePeaks.html"))
@@ -352,7 +352,7 @@ plotCheckQC <- function(obj, rtWindow = NULL, ppm = NULL) {
       geom_rect(aes(ymin = 2, ymax = 5, xmin = -Inf, xmax = Inf), fill = "PaleGreen", alpha = 0.05) +
       geom_rect(aes(ymin = 5, ymax = Inf, xmin = -Inf, xmax = Inf), fill = "ForestGreen", alpha = 0.05) +
       geom_rect(aes(ymin = -Inf, ymax = 2, xmin = -Inf, xmax = Inf), fill = "white", alpha = 0.01) +
-      geom_point(stat = "identity", aes(x = name, y = nfrag)) +
+      geom_point(stat = "identity", aes(x = name, y = ifelse(nfrag > 10, 10, nfrag))) +
       theme(axis.text.y = element_blank(),
             axis.title.y = element_blank(),
             axis.text.x = element_text(size = 7),

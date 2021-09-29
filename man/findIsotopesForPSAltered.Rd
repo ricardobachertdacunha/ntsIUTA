@@ -12,7 +12,6 @@ findIsotopesForPSAltered(
   snValues = snValues,
   maxcharge = maxcharge,
   devppm = devppm,
-  mzabs = mzabs,
   validateIsotopePatterns = TRUE
 )
 }
@@ -30,8 +29,6 @@ findIsotopesForPSAltered(
 \item{maxcharge}{Maximum charge allowed.}
 
 \item{devppm}{Maximum mass deviation, in ppm.}
-
-\item{mzabs}{Maximum mass deviation, in \emph{m/z}.}
 
 \item{validateIsotopePatterns}{Logical, when \code{TRUE} applies validation using the kegg library.}
 }

@@ -106,15 +106,16 @@ setupProject <- function(path = utils::choose.dir(getwd(), "Select or create a p
   obj@metadata <- obj@samples[, "sample", drop = FALSE]
 
   if (makeNewProject) {
-
+    
+    if (save) saveObject(obj = obj)
+    
     #TODO add template for main script file
     sp <- file.path(obj@path, "mainscript.R")
     cat(
-
-      "#Copy template from template.R using x and/or use ?ntsIUTA for a tutorial.\n
-      #Run the following code to load the project setup:\n
-      library(ntsIUTA) #/n
-      setup <- readRDS('rData/ntsData.rds')",
+"#Copy template from template.R using x and/or use ?ntsIUTA for a tutorial.\n
+#Run the following code to load the project setup:\n
+library(ntsIUTA) #/n
+setup <- readRDS('rData/ntsData.rds')",
 
     file = sp, sep = "")
 

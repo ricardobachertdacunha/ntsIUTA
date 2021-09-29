@@ -16,6 +16,14 @@ path <- system.file(package = "ntsIUTA", dir = "extdata")
 dtall <- setupProject(path, polarity = "positive", save = FALSE, makeNewProject = FALSE)
 
 
+#### Create New Session -----
+
+setupProject(title = "Aopti_20200317",
+             date = as.Date("2020-03-17"),
+             polarity = "positive",
+             save = TRUE, makeNewProject = TRUE)
+
+
 
 
 ### S4 Methods ----------------------------------------------------------------------------------------------
@@ -213,7 +221,8 @@ plotRawChrom(dt)
 
 plotCorReplicates(dt, binsize = 3)
 
-
+#Data frame with carrelation summary
+getCorReplicates(dt, exportResults = FALSE)
 
 
 #### xcms3 ---------------------------------------------------------------------
@@ -837,6 +846,17 @@ dt <- annotationParameters(dt,
 )
 
 
+
+
+### Wrapper PP, Grou & Anno ----------------------------------------------------------------------------------
+
+dt <- createFeatures(dt, excludeBlanks = FALSE, save = FALSE)
+
+dt
+
+
+
+
 ### QC check ------------------------------------------------------------------------------------------------
 # Wrapping function for fast QC check using the workflow parameters.
 
@@ -870,7 +890,7 @@ plotFeaturePeaks(obj = qc2ntsData(dt1),
 
 
 # TODO make S4 method to get QC results
-View(dtxcms3@QC$results)
+View(dt1@QC@results)
 
 
 
@@ -959,9 +979,9 @@ test <- dtxcms3[, dtxcms3@control$results$IN$ID]
 
 ### Feature Metadata ---------------------------------------------------------------------------------------
 
-dtxcms4 <- dtxcms2[4:6]
+dtxcms5 <- dtxcms4[4:6]
 
-dtxcms4 <- calculateFeaturesMetadata(dtxcms4, ID = NULL)
+dtxcms5 <- calculateFeaturesMetadata(dtxcms5, ID = NULL)
 
 ft <- dtxcms4@peaks
 
@@ -1019,7 +1039,7 @@ suspectListPath <- paste0(system.file(package = "ntsIUTA", dir = "extdata"),
 
 suspectList <- getSuspectList(suspectListPath)
 
-dtxcms3 <- suspectScreening(obj = dtxcms2,
+dtxcms5 <- suspectScreening(obj = dtxcms4,
                             title = NULL,
                             samples = 4,
                             suspectList = suspectList,
@@ -1031,11 +1051,23 @@ dtxcms3 <- suspectScreening(obj = dtxcms2,
                             MS2param = MS2param())
 
 
-View(dtxcms3@workflows$SuspectScreening@results)
+View(dtxcms5@workflows$SuspectScreening@results)
 
+
+
+
+### Find Fragments ------------------------------------------------------------------------------------------
+
+dt2 <- qc2ntsData(dt1)
+
+ID <- dt2@QC@results$ID
+
+targets <- read.csv("F:/NTS_IUTA_Projects/art01_Aopti/tp_nitro.csv")
 
 
 ### Other ---------------------------------------------------------------------------------------------------
+
+
 
 
 # TODO prepare the history with info for rerun the code
