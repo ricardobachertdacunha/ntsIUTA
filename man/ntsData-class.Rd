@@ -13,6 +13,7 @@
 \alias{QC,ntsData-method}
 \alias{QC<-,ntsData-method}
 \alias{[,ntsData,ANY,missing,missing-method}
+<<<<<<< HEAD
 \alias{[,ntsData,ANY,ANY,missing-method}
 \alias{peaks,ntsData-method}
 \alias{features,ntsData-method}
@@ -25,6 +26,8 @@
 \alias{fillMissingParameters,ntsData,character,ANY-method}
 \alias{annotationParameters,ntsData,missing,missing-method}
 \alias{annotationParameters,ntsData,character,ANY-method}
+=======
+>>>>>>> cd4cc5a (git problems)
 \title{ntsData}
 \usage{
 \S4method{show}{ntsData}(object)
@@ -44,6 +47,7 @@
 \S4method{QC}{ntsData}(object) <- value
 
 \S4method{[}{ntsData,ANY,missing,missing}(x, i, j, ..., drop = TRUE)
+<<<<<<< HEAD
 
 \S4method{[}{ntsData,ANY,ANY,missing}(x, i, j, ..., drop = TRUE)
 
@@ -99,6 +103,8 @@
 \S4method{annotationParameters}{ntsData,missing,missing}(object)
 
 \S4method{annotationParameters}{ntsData,character,ANY}(object, algorithm, param)
+=======
+>>>>>>> cd4cc5a (git problems)
 }
 \arguments{
 \item{object}{An \linkS4class{ntsData} object.}
@@ -170,6 +176,7 @@ within the \pkg{ntsIUTA} package.
 
 \item \code{QC<-}: Setter for QC replicate sample groups.
 
+<<<<<<< HEAD
 \item \code{[}: Subset on samples, using sample index or name.
 
 \item \code{[}: Subset on samples, using sample index or name.
@@ -195,6 +202,9 @@ within the \pkg{ntsIUTA} package.
 \item \code{annotationParameters}: Getter for annotation parameters.
 
 \item \code{annotationParameters}: Setter for annotation parameters.
+=======
+\item \code{[}: Subset on samples.
+>>>>>>> cd4cc5a (git problems)
 }}
 
 \section{Slots}{

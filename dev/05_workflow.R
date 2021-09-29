@@ -109,6 +109,15 @@ exEIC <- extractEIC(dtcent,
                     rt = 14.8, rtWindow = 0.5,
                     rtUnit = "min")
 
+<<<<<<< Updated upstream
+=======
+exEIC <- extractEIC(obj, fileIndex = NULL,
+                    mz = 242.1434, ppm = 20,
+                    rt = 14.8, rtWindow = 0.5,
+                    rtUnit = "min")
+
+#plot functions for TIC, BPC or EIC
+>>>>>>> Stashed changes
 
 
 
@@ -1032,6 +1041,7 @@ filterPeaks(peaksOpenms, fileIndex = 1:2, mz = 748.4842, ppm = 10, rt = 14.9, rt
 
 ### Suspect Screening WF ------------------------------------------------------------------------------------
 
+<<<<<<< HEAD
 getSuspectListTemplate(saveTo = system.file(package = "ntsIUTA", dir = "extdata"))
 
 suspectListPath <- paste0(system.file(package = "ntsIUTA", dir = "extdata"),
@@ -1073,3 +1083,60 @@ targets <- read.csv("F:/NTS_IUTA_Projects/art01_Aopti/tp_nitro.csv")
 # TODO prepare the history with info for rerun the code
 # TODO add storage/drop method for processing steps
 #dtprof@MSnExp@spectraProcessingQueue <- list()
+=======
+suspects <- paste0(system.file(package = "ntsIUTA", dir = "extdata"),
+                   "/QC_ScreeningList_ntsIUTA_MS2_pos.csv")
+
+<<<<<<< Updated upstream
+dtxcms2 <- screenSuspectsFromCSV(dtxcms2,
+                                 name = NULL,
+                                 suspects = suspects,
+                                 ppm = 5,
+                                 rtWindow = 30,
+                                 adduct = NULL,
+                                 excludeBlanks = TRUE,
+                                 withMS2 = TRUE,
+                                 MS2param = MS2param())
+=======
+#### xcms3 --------------------------------------------------------------------------------------------------
+dtxcms <- makeFeatures(obj = dtxcms,
+                       algorithm = "xcms3",
+                       rtAlignment = TRUE,
+                       paramAlignment = paramAlignment,
+                       paramGrouping = paramGroupingxcms,
+                       recursive = TRUE,
+                       paramFill = paramFill,
+                       save = FALSE)
+
+
+
+
+#### openms -------------------------------------------------------------------------------------------------
+dtopenms <- makeFeatures(obj = dtopenms,
+                         algorithm = "openms",
+                         rtAlignment = TRUE,
+                         paramGrouping = paramGroupingOpenms,
+                         recursive = FALSE,
+                         paramFill = NULL,
+                         save = FALSE)
+
+# TODO improve buildFeatureList function
+
+
+#### Ploting Alignment --------------------------------------------------------------------------------------
+# TODO check alignment, may only work when xcms3 is used as algorithm to align peaks
+plotAlignment(features)
+
+
+
+
+#### Inspecting Features ------------------------------------------------------------------------------------
+
+patRoon::plotChroms(features[, 1:2], col = "none")
+
+# TODO static and iterative plot for peaks and features
+plotFeatures(features, features = "M201_R784_1")
+
+
+>>>>>>> Stashed changes
+>>>>>>> cd4cc5a (git problems)
