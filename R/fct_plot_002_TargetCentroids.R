@@ -104,7 +104,7 @@ plotTargetCentroids <- function(obj = NULL,
                   type = "scatter", mode = "markers", color = temp$i, colors = colors,
                   marker = list(size = 8, line = list(color = "white", width = 0.5)), name = paste0(s, "p1"))
 
-    if (plotTargetMark) p1 <- p1 %>% layout(shapes = c(vline1, line))
+    if (plotTargetMark) p1 <- p1 %>% plotly::layout(shapes = c(vline1, line))
 
     p1 <- p1 %>% add_annotations(text = sNames[s], x = 0.05, y = 1, yref = "paper", xref = "paper",
                                  xanchor = "left", yanchor = "bottom", align = "center",
@@ -114,7 +114,7 @@ plotTargetCentroids <- function(obj = NULL,
                   type = "scatter", mode = "markers", color = temp$i, colors = colors,
                   marker = list(size = 8, line = list(color = "white", width = 0.5)), name = paste0(s, "p2"))
 
-    if (plotTargetMark) p2 <- p2 %>% layout(shapes = list(c(vline2, line), c(hline, line), rect))
+    if (plotTargetMark) p2 <- p2 %>% plotly::layout(shapes = list(c(vline2, line), c(hline, line), rect))
 
     plotList[[paste0("p1", s)]] <- p1
     plotList[[paste0("p2", s)]] <- p2
@@ -128,16 +128,16 @@ plotTargetCentroids <- function(obj = NULL,
   yaxis1 <- list(linecolor = toRGB("black"), linewidth = 2, title = "Intensity",
                 titlefont = list(size = 12, color = "black"), range = c(0, maxInt))
 
-  yaxis2 <- list(linecolor = toRGB("black"), linewidth = 2, title = "m/z",
+  yaxis2 <- list(linecolor = toRGB("black"), linewidth = 2, title = paste("<i>m/z</i>"),
                 titlefont = list(size = 12, color = "black"), range = c(mzmin, mzmax))
 
   plot <- subplot(plotList, nrows = 2, margin = 0.04, shareX = TRUE, shareY = TRUE, which_layout = "merge")
   plot <- hide_colorbar(plot)
   plot <- hide_legend(plot)
-  plot <- plot %>% layout(xaxis = xaxis, xaxis2 = xaxis,
-                          xaxis3 = xaxis, xaxis4 = xaxis,
-                          xaxis5 = xaxis, xaxis6 = xaxis,
-                          yaxis = yaxis1, yaxis2 = yaxis2)
+  plot <- plot %>% plotly::layout(xaxis = xaxis, xaxis2 = xaxis,
+                                  xaxis3 = xaxis, xaxis4 = xaxis,
+                                  xaxis5 = xaxis, xaxis6 = xaxis,
+                                  yaxis = yaxis1, yaxis2 = yaxis2)
 
   return(plot)
 

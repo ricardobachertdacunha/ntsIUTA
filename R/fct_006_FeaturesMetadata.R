@@ -1,5 +1,149 @@
 
 
+#' @title calculateSNR
+#' 
+#' @description Calculates the signal-to-noise (sn) ratio for features in a given \linkS4class{ntsData} object
+#' or specified via the argument \code{ID}. The noise is extimated by the maximum intensity of the background
+#' centroids, which belong to the same mass bin as the peaks in the feature but are taken from a predefined
+#' (\code{rtWindow}) time window before and after the feature limits. The sn is then calculated by
+#' dividind the maximum intensity of the feature in the \linkS4class{ntsData} object with the estimated noise.
+#' Centroids that belong to other peaks within the same mass and time windows are excluded before noise estimation.
+#' 
+#' @param obj An \linkS4class{ntsData} object.
+#' @param ID Optionally, a character vector with the ID of the features to calculate the sn ratio.
+#' @param rtWindow The time window (before and after), in seconds,
+#' to find centroids for estimation of the noise level.
+#'
+#' @return An \linkS4class{ntsData} object with the noise, noise sd and sn ratio columns ammended to the
+#' features slot.
+#' 
+#' @export
+#' 
+#' @importFrom checkmate assertClass
+#' @importFrom stats sd
+#' @importFrom utils txtProgressBar setTxtProgressBar
+#' 
+calculateSNR <-  function(obj, ID = NULL, rtWindow = 120) {
+  
+  assertClass(obj, "ntsData")
+  
+  feat_org <- obj@features
+  
+  peak_org <- obj@peaks
+  
+  if (!("noise" %in% colnames(feat_org))) feat_org$noise <- NA
+  if (!("noise_sd" %in% colnames(feat_org))) feat_org$noise_sd <- NA
+  if (!("sn" %in% colnames(feat_org))) feat_org$sn <- NA
+  
+  if (!("noise" %in% colnames(peak_org))) peak_org$noise <- NA
+  if (!("noise_sd" %in% colnames(peak_org))) peak_org$noise_sd <- NA
+  if (!("sn2" %in% colnames(peak_org))) peak_org$sn2 <- NA
+  
+  feat_sn <- feat_org
+  
+  peak_sn <- peak_org
+  
+  if (!is.null(ID)) feat_sn <- feat_org[feat_org$ID %in% ID, ]
+  
+  if (!is.null(ID)) peak_sn <- peak_org[peak_org$ID %in% ID, ]
+  
+  pb <- txtProgressBar(min = 0, max = nrow(feat_sn), style = 3)
+  
+  for (jj in  seq_len(nrow(feat_sn))) {
+    
+    idf <- feat_sn$ID[jj]
+    idp <- peak_sn$ID[peak_sn$feature %in% idf]
+    loop <- seq_len(length(idp))
+    
+    featEIC <- extractEIC(obj = obj,
+                         samples = NULL,
+                         mz = c(feat_sn$mzmin[jj], feat_sn$mzmax[jj]), 
+                         ppm = NULL,
+                         rt = NULL,
+                         rtWindow = c((feat_sn$rtmin[jj] - rtWindow), (feat_sn$rtmax[jj] + rtWindow)),
+                         rtUnit = "sec")
+    
+    featEIC <- split(featEIC, featEIC$file)
+    names(featEIC) <- samples(obj)[as.numeric(names(featEIC))]
+    
+    
+    int <- lapply(loop, function(x) peak_sn$intensity[peak_sn$ID == idp[x]])
+    names(int) <- idp
+    
+    
+    noise <- lapply(loop, function(x, idp, peak_sn, featEIC, all_peaks) {
+      temp <- peak_sn[peak_sn$ID %in% idp[x], ]
+      temp2 <- featEIC[[temp$sample]]
+      temp2 <- temp2[!(temp2$rt >= temp$rtmin & temp2$rt <= temp$rtmax), ]
+      
+      #remove other peaks within the same mass and time deviation
+      others <- all_peaks[(all_peaks$sample %in% temp$sample &
+                           all_peaks$rt > min(temp2$rt) &
+                           all_peaks$rt < max(temp2$rt) &
+                           all_peaks$mz > min(temp2$mz) &
+                           all_peaks$mz < max(temp2$mz)), ]
+
+      others <- others[others$ID != idp[x], ]
+      
+      if (nrow(others) > 0) {
+        for (o in seq_len(nrow(others))) {
+          temp2 <- temp2[!(temp2$rt > others$rtmin[o] & temp2$rt < others$rtmax[o]), ]
+        }
+      }
+      
+      temp2 <- temp2$i
+      
+      return(temp2)
+      
+    }, idp = idp, peak_sn = peak_sn, featEIC = featEIC, all_peaks = obj@peaks)
+    names(noise) <- idp
+    
+    
+    noise_sd <- lapply(noise, function(x) sd(x, na.rm = TRUE))
+    
+    noise <- lapply(noise, function(x) max(x, na.rm = TRUE))
+    
+    
+    #calculate sn and add values to peak_sn
+    sn <- lapply(loop, function(x, idp, int, noise, noise_sd) {
+      
+      temp <- round(int[[x]] / noise[[x]], digits = 0)
+      
+      peak_sn$noise_sd[peak_sn$ID == idp[x]] <<- round(noise_sd[[x]], digits = 0)
+      peak_sn$noise[peak_sn$ID == idp[x]] <<- round(noise[[x]], digits = 0)
+      peak_sn$sn2[peak_sn$ID == idp[x]] <<- temp
+      
+      return(temp)
+      
+    },idp = idp, int = int, noise = noise, noise_sd = noise_sd)
+    
+    
+    toFeat <- peak_sn[peak_sn$ID %in% idp, c("noise", "noise_sd", "sn2")]
+    toFeat <- toFeat[toFeat$sn2 == max(toFeat$sn2), ]
+    toFeat <- toFeat[1, ]
+    
+    feat_sn[jj, c("noise", "noise_sd", "sn")] <- toFeat
+    
+    setTxtProgressBar(pb, jj)
+    
+  }
+  
+  
+  peak_org[peak_org$ID %in% peak_sn$ID, ] <- peak_sn
+  feat_org[feat_org$ID %in% feat_sn$ID, ] <- feat_sn
+  
+  
+  obj@peaks <- peak_org
+  obj@features <- feat_org
+
+  
+  return(obj)
+  
+}
+
+
+
+
 #' calculateFeaturesMetadata
 #'
 #' @param obj An \linkS4class{ntsData} object containing a features.

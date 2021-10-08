@@ -50,13 +50,13 @@ checkIS <- function(obj = NULL,
 
   assertClass(obj, "ntsData")
 
-  assertClass(targets, "suspectList")
-
-  if (targets@length == 0) {
-    warning("The targets list is empty!")
+  if (is.null(targets)) targets <- obj@IS@targets
+  
+  if (nrow(targets@data) == 0) {
+    warning("Targets not found in the given ntsData. They should be provided!")
     return(obj)
   }
-
+  
   if (is.null(ppm)) ppm <- obj@IS@ppm
   
   if (is.null(rtWindow)) rtWindow <- obj@IS@rtWindow
@@ -266,6 +266,8 @@ checkIS <- function(obj = NULL,
 
   }
 
+  if (save) saveObject(obj = obj)
+  
   return(obj)
 
 }

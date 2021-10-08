@@ -58,7 +58,7 @@ mzML or mzXML files in the path are directly added to the project.
 Yet, the function \code{\link{addFiles}} can be used to add files or extra files to the project.
 Setting \code{createRproject} to \code{TRUE} will create and open an R project in the selected or given folder.
 When \code{convertFiles} is \code{TRUE} the function uses the function \code{\link{mzMLconverter}} to automatically convert
-specified raw MS files int he path to mzML and add them to the project.
+specified raw MS files in the path to mzML and add them to the project.
 }
 \details{
 The \linkS4class{ntsData} object can be edited using the class methods.

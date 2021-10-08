@@ -7,7 +7,7 @@
 #' Yet, the function \code{\link{addFiles}} can be used to add files or extra files to the project.
 #' Setting \code{createRproject} to \code{TRUE} will create and open an R project in the selected or given folder.
 #' When \code{convertFiles} is \code{TRUE} the function uses the function \code{\link{mzMLconverter}} to automatically convert
-#' specified raw MS files int he path to mzML and add them to the project.
+#' specified raw MS files in the path to mzML and add them to the project.
 #'
 #' @param path The directory for project setup. The default is the \code{utils::choose.dir()} to select or create a folder.
 #' Note that the function will look into subfolders for mzML/mzXML files or specified raw files when \code{convertFiles} is set to \code{TRUE}.
@@ -106,32 +106,33 @@ setupProject <- function(path = utils::choose.dir(getwd(), "Select or create a p
   obj@metadata <- obj@samples[, "sample", drop = FALSE]
 
   if (makeNewProject) {
-    
+
     if (save) saveObject(obj = obj)
-    
+
     #TODO add template for main script file
-    sp <- file.path(obj@path, "mainscript.R")
+    sp <- file.path(obj@path, "script.R")
     cat(
-"#Copy template from template.R using x and/or use ?ntsIUTA for a tutorial.\n
+"
+\n
 #Run the following code to load the project setup:\n
-library(ntsIUTA) #/n
+library(ntsIUTA)
+\n
 setup <- readRDS('rData/ntsData.rds')",
 
     file = sp, sep = "")
 
     if (!(is.na(Sys.getenv()["RSTUDIO"]))) {
-      rstudioapi::initializeProject(path)
-      rstudioapi::openProject(path, newSession = TRUE)
+      rstudioapi::initializeProject(obj@path)
+      rstudioapi::openProject(obj@path, newSession = TRUE)
     } else {
       setwd(obj@path)
-      return(obj)
-    }
-
-    print("When not using RStudio, it is recommended
+      print("When not using RStudio, it is recommended
           to open the project folder through the IDE
           so that the files and workspace can be loaded. \n
           Run  rstudioapi::navigateToFile('mainscript.R')
-          in the new project to open the mainscript.R file.")
+          in the new project to open the script.R file.")
+      return(obj)
+    }
 
   } else {
 
@@ -243,7 +244,6 @@ addFiles <- function(newFiles = utils::choose.files(),
     }
 
     newJoint$file[i2] <- newfilepath
-
   }
 
   newJoint <- newJoint[!is.na(newJoint$file), ]
@@ -253,7 +253,6 @@ addFiles <- function(newFiles = utils::choose.files(),
   if ("QC" %in% obj@samples$group) QC(obj) <- "QC"
 
   return(obj)
-
 }
 
 
@@ -379,7 +378,6 @@ mzMLconverter <- function(path = getwd(),
       return(cat("No files found with the given format or vendor.
       See ?ntsIUTA::mzMLconverter for information."))
     }
-
 
   } else {
     return(cat("Warning: the format given in convertFrom is not recognized.

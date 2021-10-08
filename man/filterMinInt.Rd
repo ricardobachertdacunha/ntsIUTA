@@ -4,12 +4,12 @@
 \alias{filterMinInt}
 \title{filterMinInt}
 \usage{
-filterMinInt(obj, IntThreshold = 500)
+filterMinInt(obj, intensityThreshold = 500)
 }
 \arguments{
 \item{obj}{An \linkS4class{ntsData} object.}
 
-\item{IntThreshold}{A numerical value set at the desired minimum intensity set for features.}
+\item{intensityThreshold}{A numerical value set at the desired minimum intensity for features.}
 }
 \value{
 

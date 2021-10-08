@@ -20,7 +20,7 @@ setMethod("show", "ntsData", function(object) {
       "  Date:  ", as.character(object@date), "\n",
       "  Path:  ", object@path, "\n",
       "  Polarity:  ", object@polarity, "\n",
-      "  Exp. Samples:  ", "\n", "\n", sep = "")
+      "  Samples:  ", "\n", "\n", sep = "")
 
   if (nrow(st) > 0) rownames(st) <- seq_len(nrow(st))
 
@@ -70,19 +70,22 @@ setMethod("show", "ntsData", function(object) {
       sep = ""
   )
 
+  if (nrow(object@annotation$comp) > 0) {
+    cat("  Annotation:  ", "Yes", "\n", sep = "")
+  }
+  
   if (nrow(object@features) > 0) {
     cat("\n")
-    cat(" Number of features:  ", nrow(object@features), "\n", sep = "")
+    cat("  Number of features:  ", nrow(object@features), "\n", sep = "")
   }
-
-  if (nrow(object@annotation$comp) > 0) {
-    cat("\n")
-    cat(" Annotation:  ", "Yes", "\n", sep = "")
+  
+  if (nrow(object@features) > 0) {
+    cat("  Filtered features:  ", nrow(object@removed), "\n", sep = "")
   }
 
   if (length(object@workflows) > 0) {
     cat("\n")
-    cat(" Workflow Objects:\n", names(object@workflows), "\n", sep = "")
+    cat("  Workflow Objects:\n", paste(names(object@workflows), "\n", sep = ""))
   }
 
 })

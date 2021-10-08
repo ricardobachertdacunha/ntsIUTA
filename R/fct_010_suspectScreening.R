@@ -148,16 +148,11 @@ suspectScreening <- function(obj,
   }
 
   rg <- unique(sampleGroups(obj2))
-
-  if (!is.null(ID)) {
-    obj2@patdata <- obj2@patdata[, ID]
-    obj2@features <- obj2@features[obj2@features$ID %in% ID, ]
-  }
-
+  
   screen <- screenSuspects(obj2@patdata, select(suspects, -mz),
                            rtWindow = rtWindow, mzWindow = 0.03,
                            adduct = adduct, onlyHits = TRUE)
-
+  
   df <- arrange(patRoon::as.data.frame(screen, average = FALSE), group)
   df <- rename(df, name = susp_name)
   df <- left_join(df, suspects[, colnames(suspects) %in% c("name", "formula", "adduct", "hasFragments", "intControl")], by = "name")
@@ -166,6 +161,9 @@ suspectScreening <- function(obj,
   df <- dplyr::rename(df, rt = ret, ID = group)
   df <- select(df, name, formula, adduct, ID, mz, rt, everything(), -d_mz, d_ppm, d_rt)
 
+  #is (!is.null(ID)) df <- df[df$ID %in% ID, ]
+  df <- df[df$ID %in% obj2@features$ID, ] #removed features that were removed during filtering
+  
   df <- dplyr::filter(df, d_ppm <= ppm)
   df$d_ppm <- round(df$d_ppm, digits = 1)
   df$d_rt <- round(df$d_rt, digits = 1)
@@ -197,35 +195,47 @@ suspectScreening <- function(obj,
                                                    isolatePrec = TRUE,
                                                    adduct = "[M+H]+", # TODO make NULL
                                                    elements = elements,
-                                                   topMost = 25, extraOpts = NULL,
+                                                   topMost = 50, extraOpts = NULL,
                                                    calculateFeatures = FALSE,
                                                    featThreshold = 1,
                                                    timeout = 240, hetero = TRUE, oc = TRUE)
 
       temp <- patRoon::annotateSuspects(temp, MSPeakLists = MS2,
                                         formulas = formulas,
-                                        compounds = NULL)
+                                        absMzDev = 0.008,
+                                        relMinMSMSIntensity = 0.05,
+                                        simMSMSMethod = "cosine",
+                                        checkFragments = "mz",
+                                        formulasNormalizeScores = "max",
+                                        compoundsNormalizeScores = "max")
 
       tempScreen <- temp@screenInfo[match(df$ID, temp@screenInfo$group)]
 
+      tempScreen <- tempScreen[!is.na(tempScreen$group)]
+      
       tempScreen$d_ppm <- (abs(tempScreen$d_mz) / tempScreen$mz) * 1E6
 
       isoScore <- tempScreen$group
       for (iso in seq_len(nrow(tempScreen))) {
         tempForm <- formulas@groupAnnotations[[isoScore[iso]]]
-        tempForm <- tempForm[tempForm$neutral_formula %in% tempScreen$formula, ]
-        tempForm$ID <- isoScore[iso]
-        isoScore[iso] <- round(unique(tempForm$isoScore)[1], digits = 2)
-        if (iso == 1) {
-          Form <- tempForm
+        if (!is.null(tempForm)) {
+          tempForm <- tempForm[tempForm$neutral_formula %in% tempScreen$formula, ]
+          tempForm$ID <- isoScore[iso]
+          isoScore[iso] <- round(unique(tempForm$isoScore)[1], digits = 2)
+          if (iso == 1 | !exists("Form")) {
+            Form <- tempForm
+          } else {
+            Form <- rbind(Form, tempForm, fill = TRUE)
+          }
         } else {
-          Form <- rbind(Form, tempForm, fill = TRUE)
+          isoScore[iso] <- NA
         }
       }
 
       tempScreen$isoScore <- isoScore
 
       tempScreen$hasExpFrag <- FALSE
+      
       for (i in seq_len(nrow(tempScreen))) {
         fragments <- MS2[[tempScreen$group[i]]]$MSMS
         if (!is.null(fragments)) tempScreen$hasExpFrag[i] <- TRUE
@@ -235,7 +245,7 @@ suspectScreening <- function(obj,
 
       tempScreen <- dplyr::rename(tempScreen, ID = group, IdLevel = estIDLevel)
 
-      tempScreen$hasFrag <- df$hasFragments
+      tempScreen$hasFrag <- df$hasFragments[df$ID %in% tempScreen$ID]
 
       tempScreen <- select(tempScreen, name, formula, adduct, ID, mz, rt, IdLevel, d_rt, d_ppm, isoScore, FragMatch, hasExpFrag, hasFrag, everything())
 
@@ -249,7 +259,7 @@ suspectScreening <- function(obj,
 
     }
 
-    results <- data.table::rbindlist(results, idcol = "group")
+    results <- data.table::rbindlist(results, idcol = "group", fill = TRUE)
 
     results <- base::as.data.frame(results)
 

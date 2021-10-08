@@ -273,6 +273,7 @@ extractEIC <- function(obj = NULL, samples = NULL,
 
   raw <- filterRt(object = obj@MSnExp, rt = rtr)
 
+  # TODO add MS2 extraction possibility
   raw <- filterMsLevel(raw, msLevel. = msLevel)
 
   if (!is.null(mzr)) raw <- suppressWarnings(filterMz(raw, mz = mzr))

@@ -16,17 +16,22 @@ path <- system.file(package = "ntsIUTA", dir = "extdata")
 dtall <- setupProject(path, polarity = "positive", save = FALSE, makeNewProject = FALSE)
 
 
-#### Create New Session -----
-
-setupProject(title = "Aopti_20200317",
-             date = as.Date("2020-03-17"),
-             polarity = "positive",
-             save = TRUE, makeNewProject = TRUE)
 
 
+#### Real FullData -----
+
+test <- setupProject(title = "Test Project", date = Sys.Date(),
+             polarity = "positive", save = FALSE, makeNewProject = FALSE)
 
 
-### S4 Methods ----------------------------------------------------------------------------------------------
+
+
+#### New Session ------
+
+
+
+
+### ntsData Methods ----------------------------------------------------------------------------------------------
 
 
 #### Sample Groups -------------------------------------------------------------
@@ -44,7 +49,7 @@ sampleGroups(dtall) <- c(rep("Blank", 3),
 sampleGroups(dtall)
 
 #getter for sample names (i.e. file names)
-samples(dtall) #no setter
+samples(dtall) #there is no setter
 
 
 
@@ -86,7 +91,7 @@ dtall
 
 
 
-### Raw Data ------------------------------------------------------------------------------------------------
+### Manipulate Raw Data --------------------------------------------------------------------------------------
 
 #sub-setting by samples
 dtcent <- dtall[16:18]
@@ -103,18 +108,18 @@ dtcent <- importRawData(dtcent,
 
 #### TIC, BPC and EIC ----------------------------------------------------------
 
-exEIC <- extractEIC(dtcent,
-                    samples = 1:2,
-                    mz = 242.1434, ppm = 20,
-                    rt = 14.8, rtWindow = 0.5,
-                    rtUnit = "min")
+extractEIC(dtcent,
+           samples = 1:2,
+           mz = 242.1434, ppm = 20,
+           rt = 14.8, rtWindow = 0.5,
+           rtUnit = "min")
 
 
 
 
 #### Inspecting ----------------------------------------------------------------
 
-plotRawChrom(dtcent,
+plotRawChrom(obj = dtcent,
              samples = NULL,
              type = "tic",
              mz = 242.1434, ppm = 20,
@@ -124,24 +129,23 @@ plotRawChrom(dtcent,
              interactive = FALSE)
 
 #iterative
-plotRawChrom(dtcent,
+plotRawChrom(obj = dtcent,
              samples = NULL,
              type = "tic",
-             mz = 242.1434, ppm = 20,
-             rt = 14.8, rtWindow = 0.5,
+             mz = 242.1434,
+             ppm = 20,
+             rt = 14.8,
+             rtWindow = 0.5,
              rtUnit = "min",
              colorBy = "samples",
              interactive = TRUE)
-
-#plot correlation of replicate sample groups
-plotCorReplicates(dtcent)
 
 #plot centroids
 plotTargetCentroids(obj = dtcent,
                     samples = NULL,
                     mz = 242.1434, ppm = 20,
                     rt = 14.8, rtWindow = 0.5,
-                    rtUnit = "min", plotTargetMark = FALSE)
+                    rtUnit = "min", plotTargetMark = TRUE)
 
 
 
@@ -189,7 +193,6 @@ dtprof <- centroidProfileData(obj = dtprof,
                               smoothing = FALSE,
                               save = FALSE)
 
-
 p1 <- plotTargetCentroids(dtcent, samples = 1,
                           mz = 242.1434, ppm = 30,
                           rt = 14.75, rtWindow = 0.8,
@@ -204,8 +207,9 @@ plotly::subplot(list(p1, p2), nrows = 1, margin = 0.04)
 
 
 
+### Basic Workflow -------------------------------------------------------------------------------------------
 
-### Peak Picking --------------------------------------------------------------------------------------------
+#### Raw Data ------------------------------------------------------------------------------------------------
 # TODO when applying rtFilter for import raw data reuse when peak picking with patRoon
 
 dt <- dtall[1:6]
@@ -217,15 +221,23 @@ dt <- importRawData(dt,
                     removeEmptySpectra = TRUE,
                     save = FALSE)
 
+
+
+
+##### Assess Raw Data -------------------
+
 plotRawChrom(dt)
 
 plotCorReplicates(dt, binsize = 3)
 
-#Data frame with carrelation summary
 getCorReplicates(dt, exportResults = FALSE)
 
 
-#### xcms3 ---------------------------------------------------------------------
+
+
+#### Peak Picking --------------------------------------------------------------------------------------------
+
+##### xcms3 ---------------------------------------------------------------------
 
 dtxcms <- dt
 
@@ -248,7 +260,7 @@ dtxcms <- peakPicking(obj = dtxcms, save = FALSE)
 
 
 
-#### openms --------------------------------------------------------------------
+##### openms --------------------------------------------------------------------
 
 dtopenms <- dt
 
@@ -284,7 +296,7 @@ dtopenms <- peakPicking(obj = dtopenms, save = FALSE)
 
 
 
-#### sirius --------------------------------------------------------------------
+##### sirius --------------------------------------------------------------------
 #TODO Error with mz column
 
 dtsirius <- dt
@@ -298,7 +310,7 @@ dtsirius <- peakPicking(obj = dtsirius, save = FALSE)
 
 
 
-#### kpic2 ---------------------------------------------------------------------
+##### kpic2 ---------------------------------------------------------------------
 
 dtkpic2 <- dt
 
@@ -321,7 +333,7 @@ class(dtkpic2@patdata)
 
 
 
-#### safd ----------------------------------------------------------------------
+##### safd ----------------------------------------------------------------------
 
 dtsafd <- dtprof
 
@@ -346,7 +358,7 @@ dtsafd <- peakPicking(obj = dtsafd, save = FALSE)
 
 
 
-#### Inspecting Peaks ----------------------------------------------------------
+##### Inspecting Peaks ----------------------------------------------------------
 
 #Option 1
 dtxcms@peaks[1, ]
@@ -371,10 +383,10 @@ mapPeaks(dtxcms, samples = c(1, 4), mz = c(234, 270), ppm = NULL, rtWindow = c(9
 
 
 
-### Alignment and Grouping ----------------------------------------------------------------------------------
+#### Alignment and Grouping ----------------------------------------------------------------------------------
 
 
-#### xcms3 ---------------------------------------------------------------------
+##### xcms3 ---------------------------------------------------------------------
 
 dtxcms <- peakGroupingParameters(dtxcms,
   algorithm = "xcms3",
@@ -432,7 +444,7 @@ dtxcms2 <- makeFeatures(dtxcms, save = FALSE)
 
 
 
-#### openms --------------------------------------------------------------------
+##### openms --------------------------------------------------------------------
 
 dtopenms@algorithms$makeFeatures <- "openms"
 
@@ -452,7 +464,6 @@ dtopenms@parameters$peakGrouping <- paramGroupingOpenms
 dtopenms2 <- makeFeatures(obj = dtopenms,
                          algorithm = NULL,
                          paramGrouping = NULL,
-                         recursive = FALSE,
                          paramFill = NULL,
                          save = FALSE)
 
@@ -981,7 +992,21 @@ test <- dtxcms3[, dtxcms3@control$results$IN$ID]
 
 dtxcms5 <- dtxcms4[4:6]
 
-dtxcms5 <- calculateFeaturesMetadata(dtxcms5, ID = NULL)
+dtxcms5 <- dtxcms5[, dtxcms5@IS@results$IN$ID]
+
+dtxcms5 <- calculateSNR(dtxcms5)
+
+dtxcms5 <- calculateFeaturesMetadata(dtxcms5)
+
+
+
+ft <- dtxcms5@features
+
+pk <- dtxcms5@peaks
+
+View(ft)
+
+View(pk)
 
 ft <- dtxcms4@peaks
 
@@ -991,9 +1016,7 @@ ft <- ft[ft$intensity > 10000, ]
 
 ft <- ft[c("ID", "mz", "rt", "intensity", "ZigZag", "ZigZagScore")]
 
-
 IDs <- c(28378, 29841)
-
 
 plotPeaks(obj = dtxcms4,
           ID = IDs[1],
@@ -1020,17 +1043,33 @@ plotPeaks(obj = dtxcms4,
 
 ### Filter features -----------------------------------------------------------------------------------------
 
-dtxcms3 <- dtxcms2
-# TODO add rt filter for the set, removing flushing and initial chromatographic time
-# TODO make filter function/method and create filtering parameters slot
-# TODO Adapt to ntsData, but integrate with features (main filter method)
-filterPeaks(peaks, fileIndex = 4:5, mz = 748.4842, ppm = 10, rt = 14.9, rtUnit = "min")
-filterPeaks(peaksOpenms, fileIndex = 1:2, mz = 748.4842, ppm = 10, rt = 14.9, rtUnit = "min")
+dtxcms6 <- dtxcms4
+
+dtxcms6 <- filterFeatures(obj = dtxcms6, filterMinInt = 5000)
+
+dtxcms7 <- removeFilteredFeatures(dtxcms6)
+
+dtxcms7@features$sn <- NA
+
+dtxcms8 <- filterFeatures(obj = dtxcms7, filterBlank = 3)
+
+dtxcms8 <- removeFilteredFeatures(dtxcms8)
+
+dtxcms9 <- restoreFilteredFeatures(dtxcms8)
+
+all.equal(dtxcms8@features$ID, dtxcms6@features$ID)
+
+View(dtxcms7@removed)
+
+View(dtxcms8@features)
 
 
 
 
-### Suspect Screening WF ------------------------------------------------------------------------------------
+### Workflows ------------------------------------------------------------------------------------------------
+
+
+#### Suspect Screening WF ------------------------------------------------------------------------------------
 
 getSuspectListTemplate(saveTo = system.file(package = "ntsIUTA", dir = "extdata"))
 
@@ -1056,13 +1095,67 @@ View(dtxcms5@workflows$SuspectScreening@results)
 
 
 
-### Find Fragments ------------------------------------------------------------------------------------------
+#### Find Fragments ------------------------------------------------------------------------------------------
 
 dt2 <- qc2ntsData(dt1)
 
-ID <- dt2@QC@results$ID
-
 targets <- read.csv("F:/NTS_IUTA_Projects/art01_Aopti/tp_nitro.csv")
+
+
+dt2 <- findFragments(dt2,
+                     targets = targets,
+                     replicates = NULL,
+                     ID = dt2@QC@results$ID,
+                     ppm = 10,
+                     intMin = 10)
+
+class(dt2@workflows$MS2FragmentsScreening)
+
+View(dt2@workflows$MS2FragmentsScreening@results)
+
+
+
+
+#### Monitoring ---------------------------------------------------------------------------------------------
+
+dt3 <- dtall[1:15]
+
+dt3@parameters <- dt2@parameters
+
+dt3 <- checkQC(dt3, targets = QCList,  save = FALSE)
+
+plotCheckQC(dt3)
+
+dt3 <- createFeatures(dt3)
+
+dt3 <- checkIS(dt3, targets = ISList, save = FALSE)
+
+plotCheckIS(dt3)
+
+dt3 <- filterFeatures(obj = dt3, filterMinInt = 3000, filterBlank = 2)
+
+dt3 <- removeFilteredFeatures(dt3)
+
+dt3
+
+dt3 <- processMonitoring(dt3, sequences = list(Aopti = c("IN", "OZ", "UV", "AC")),
+                         title = NULL,
+                         constantLevel = 5000,
+                         doClustering = TRUE,
+                         minClust = 10,
+                         sizeClus = 2:100,
+                         exportResults = FALSE)
+
+object <- dt3@workflows$processMonitoring
+
+catplot <- plotProcessCategories(dt3@workflows$processMonitoring, sequences = "Aopti", yUnit = "rt")
+
+effplot <- plotProcessEfficiency(dt3@workflows$processMonitoring, sequences = "Aopti")
+
+clusplot <- plotProcessClusters(dt3@workflows$processMonitoring, sequences = "Aopti")
+
+exportPlots(dt3@workflows$processMonitoring, path = "C:/Users/MZmine/Desktop", interactive = TRUE)
+
 
 
 ### Other ---------------------------------------------------------------------------------------------------
