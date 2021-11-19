@@ -167,7 +167,9 @@ suspectScreening <- function(obj,
   df <- dplyr::filter(df, d_ppm <= ppm)
   df$d_ppm <- round(df$d_ppm, digits = 1)
   df$d_rt <- round(df$d_rt, digits = 1)
-
+  # TODO Check why Formulas occasionally become NA, breaking Genform with NACHO elements
+    df <- df[!(is.na(df$formula)),]
+  
   screen <- screen[, df$ID]
 
   elements <- gsub("[^a-zA-Z]", "", df$formula)
@@ -210,8 +212,15 @@ suspectScreening <- function(obj,
                                         compoundsNormalizeScores = "max")
 
       tempScreen <- temp@screenInfo[match(df$ID, temp@screenInfo$group)]
-
+      
+      # TODO Verify if this solution works in all instances
+      if (all(is.na(tempScreen$rt))) {
+        tempScreen$rt <- ifelse(df$ID == tempScreen$group, df$rt, NA)
+        
+      }
       tempScreen <- tempScreen[!is.na(tempScreen$group)]
+      
+
       
       tempScreen$d_ppm <- (abs(tempScreen$d_mz) / tempScreen$mz) * 1E6
 

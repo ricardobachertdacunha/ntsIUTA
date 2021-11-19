@@ -137,7 +137,7 @@ addMS2Info <- function(wfobj = NULL,
 
   if (length(unique(df$name)) != nrow(df)) {
     warning("Duplicate compound names found. Filter workflow object results,
-            keeping with desired correspondence between compuond name and feature ID.")
+            keeping with desired correspondence between compound name and feature ID.")
     return()
   }
 
@@ -148,7 +148,8 @@ addMS2Info <- function(wfobj = NULL,
       warning("More than one sample replicate group in the workflow object.
               Select a representative sample replicate group
               to extract MS2 using the argument sampleGroup.")
-      return()
+      # TODO Find better way to communicate that nothing was added, changed return to wfobj, to avoid losing data by returning empty
+      return(wfobj)
     }
   } else {
     pat <- wfobj@data[[1]]

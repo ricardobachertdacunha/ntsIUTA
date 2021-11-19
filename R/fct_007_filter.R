@@ -133,7 +133,7 @@ filterSNR <- function(obj, snRatio = 5) {
 #' filterMinReplicateAbundance
 #'
 #' @param obj An \linkS4class{ntsData} object.
-#' @param blankThreshold A numerical value set at the desired minimum intensity for features.
+#' @param ReplicateThreshold A numerical value set at the desired minimum replicates.
 #'
 #' @return
 #'

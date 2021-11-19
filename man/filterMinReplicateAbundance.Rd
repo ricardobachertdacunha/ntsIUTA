@@ -9,7 +9,7 @@ filterMinReplicateAbundance(obj, ReplicateThreshold = 2)
 \arguments{
 \item{obj}{An \linkS4class{ntsData} object.}
 
-\item{blankThreshold}{A numerical value set at the desired minimum intensity for features.}
+\item{ReplicateThreshold}{A numerical value set at the desired minimum replicates.}
 }
 \value{
 
