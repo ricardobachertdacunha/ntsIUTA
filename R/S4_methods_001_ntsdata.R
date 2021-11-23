@@ -15,70 +15,80 @@ setMethod("show", "ntsData", function(object) {
     st$peaks <- count(object@peaks, sample)$n
   }
 
-  cat(is(object)[[1]], "\n",
-      "  Project: ", object@title, "\n",
-      "  Date:  ", as.character(object@date), "\n",
-      "  Path:  ", object@path, "\n",
-      "  Polarity:  ", object@polarity, "\n",
-      "  Samples:  ", "\n", "\n", sep = "")
+  cat(
+    is(object)[[1]], "\n",
+    "  Project: ", object@title, "\n",
+    "  Date:  ", as.character(object@date), "\n",
+    "  Path:  ", object@path, "\n",
+    "  Polarity:  ", object@polarity, "\n",
+    "  Samples:  ", "\n", "\n", sep = ""
+  )
 
   if (nrow(st) > 0) rownames(st) <- seq_len(nrow(st))
-
   print(st)
 
   cat("\n")
 
-  cat("  QC samples:  ",
-      ifelse(nrow(object@QC@samples) < 1, "empty", paste(object@QC@samples$sample, collapse = ", ")),
-      "\n", " QC results:  ",
-      ifelse(length(object@QC@results) < 1, "empty", paste(nrow(object@QC@results), " compounds evaluated")),
-      "\n", set = "")
+  mtd <- colnames(object@metadata)
+  mtd <- mtd[mtd != "sample"]
+  cat("  Metadata Variables:  ", mtd, "\n", sep = " ")
 
   cat("\n")
 
-  cat("  Parameters:  ", "\n",
-      "    ", "Peak Picking: ", ifelse(!is.na(object@parameters@peakPicking@algorithm),
-                                       object@parameters@peakPicking@algorithm,
-                                       "n.a."), "\n",
-      
-      "    ", "Grouping: ", ifelse(!is.na(object@parameters@peakGrouping@algorithm),
-                                   object@parameters@peakGrouping@algorithm,
-                                   "n.a."), "\n",
-
-      "    ", "Fill Missing: ", ifelse(!is.na(object@parameters@fillMissing@algorithm),
-                                       object@parameters@fillMissing@algorithm,
-                                       "n.a."), "\n",
-
-      "    ", "Annotation: ", ifelse(!is.na(object@parameters@annotation@algorithm),
-                                     object@parameters@annotation@algorithm,
-                                     "n.a."), "\n",
-
-      "    ", "MS2: ", ifelse(length(object@parameters@MS2) > 0,
-                              class(object@parameters@MS2),
-                              "empty"), "\n",
-      sep = ""
+  cat("  QC samples:  ",
+    ifelse(nrow(object@QC@samples) < 1, "empty", paste(object@QC@samples$sample, collapse = ", ")),
+    "\n", " QC results:  ",
+    ifelse(length(object@QC@results) < 1, "empty", paste(nrow(object@QC@results), " compounds evaluated")),
+    "\n", set = ""
   )
 
   cat("\n")
 
-  cat("  MSnExp spectra:  ", length(object@MSnExp), "\n",
-      "  MS level(s):  ", ifelse(length(object@MSnExp) > 0,
-                                 paste(sort(unique(msLevel(object@MSnExp))), collapse = ", "),
-                                 "-"), "\n",
-      "  patRoon-class:  ", ifelse(length(object@patdata) > 0,
-                                   class(object@patdata), "empty"), "\n",
-      sep = ""
+  cat(
+    "  Parameters:  ", "\n",
+    "    ", "Peak Picking: ", ifelse(!is.na(object@parameters@peakPicking@algorithm),
+                                      object@parameters@peakPicking@algorithm,
+                                      "n.a."), "\n",
+
+    "    ", "Grouping: ", ifelse(!is.na(object@parameters@peakGrouping@algorithm),
+                                  object@parameters@peakGrouping@algorithm,
+                                  "n.a."), "\n",
+
+    "    ", "Fill Missing: ", ifelse(!is.na(object@parameters@fillMissing@algorithm),
+                                      object@parameters@fillMissing@algorithm,
+                                      "n.a."), "\n",
+
+    "    ", "Annotation: ", ifelse(!is.na(object@parameters@annotation@algorithm),
+                                    object@parameters@annotation@algorithm,
+                                    "n.a."), "\n",
+
+    "    ", "MS2: ", ifelse(length(object@parameters@MS2) > 0,
+                            class(object@parameters@MS2),
+                            "empty"), "\n",
+    sep = ""
+  )
+
+  cat("\n")
+
+  cat(
+    "  MSnExp spectra:  ", length(object@MSnExp), "\n",
+    "  MS level(s):  ", ifelse(length(object@MSnExp) > 0,
+                                paste(sort(unique(msLevel(object@MSnExp))), collapse = ", "),
+                                "-"), "\n",
+    "  patRoon-class:  ", ifelse(length(object@patdata) > 0,
+                                  class(object@patdata), "empty"), "\n",
+    sep = ""
   )
 
   if (nrow(object@annotation$comp) > 0) {
     cat("  Annotation:  ", "Yes", "\n", sep = "")
   }
-  
+
   if (nrow(object@features) > 0) {
     cat("\n")
     cat("  Number of features:  ", nrow(object@features), "\n", sep = "")
   }
-  
+
   if (nrow(object@features) > 0) {
     cat("  Filtered features:  ", nrow(object@removed), "\n", sep = "")
   }

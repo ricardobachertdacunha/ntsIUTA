@@ -47,7 +47,8 @@ setClass("suspectList",
 setClass("paramSet",
   slots = c(
     algorithm = "character",
-    param = "list"),
+    param = "list"
+  ),
   prototype = list(
     algorithm = NA_character_,
     param = list()
@@ -94,7 +95,8 @@ setClass("AlteredCameraParam",
     searchAdducts = "logical",
     ppmAdducts = "numeric",
     extendedList = "logical"
-))
+  )
+)
 
 
 
@@ -158,7 +160,8 @@ setClass("paramList",
     peakGrouping = "paramSet",
     fillMissing = "paramSet",
     annotation = "paramSet",
-    MS2 = "MS2param"),
+    MS2 = "MS2param"
+  ),
   prototype = list(
     peakPicking = new("paramSet"),
     peakGrouping = new("paramSet"),
@@ -205,19 +208,23 @@ setClass("qcData",
     annotation = "list",
     results = "data.frame"
   ),
-  prototype = list(samples = data.frame(file = character(),
-                                   sample = character(),
-                                   group = character(),
-                                   blank = character()),
-              targets = new("suspectList"),
-              rtWindow = 30,
-              ppm = 15,
-              MSnExp = new("OnDiskMSnExp"),
-              patdata = new("featuresXCMS3"),
-              peaks = data.frame(),
-              features = data.frame(),
-              annotation = list(),
-              results = data.frame())
+  prototype = list(
+    samples = data.frame(
+      file = character(),
+      sample = character(),
+      group = character(),
+      blank = character()
+    ),
+    targets = new("suspectList"),
+    rtWindow = 30,
+    ppm = 15,
+    MSnExp = new("OnDiskMSnExp"),
+    patdata = new("featuresXCMS3"),
+    peaks = data.frame(),
+    features = data.frame(),
+    annotation = list(),
+    results = data.frame()
+  )
 )
 
 # TODO make methods to get a ntsData out of a qcData for time analysis
@@ -247,11 +254,13 @@ setClass("isData",
     recoveryFrom = "character",
     results = "list"
   ),
-  prototype = list(targets = new("suspectList"),
-                   ppm = 10,
-                   rtWindow = 30,
-                   recoveryFrom = NA_character_,
-                   results = list())
+  prototype = list(
+    targets = new("suspectList"),
+    ppm = 10,
+    rtWindow = 30,
+    recoveryFrom = NA_character_,
+    results = list()
+  )
 )
 
 
@@ -342,15 +351,19 @@ setClass("ntsData",
   ),
   prototype = list(
     title = "New Project",
-    info = list(description = NA_character_,
-                history = list()),
+    info = list(
+      description = NA_character_,
+      history = list()
+    ),
     path = NA_character_,
     date = Sys.Date(),
     polarity = "positive",
-    samples = data.frame(file = character(),
-                         sample = character(),
-                         group = character(),
-                         blank = character()),
+    samples = data.frame(
+      file = character(),
+      sample = character(),
+      group = character(),
+      blank = character()
+    ),
     metadata = data.frame(sample = character()),
     parameters = new("paramList"),
     QC = new("qcData"),
@@ -358,8 +371,10 @@ setClass("ntsData",
     patdata = new("featuresXCMS3"),
     peaks = data.frame(),
     features = data.frame(),
-    annotation = list(comp = data.frame(),
-                      raw = list()),
+    annotation = list(
+      comp = data.frame(),
+      raw = list()
+    ),
     IS = new("isData"),
     filters = list(),
     removed = data.frame(),
