@@ -139,6 +139,8 @@ setMethod("sampleGroups<-", signature("ntsData", "ANY"), function(object, value)
   }
 
   object@samples$group <- value
+  
+  object@metadata <- data.frame(group = unique(value))
 
   return(object)
 })
@@ -174,6 +176,34 @@ setMethod("blanks<-", signature("ntsData", "ANY"), function(object, value) {
   object@samples$blank <- value
 
   return(object)
+})
+
+
+
+
+### metadata -----
+
+#' @describeIn ntsData Getter for metadata.
+#'
+#' @param x An \linkS4class{ntsData} object.
+#' @param vars The name of the variables to extract.
+#'
+#' @export
+#'
+setMethod("metadata", "ntsData", function(x, vars) {
+  
+  if (!missing(vars)) {
+    if (all(vars %in% colnames(x@metadata))) {
+      m <- x@metadata[, c("group", vars)]
+    } else {
+      warning("vars not find in metadata.")
+      m <- x@metadata
+    }
+  } else {
+    m <- x@metadata
+  }
+  
+  return(m)
 })
 
 
@@ -246,7 +276,7 @@ setMethod("[", c("ntsData", "ANY", "missing", "missing"), function(x, i, ...) {
 
     x@samples <- x@samples[x@samples$sample %in% sn,, drop = FALSE]
 
-    x@metadata <- x@metadata[x@metadata$sample %in% sn,, drop = FALSE]
+    x@metadata <- x@metadata[x@metadata$group %in% x@samples$group,, drop = FALSE]
 
     if (length(x@MSnExp) > 0) x@MSnExp <- MSnbase::filterFile(x@MSnExp, file = sidx)
 
