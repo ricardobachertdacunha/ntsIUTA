@@ -376,9 +376,11 @@ annotateFeatures <- function(obj = NULL,
 
   obj <- annotationParameters(obj, algorithm = algorithm, param = param)
   
-  if (save) saveObject(obj = obj)
-
-  if (is.character(save)) saveObject(obj = obj, filename = save)
+  if (is.character(save)) {
+    saveObject(obj = obj, filename = save)
+  } else {
+    if (save) saveObject(obj = obj)  
+  }
 
   return(obj)
 

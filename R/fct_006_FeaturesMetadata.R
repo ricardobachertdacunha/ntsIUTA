@@ -31,10 +31,12 @@ calculateSNR <-  function(obj, ID = NULL, rtWindow = 120) {
   
   peak_org <- obj@peaks
   
+  if (!("ncent" %in% colnames(feat_org))) feat_org$ncent <- NA
   if (!("noise" %in% colnames(feat_org))) feat_org$noise <- NA
   if (!("noise_sd" %in% colnames(feat_org))) feat_org$noise_sd <- NA
   if (!("sn" %in% colnames(feat_org))) feat_org$sn <- NA
   
+  if (!("ncent" %in% colnames(peak_org))) peak_org$ncent <- NA
   if (!("noise" %in% colnames(peak_org))) peak_org$noise <- NA
   if (!("noise_sd" %in% colnames(peak_org))) peak_org$noise_sd <- NA
   if (!("sn2" %in% colnames(peak_org))) peak_org$sn2 <- NA
@@ -45,7 +47,7 @@ calculateSNR <-  function(obj, ID = NULL, rtWindow = 120) {
   
   if (!is.null(ID)) feat_sn <- feat_org[feat_org$ID %in% ID, ]
   
-  if (!is.null(ID)) peak_sn <- peak_org[peak_org$ID %in% ID, ]
+  if (!is.null(ID)) peak_sn <- peak_org[peak_org$feature %in% ID, ]
   
   pb <- txtProgressBar(min = 0, max = nrow(feat_sn), style = 3)
   
@@ -66,28 +68,37 @@ calculateSNR <-  function(obj, ID = NULL, rtWindow = 120) {
     featEIC <- split(featEIC, featEIC$file)
     names(featEIC) <- samples(obj)[as.numeric(names(featEIC))]
     
-    
     int <- lapply(loop, function(x) peak_sn$intensity[peak_sn$ID == idp[x]])
     names(int) <- idp
     
+    ncent <- lapply(loop, function(x, idp, peak_sn, featEIC) {
+      cents <- peak_sn[peak_sn$ID %in% idp[x], ]
+      cents2 <- featEIC[[cents$sample]]
+      cents2 <- cents2[cents2$rt >= cents$rtmin & cents2$rt <= cents$rtmax, ]
+      cents2 <- nrow(cents2)
+      return(cents2)
+      
+    }, idp = idp, peak_sn = peak_sn, featEIC = featEIC)
     
     noise <- lapply(loop, function(x, idp, peak_sn, featEIC, all_peaks) {
       temp <- peak_sn[peak_sn$ID %in% idp[x], ]
       temp2 <- featEIC[[temp$sample]]
       temp2 <- temp2[!(temp2$rt >= temp$rtmin & temp2$rt <= temp$rtmax), ]
       
-      #remove other peaks within the same mass and time deviation
-      others <- all_peaks[(all_peaks$sample %in% temp$sample &
-                           all_peaks$rt > min(temp2$rt) &
-                           all_peaks$rt < max(temp2$rt) &
-                           all_peaks$mz > min(temp2$mz) &
-                           all_peaks$mz < max(temp2$mz)), ]
-
-      others <- others[others$ID != idp[x], ]
-      
-      if (nrow(others) > 0) {
-        for (o in seq_len(nrow(others))) {
-          temp2 <- temp2[!(temp2$rt > others$rtmin[o] & temp2$rt < others$rtmax[o]), ]
+      if (nrow(temp2) > 1) {
+        #remove other peaks within the same mass and time deviation
+        others <- all_peaks[(all_peaks$sample %in% temp$sample &
+                             all_peaks$rt > min(temp2$rt) &
+                             all_peaks$rt < max(temp2$rt) &
+                             all_peaks$mz > min(temp2$mz) &
+                             all_peaks$mz < max(temp2$mz)), ]
+  
+        others <- others[others$ID != idp[x], ]
+        
+        if (nrow(others) > 0) {
+          for (o in seq_len(nrow(others))) {
+            temp2 <- temp2[!(temp2$rt > others$rtmin[o] & temp2$rt < others$rtmax[o]), ]
+          }
         }
       }
       
@@ -101,28 +112,35 @@ calculateSNR <-  function(obj, ID = NULL, rtWindow = 120) {
     
     noise_sd <- lapply(noise, function(x) sd(x, na.rm = TRUE))
     
-    noise <- lapply(noise, function(x) max(x, na.rm = TRUE))
+    noise <- lapply(noise, function(x) ifelse(length(x) > 0, max(x, na.rm = TRUE), 0))
     
     
     #calculate sn and add values to peak_sn
-    sn <- lapply(loop, function(x, idp, int, noise, noise_sd) {
+    sn <- lapply(loop, function(x, idp, int, ncent, noise, noise_sd) {
       
-      temp <- round(int[[x]] / noise[[x]], digits = 0)
+      if (noise[[x]] != 0) {
+        temp <- int[[x]] / noise[[x]]
+      } else {
+        temp <- NA
+      }
       
+      temp <- round(temp, digits = 0)
+      
+      peak_sn$ncent[peak_sn$ID == idp[x]] <<- ncent[[x]]
       peak_sn$noise_sd[peak_sn$ID == idp[x]] <<- round(noise_sd[[x]], digits = 0)
       peak_sn$noise[peak_sn$ID == idp[x]] <<- round(noise[[x]], digits = 0)
       peak_sn$sn2[peak_sn$ID == idp[x]] <<- temp
       
       return(temp)
       
-    },idp = idp, int = int, noise = noise, noise_sd = noise_sd)
+    },idp = idp, int = int, ncent = ncent, noise = noise, noise_sd = noise_sd)
     
     
-    toFeat <- peak_sn[peak_sn$ID %in% idp, c("noise", "noise_sd", "sn2")]
+    toFeat <- peak_sn[peak_sn$ID %in% idp, c("ncent", "noise", "noise_sd", "sn2")]
     toFeat <- toFeat[toFeat$sn2 == max(toFeat$sn2), ]
     toFeat <- toFeat[1, ]
     
-    feat_sn[jj, c("noise", "noise_sd", "sn")] <- toFeat
+    feat_sn[jj, c("ncent", "noise", "noise_sd", "sn")] <- toFeat
     
     setTxtProgressBar(pb, jj)
     

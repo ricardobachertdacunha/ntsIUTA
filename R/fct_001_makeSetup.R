@@ -261,7 +261,7 @@ addFiles <- function(newFiles = utils::choose.files(),
 #' @title addMetadata
 #' @description Adds sample replicate group metadata to an \linkS4class{ntsData} object. 
 #'
-#' @param obj An \linkS4class{ntsData} object to integrate sample replicate gorup metadata.
+#' @param obj An \linkS4class{ntsData} object to integrate sample replicate group metadata.
 #' @param var A \code{data.frame} or a \code{vector} with the same
 #' row number or length as the number of sample replicate groups in the \linkS4class{ntsData}.
 #' @param varname A character vector to name the column in the metadata

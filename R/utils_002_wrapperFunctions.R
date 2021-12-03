@@ -1,6 +1,8 @@
 
 
 #' createFeatures
+#' 
+#' @description Wrapper function for peak picking, grouping and annotation when parameters are defined.
 #'
 #' @param obj An \linkS4class{ntsData} object.
 #' @param excludeBlanks Logical, set to \code{TRUE} to exclude
@@ -26,6 +28,12 @@ createFeatures <- function(obj, excludeBlanks = FALSE, save = TRUE) {
   obj <- makeFeatures(obj, save = save)
   
   obj <- annotateFeatures(obj, excludeBlanks = excludeBlanks, save = save)
+  
+  if (is.character(save)) {
+    saveObject(obj = obj, filename = save)
+  } else {
+    if (save) saveObject(obj = obj)  
+  }
   
   return(obj)
   
