@@ -127,3 +127,23 @@ setGeneric("features", function(object, ...) standardGeneric("features"))
 #' @return A data.frame with feature component details.
 #'
 setGeneric("components", function(object, ...) standardGeneric("components"))
+
+#' exportPlots
+#'
+#' @param object A workflow object.
+#' @param path The path to export the plots.
+#' @param ... Other parameters used in the production of plots.
+#'
+#' @return A set of plots saved into the given path.
+#'
+setGeneric("exportPlots", function(object, path, ...) standardGeneric("exportPlots"))
+
+#' exportCSVs
+#'
+#' @param object An workflow object.
+#' @param path The path to export the CSV files.
+#' @param ... Other parameters used in the production of CSV files.
+#'
+#' @return A set of CSVs saved into the given path.
+#'
+setGeneric("exportCSVs", function(object, path, ...) standardGeneric("exportCSVs"))

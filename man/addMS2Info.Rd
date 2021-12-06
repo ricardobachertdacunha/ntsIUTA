@@ -8,7 +8,7 @@ addMS2Info(
   wfobj = NULL,
   sampleGroup = NULL,
   suspectList = NULL,
-  MS2param = MS2param(),
+  param = MS2param(),
   updateRT = TRUE,
   updateIntControl = TRUE,
   save = TRUE
@@ -22,7 +22,7 @@ representative sample replicate group to extract the MS2 information.}
 
 \item{suspectList}{The \linkS4class{suspectList} object to add the MS2 information.}
 
-\item{MS2param}{The parameters to extract the MS2 from the \linkS4class{ntsSuspectData} object.}
+\item{param}{The parameters to extract the MS2 from the \linkS4class{ntsSuspectData} object.}
 
 \item{updateRT}{Logical, set to \code{TRUE} to update or add the retention time
 to the \linkS4class{suspectList}.}

@@ -67,7 +67,7 @@ FindIsotopesWithValidationAltered <- function(xA = xA,
   
   peaks <- peaks %>%
     dplyr::group_by(feature) %>%
-    summarize(mz = mean(mz),
+    dplyr::summarize(mz = mean(mz),
               rt = mean(rt),
               int = mean(intensity),
               sd = sd(intensity),
@@ -139,7 +139,6 @@ FindIsotopesWithValidationAltered <- function(xA = xA,
       snValues = ftID$sn[peakIndeces],
       maxcharge = maxcharge,
       devppm = devppm,
-      mzabs = mzabs,
       validateIsotopePatterns = validateIsotopePatterns
     )
     
@@ -207,7 +206,6 @@ FindIsotopesWithValidationAltered <- function(xA = xA,
 #' @param sdValues Intensity standard deviation of the peaks. 
 #' @param maxcharge Maximum charge allowed.
 #' @param devppm Maximum mass deviation, in ppm.
-#' @param mzabs Maximum mass deviation, in \emph{m/z}.
 #' @param validateIsotopePatterns Logical, when \code{TRUE} applies validation using the kegg library.
 #'
 #' @return A list of isotopic annotation for the given peaks.
@@ -227,7 +225,6 @@ findIsotopesForPSAltered <- function(peakIndeces = peakIndeces,
                                      snValues = snValues,
                                      maxcharge = maxcharge,
                                      devppm = devppm,
-                                     mzabs = mzabs,
                                      validateIsotopePatterns = TRUE) {
   
   
@@ -411,8 +408,8 @@ findIsotopesForPSAltered <- function(peakIndeces = peakIndeces,
   ## 0.005000 0.995000 0.010000 0.990000 0.025000 0.975000 0.050000 0.950000 0.100000 0.900000 0.500000
   #quantileLow  <- 0.00500
   #quantileHigh <- 0.99500
-  quantileLow  <- 0.00005
-  quantileHigh <- 0.99995
+  quantileLow <- c(0.000050, 0.000100, 0.000500, 0.001000, 0.005000)
+  quantileHigh <- c(0.99995, 0.999900, 0.999500, 0.999000, 0.995000)
   
   for (chainIdx in seq_len(length.out = length(resultChains))) {
     
@@ -445,15 +442,27 @@ findIsotopesForPSAltered <- function(peakIndeces = peakIndeces,
           proportionExpectedMax <- Inf
         } else {
           ## fetch expected proportion interval
-          proportionExpectedMin <- getIsotopeProportion(object = cpObj, isotope1 = 0, isotope2 = isotopeNumber, mass = mass, quantile = quantileLow)
-          proportionExpectedMax <- getIsotopeProportion(object = cpObj, isotope1 = 0, isotope2 = isotopeNumber, mass = mass, quantile = quantileHigh)
+          proportionExpectedMin <- getIsotopeProportion(object = cpObj, isotope1 = 0, isotope2 = isotopeNumber, mass = mass, quantile = quantileLow[1])
+          proportionExpectedMax <- getIsotopeProportion(object = cpObj, isotope1 = 0, isotope2 = isotopeNumber, mass = mass, quantile = quantileHigh[1])
+          
+          if (is.infinite(proportionExpectedMax)) {
+            ncouter <- 1
+            while(is.infinite(proportionExpectedMax)) {
+              ncouter <- ncouter + 1
+              proportionExpectedMax <- getIsotopeProportion(object = cpObj, isotope1 = 0, isotope2 = isotopeNumber, mass = mass, quantile = quantileHigh[ncouter])
+            }
+          }
+          
+          if (is.infinite(proportionExpectedMax)) warning(paste0("Infinite max quantile for ", paste(round(spectrum[chain, "mz"], digits = 4), collapse = "; ")))
+          if (is.infinite(proportionExpectedMin)) warning(paste0("Infinite min quantile for ", paste(round(spectrum[chain, "mz"], digits = 4), collapse = "; ")))
+          
         }
         
         centerObserved = (proportionObservedMin + proportionObservedMax) / 2;
-        centerObserved = ifelse(is.nan(centerObserved),0,centerObserved);
+        #centerObserved = ifelse(is.nan(centerObserved),0,centerObserved);
         centerExpected  = (proportionExpectedMin + proportionExpectedMax) / 2;
         radiusObserved  = (proportionObservedMax - proportionObservedMin) / 2;
-        radiusObserved  = ifelse(is.nan(radiusObserved),0,radiusObserved)
+        #radiusObserved  = ifelse(is.nan(radiusObserved),0,radiusObserved)
         radiusExpected  = (proportionExpectedMax - proportionExpectedMin) / 2;
         isotopeProportionFits <- abs(centerObserved - centerExpected) <= (radiusObserved + radiusExpected)
         

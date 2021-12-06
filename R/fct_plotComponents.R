@@ -80,9 +80,13 @@ plotComponents <- function(obj = NULL,
                    onlyAnnotated = onlyAnnotated,
                    onlyRelated = onlyRelated)
 
-
+  if (nrow(ft) < 1) {
+    warning("No feature components found!")
+    return(obj)
+  }
+  
   #plotting table
-  ft$text <- paste0(round(ft$mz, digits = 2), ft$isotopes, ft$adduct)
+  ft$text <- paste0(round(as.numeric(ft$mz), digits = 2), ft$isotopes, ft$adduct)
 
   mzrange <- c(min(ft$mz) - 0.5, max(ft$mz) + 0.5)
 

@@ -193,7 +193,7 @@ filterFileFaster <- function(x, i) {
     sn <- x@samples$sample[i]
     sidx <- which(x@samples$sample %in% sn)
   } else {
-    if (FALSE %in% (i %in% obj@samples$sample)) {
+    if (FALSE %in% (i %in% x@samples$sample)) {
       warning("Given sample names not found in the ntsData object!")
       return(x)
     }
@@ -210,18 +210,13 @@ filterFileFaster <- function(x, i) {
   x@MSnExp <- filterFile(x@MSnExp, file = sidx)
   
   if (length(analyses(x@patdata)) > 0) {
-    #x@patdata <- filterFeatureGroups(x@patdata, sidx)
     x@patdata <- x@patdata[sidx]
   }
-
-  #Subsets the peaks and features slots without rebuilding, thus is faster
   
   if (nrow(x@peaks) > 0) x@peaks <- x@peaks[x@peaks$sample %in% sn, ]
 
   if (nrow(x@features) > 0) {
     x@features <- x@features[x@features$ID %in% names(x@patdata), ]
-    #rg <- unique(x@samples$group)
-    #x@features <- x@features[, !(colnames(x@features) %in% rgr)]
   }
 
   return(x)

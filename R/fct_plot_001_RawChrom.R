@@ -49,11 +49,8 @@ plotRawChrom <- function(obj,
                          interactive = FALSE) {
 
   assertClass(obj, "ntsData")
-
   assertSubset(rtUnit, c("sec", "min"))
-
   assertSubset(type, c("tic", "bpc"))
-
   assertSubset(colorBy, c("samples", "sampleGroups"))
 
   if (!is.null(mz) && length(mz) == 1) {
@@ -68,7 +65,7 @@ plotRawChrom <- function(obj,
       main <- toupper(type)
     }
   }
-  
+
   if (!is.null(samples)) obj <- filterFileFaster(obj, samples)
 
   df <- extractEIC(obj = obj,
@@ -105,16 +102,18 @@ plotRawChrom <- function(obj,
 
     plot <- ggplot(data = df, aes(x = rt, y = i, color = file)) +
       geom_line(size = 0.5) +
+      geom_point(size = 0.5) +
       scale_color_manual(values = cl) +
       ggtitle(main) +
       theme_bw() +
       ylab("Intensity") +
       xlab("Retention Time") +
-      theme(legend.title = element_blank())
+      theme(legend.title = element_blank(),
+            title = element_text(size = 8))
 
   } else {
 
-    title <- list(text = main, x = 0.1, y = 0.98, font = list(size = 14, color = "black"))
+    title <- list(text = main, x = 0.13, y = 0.98, font = list(size = 12, color = "black"))
 
     xaxis <- list(linecolor = toRGB("black"),
                   linewidth = 2, title = "Retention Time (sec.)",

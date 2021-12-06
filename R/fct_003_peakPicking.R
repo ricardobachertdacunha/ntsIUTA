@@ -2,10 +2,10 @@
 
 #' peakPicking
 #'
-#' @description Finds chromatographic peaks from centroided MS in the
+#' @description Finds chromatographic peaks from centroided MS data in the
 #' samples of a given \linkS4class{ntsData} object.
 #' The peak picking uses the \pkg{patRoon} package and
-#' the following algorithms are possible:
+#' the following algorithms are available:
 #' "xcms3", "xcms", "openms", "envipick", "sirius", "kpic2", "safd".
 #' The parameters depend on the algorithm chosen.
 #' See ?\pkg{patRoon} for further information.
@@ -104,20 +104,37 @@ peakPicking <- function(obj = NULL,
 buildPeakList <- function(obj) {
 
   pat <- obj@patdata
-
-  peaks <- base::as.data.frame(data.table::rbindlist(featureTable(pat), idcol = "sample"))
-
-  if ("group" %in% colnames(peaks)) peaks <- rename(peaks, feature = group)
-
-  peaks <- rename(peaks, rt = ret, rtmin = retmin, rtmax = retmax)
-
-  peaks$group <- sapply(peaks$sample, FUN = function(x) x <- obj@samples$group[which(obj@samples$sample == x)])
-
+  
+  peaks <- featureTable(pat)
+  
+  peaks <- lapply(seq_len(length(peaks)), function(x, sp, peaks) {
+    peaks[[sp[x]]]$sample <- sp[x]
+    peaks[[sp[x]]] <- rename(peaks[[sp[x]]], rt = ret, rtmin = retmin, rtmax = retmax)
+    return(peaks[[sp[x]]])
+  }, sp = names(peaks), peaks = peaks)
+  
+  names(peaks) <- samples(obj)
+  
   if (class(pat) == "featuresXCMS3" | class(pat) == "featureGroupsXCMS3") {
     extra <- base::as.data.frame(chromPeaks(pat@xdata, isFilledColumn = TRUE))
     extra <- rename(extra, intensity = maxo, area = into)
-    peaks <- cbind(peaks, extra[,!(colnames(extra) %in% colnames(peaks))])
+    extra$sample <- samples(obj)[extra$sample]
+    
+    peaks <- lapply(peaks, function(x, extra) {
+      
+      x <- cbind(x, extra[extra$sample == unique(x$sample), !(colnames(extra) %in% colnames(x))])
+      return(x)
+    }, extra = extra)
+    
+    names(peaks) <- samples(obj)
+    
   }
+  
+  peaks <- base::as.data.frame(data.table::rbindlist(peaks, idcol = NULL))
+
+  if ("group" %in% colnames(peaks)) peaks <- rename(peaks, feature = group)
+
+  peaks$group <- sapply(peaks$sample, FUN = function(x) x <- obj@samples$group[which(obj@samples$sample == x)])
 
   peaks$ID <- seq_len(nrow(peaks))
 

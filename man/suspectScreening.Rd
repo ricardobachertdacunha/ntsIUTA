@@ -9,13 +9,13 @@ suspectScreening(
   samples = NULL,
   ID = NULL,
   title = NULL,
-  suspectList = utils::read.csv(base::file.choose()),
+  suspectList = NULL,
   ppm = 5,
   rtWindow = 30,
   adduct = NULL,
   excludeBlanks = TRUE,
   withMS2 = TRUE,
-  MS2param = MS2param()
+  param = MS2param()
 )
 }
 \arguments{
@@ -48,7 +48,7 @@ assigned as blanks in the \code{samples} slot of the \code{obj}.}
 
 \item{withMS2}{Logical, set to \code{TRUE} for using confirmation via MS2.}
 
-\item{MS2param}{An \linkS4class{MS2param} object with parameters for MS2 extraction.}
+\item{param}{An \linkS4class{MS2param} object with parameters for MS2 extraction.}
 }
 \value{
 An \linkS4class{ntsData} object with screening results

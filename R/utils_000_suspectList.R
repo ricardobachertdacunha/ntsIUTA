@@ -109,7 +109,7 @@ getSuspectListTemplate <- function(saveTo = NULL) {
 #' @param sampleGroup A character object with the name of a
 #' representative sample replicate group to extract the MS2 information.
 #' @param suspectList The \linkS4class{suspectList} object to add the MS2 information.
-#' @param MS2param The parameters to extract the MS2 from the \linkS4class{ntsSuspectData} object.
+#' @param param The parameters to extract the MS2 from the \linkS4class{ntsSuspectData} object.
 #' @param updateRT Logical, set to \code{TRUE} to update or add the retention time
 #' to the \linkS4class{suspectList}.
 #' @param updateIntControl Logical, set to \code{TRUE} to add the intensity
@@ -126,7 +126,7 @@ getSuspectListTemplate <- function(saveTo = NULL) {
 addMS2Info <- function(wfobj = NULL,
                        sampleGroup = NULL,
                        suspectList = NULL,
-                       MS2param = MS2param(),
+                       param = MS2param(),
                        updateRT = TRUE,
                        updateIntControl = TRUE,
                        save = TRUE) {
@@ -137,7 +137,7 @@ addMS2Info <- function(wfobj = NULL,
 
   if (length(unique(df$name)) != nrow(df)) {
     warning("Duplicate compound names found. Filter workflow object results,
-            keeping with desired correspondence between compuond name and feature ID.")
+            keeping with desired correspondence between compound name and feature ID.")
     return()
   }
 
@@ -148,7 +148,8 @@ addMS2Info <- function(wfobj = NULL,
       warning("More than one sample replicate group in the workflow object.
               Select a representative sample replicate group
               to extract MS2 using the argument sampleGroup.")
-      return()
+      # TODO Find better way to communicate that nothing was added, changed return to wfobj, to avoid losing data by returning empty
+      return(wfobj)
     }
   } else {
     pat <- wfobj@data[[1]]
@@ -157,7 +158,7 @@ addMS2Info <- function(wfobj = NULL,
     }
   }
 
-  MS2 <- extractMS2(pat, param = MS2param)
+  MS2 <- extractMS2(pat, param = param)
 
   for (i in seq_len(nrow(df))) {
 
@@ -189,7 +190,7 @@ addMS2Info <- function(wfobj = NULL,
 
   suspectList@data <- sl
 
-  if (TRUE == save) utils::write.csv(sl, file = suspectList@path)
+  if (TRUE == save) utils::write.csv(sl, file = suspectList@path, row.names = FALSE)
 
   if (is.character(save)) {
     utils::write.csv(sl, file = base::paste0(dirname(suspectList@path), "/", save, ".csv"), row.names = FALSE)

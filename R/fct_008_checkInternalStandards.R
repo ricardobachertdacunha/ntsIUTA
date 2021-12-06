@@ -50,13 +50,13 @@ checkIS <- function(obj = NULL,
 
   assertClass(obj, "ntsData")
 
-  assertClass(targets, "suspectList")
-
-  if (targets@length == 0) {
-    warning("The targets list is empty!")
+  if (is.null(targets)) targets <- obj@IS@targets
+  
+  if (nrow(targets@data) == 0) {
+    warning("Targets not found in the given ntsData. They should be provided!")
     return(obj)
   }
-
+  
   if (is.null(ppm)) ppm <- obj@IS@ppm
   
   if (is.null(rtWindow)) rtWindow <- obj@IS@rtWindow
@@ -195,10 +195,9 @@ checkIS <- function(obj = NULL,
             dbMS2 <- top_n(dbMS2, 10, intensity)
             dbMS2 <- mutate(dbMS2, into_ind = intensity / max(dbMS2$intensity))
 
-            combi <- fuzzyjoin::difference_inner_join(xMS2, dbMS2,
-                                                      by = c("mz"),
-                                                      max_dist = 0.005,
-                                                      distance_col = "diff")
+            combi <- fuzzyjoin::difference_inner_join(xMS2, dbMS2, by = c("mz"), max_dist = 0.02, distance_col = "diff")
+            combi$diff <- (combi$diff/combi$mz.x) * 1E6
+            combi <- combi[combi$diff < 10, ] #remove entries with max diff of 10 ppm
 
             temp$nfrag[i] <- nrow(combi)
             temp$pfrag[i] <- nrow(combi) / nrow(dbMS2)
@@ -250,7 +249,7 @@ checkIS <- function(obj = NULL,
     widths <- c(8,5, rep(5, length(ls)))
 
     ggsave(paste0(results, "/IS02_DeviationsAndRecovery.tiff"),
-           plot = plotqc, device = "tiff", path = NULL, scale = 1,
+           plot = plotis, device = "tiff", path = NULL, scale = 1,
            width = sum(widths), height = 10, units = "cm", dpi = 300, limitsize = TRUE)
 
     plotfp <- plotFeaturePeaks(obj = obj,
@@ -267,6 +266,8 @@ checkIS <- function(obj = NULL,
 
   }
 
+  if (save) saveObject(obj = obj)
+  
   return(obj)
 
 }

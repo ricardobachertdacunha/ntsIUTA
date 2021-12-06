@@ -10,6 +10,7 @@
 \alias{sampleGroups<-,ntsData-method}
 \alias{blanks,ntsData-method}
 \alias{blanks<-,ntsData-method}
+\alias{metadata,ntsData-method}
 \alias{QC,ntsData-method}
 \alias{QC<-,ntsData-method}
 \alias{[,ntsData,ANY,missing,missing-method}
@@ -38,6 +39,8 @@
 \S4method{blanks}{ntsData}(object)
 
 \S4method{blanks}{ntsData}(object) <- value
+
+\S4method{metadata}{ntsData}(x, vars)
 
 \S4method{QC}{ntsData}(object)
 
@@ -108,6 +111,8 @@ to be used for QC.}
 
 \item{x}{An \linkS4class{ntsData} object.}
 
+\item{vars}{The name of the variables to extract.}
+
 \item{i}{The indice/s or name/s of the samples to keep in the \code{x} object.}
 
 \item{j}{Ignored.}
@@ -165,6 +170,8 @@ within the \pkg{ntsIUTA} package.
 \item \code{blanks}: Getter for blank replicate groups.
 
 \item \code{blanks<-}: Setter for blank replicate groups.
+
+\item \code{metadata}: Getter for metadata.
 
 \item \code{QC}: Getter for QC replicate sample groups.
 

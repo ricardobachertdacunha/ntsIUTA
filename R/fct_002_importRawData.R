@@ -48,20 +48,23 @@
 #' dt <- setupProject(path = path, save = FALSE)
 #' dt <- importRawData(dt[1], save = FALSE, centroidedData = TRUE)
 #'
-importRawData <- function(obj = NULL,
-                          rtFilter = NULL,
-                          rtUnit = "min",
-                          msLevel = c(1, 2),
-                          centroidedData = TRUE,
-                          removeEmptySpectra = TRUE,
-                          save = FALSE) {
-
+importRawData <- function(
+  obj = NULL,
+  rtFilter = NULL,
+  rtUnit = "min",
+  msLevel = c(1, 2),
+  centroidedData = TRUE,
+  removeEmptySpectra = TRUE,
+  save = FALSE
+) {
   assertClass(obj, "ntsData")
 
-  snow <- SnowParam(workers = detectCores() - 1,
-                    type = "SOCK",
-                    exportglobals = FALSE,
-                    progressbar = TRUE)
+  snow <- SnowParam(
+    workers = detectCores() - 1,
+    type = "SOCK",
+    exportglobals = FALSE,
+    progressbar = TRUE
+  )
 
   register(snow, default = TRUE)
 
@@ -75,14 +78,18 @@ importRawData <- function(obj = NULL,
   }
 
   raw <- suppressWarnings(
-    readMSData(msFiles,
-               pdata = new("NAnnotatedDataFrame",
-                data.frame(sample_name = sample_name,
-                           sample_group = sample_group)),
-               msLevel. = NULL,
-               mode = "onDisk",
-               centroided. = centroidedData,
-               smoothed. = FALSE)
+    readMSData(
+      msFiles,
+      pdata = new("NAnnotatedDataFrame",
+      data.frame(
+        sample_name = sample_name,
+        sample_group = sample_group)
+      ),
+      msLevel. = NULL,
+      mode = "onDisk",
+      centroided. = centroidedData,
+      smoothed. = FALSE
+    )
   )
 
   if (!is.null(rtFilter)) {
@@ -99,7 +106,6 @@ importRawData <- function(obj = NULL,
   if (is.character(save)) saveObject(obj = obj, filename = save)
 
   return(obj)
-
 }
 
 
@@ -273,6 +279,7 @@ extractEIC <- function(obj = NULL, samples = NULL,
 
   raw <- filterRt(object = obj@MSnExp, rt = rtr)
 
+  # TODO add MS2 extraction possibility
   raw <- filterMsLevel(raw, msLevel. = msLevel)
 
   if (!is.null(mzr)) raw <- suppressWarnings(filterMz(raw, mz = mzr))

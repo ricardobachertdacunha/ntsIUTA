@@ -25,10 +25,10 @@ An \linkS4class{ntsData} object containing a \linkS4class{features}
 object in the slot \code{patdata}.
 }
 \description{
-Finds chromatographic peaks from centroided MS in the
+Finds chromatographic peaks from centroided MS data in the
 samples of a given \linkS4class{ntsData} object.
 The peak picking uses the \pkg{patRoon} package and
-the following algorithms are possible:
+the following algorithms are available:
 "xcms3", "xcms", "openms", "envipick", "sirius", "kpic2", "safd".
 The parameters depend on the algorithm chosen.
 See ?\pkg{patRoon} for further information.

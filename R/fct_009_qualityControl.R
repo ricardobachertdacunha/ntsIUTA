@@ -49,17 +49,17 @@ checkQC <- function(
 
   assertClass(obj, "ntsData")
 
-  assertClass(targets, "suspectList")
-
-  if (targets@length == 0) {
-    warning("The targets list is empty!")
-    return(obj)
-  }
-
+  if (is.null(targets)) targets <- obj@QC@targets
+  
   if (is.null(rtWindow)) rtWindow <- obj@QC@rtWindow
   
   if (is.null(ppm)) ppm <- obj@QC@ppm
-    
+  
+  if (nrow(targets@data) == 0) {
+    warning("Targets not found in the given ntsData. They should be provided!")
+    return(obj)
+  }
+  
   #creates a temporary ntsData to produce results
   data <- new("ntsData")
 
@@ -116,10 +116,13 @@ checkQC <- function(
   df$d_rt <- round(df$d_rt, digits = 1)
 
   screen <- screen[, df$ID]
-
+  
   annot <- data@annotation$comp[data@annotation$comp$ID %in% df$ID, ]
+  
   for (i in seq_len(nrow(annot))) {
-    df$isoN[i] <- nrow(data@annotation$comp[data@annotation$comp$isogroup %in% annot$isogroup[i], ]) - 1
+    annot_temp <- data@annotation$comp$isogroup[data@annotation$comp$isogroup %in% annot$isogroup[i]]
+    if (NA %in% annot_temp) annot_temp <- 0
+    df$isoN[i] <- length(annot_temp) - 1
   }
 
   if ("hasFragments" %in% colnames(df)) {
@@ -164,17 +167,17 @@ checkQC <- function(
             dbMS2 <- data.frame(mz = as.numeric(unlist(strsplit(ms2df$fragments_mz[i], split = ";"))),
                                 intensity = as.numeric(unlist(strsplit(ms2df$fragments_int[i], split = ";"))),
                                 precursor = as.logical(unlist(strsplit(ms2df$fragments_pre[i], split = ";"))))
-
+            
+            
             xMS2 <- top_n(xMS2, 10, intensity)
             xMS2 <- mutate(xMS2, into_ind = intensity / max(xMS2$intensity))
-
+            
             dbMS2 <- top_n(dbMS2, 10, intensity)
             dbMS2 <- mutate(dbMS2, into_ind = intensity / max(dbMS2$intensity))
-
-            combi <- fuzzyjoin::difference_inner_join(xMS2, dbMS2,
-                                                      by = c("mz"),
-                                                      max_dist = 0.005,
-                                                      distance_col = "diff")
+            
+            combi <- fuzzyjoin::difference_inner_join(xMS2, dbMS2, by = c("mz"), max_dist = 0.02, distance_col = "diff")
+            combi$diff <- (combi$diff/combi$mz.x) * 1E6
+            combi <- combi[combi$diff < 10, ] #remove entries with max diff of 10 ppm
 
             df$nfrag[i] <- nrow(combi)
             df$pfrag[i] <- nrow(combi) / nrow(dbMS2)
@@ -227,24 +230,26 @@ checkQC <- function(
 
     plotqc <- plotCheckQC(obj, rtWindow = rtWindow, ppm = ppm)
 
-    ggsave(paste0(results, "/QC02_deviations.tiff"),
-           plot = plotqc, device = "tiff", path = NULL, scale = 1,
-           width = 17, height = 10, units = "cm", dpi = 300, limitsize = TRUE)
+    ggplot2::ggsave(paste0(results, "/QC02_deviations.tiff"),
+                    plot = plotqc, device = "tiff", path = NULL, scale = 1,
+                    width = 17, height = 10, units = "cm", dpi = 300, limitsize = TRUE)
 
     plotfp <- plotFeaturePeaks(obj = data,
-                               ID = obj@QC$results$ID,
+                               ID = obj@QC@results$ID,
                                mz = NULL,
                                rt = NULL,
                                rtUnit = "min",
                                ppm = NULL,
                                rtWindow = NULL,
-                               names = obj@QC$results$name,
+                               names = obj@QC@results$name,
                                interactive = TRUE)
 
     saveWidget(partial_bundle(plotfp), file = paste0(results, "/QC03_featurePeaks.html"))
 
   }
 
+  if (save) saveObject(obj = obj)
+  
   return(obj)
 
 }
@@ -268,7 +273,7 @@ plotCheckQC <- function(obj, rtWindow = NULL, ppm = NULL) {
   qcdf <- obj@QC@results
 
   if (nrow(qcdf) == 0) return(cat("QC results not found or empty."))
-
+  
   if (is.null(rtWindow)) rtWindow <- obj@QC@rtWindow
   
   if (is.null(ppm)) ppm <- obj@QC@ppm
@@ -332,7 +337,7 @@ plotCheckQC <- function(obj, rtWindow = NULL, ppm = NULL) {
     grobs[["isoN"]] <- ggplot(qcdf) +
       theme_bw() +
       geom_rect(aes(ymin = -Inf, ymax = 2, xmin = -Inf, xmax = Inf), fill = "white", alpha = 0.05) +
-      geom_rect(aes(ymin = 2, ymax = 5, xmin = -Inf, xmax = Inf), fill = "ForestGreen", alpha = 0.05) +
+      geom_rect(aes(ymin = 2, ymax = 6, xmin = -Inf, xmax = Inf), fill = "ForestGreen", alpha = 0.05) +
       geom_rect(aes(ymin = 5, ymax = Inf, xmin = -Inf, xmax = Inf), fill = "white", alpha = 0.01) +
       geom_point(stat = "identity", aes(x = name, y = isoN)) +
       theme(axis.text.y = element_blank(),
@@ -340,7 +345,7 @@ plotCheckQC <- function(obj, rtWindow = NULL, ppm = NULL) {
             axis.text.x = element_text(size = 7),
             axis.title.x = element_text(size = 7)) +
       ylab("Nr Isotopes") +
-      ylim(0, 6) +
+      ylim(0, 7) +
       coord_flip()
 
   }
@@ -352,7 +357,7 @@ plotCheckQC <- function(obj, rtWindow = NULL, ppm = NULL) {
       geom_rect(aes(ymin = 2, ymax = 5, xmin = -Inf, xmax = Inf), fill = "PaleGreen", alpha = 0.05) +
       geom_rect(aes(ymin = 5, ymax = Inf, xmin = -Inf, xmax = Inf), fill = "ForestGreen", alpha = 0.05) +
       geom_rect(aes(ymin = -Inf, ymax = 2, xmin = -Inf, xmax = Inf), fill = "white", alpha = 0.01) +
-      geom_point(stat = "identity", aes(x = name, y = nfrag)) +
+      geom_point(stat = "identity", aes(x = name, y = ifelse(nfrag > 10, 10, nfrag))) +
       theme(axis.text.y = element_blank(),
             axis.title.y = element_blank(),
             axis.text.x = element_text(size = 7),
