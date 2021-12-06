@@ -364,7 +364,7 @@ setClass("ntsData",
       group = character(),
       blank = character()
     ),
-    metadata = data.frame(sample = character()),
+    metadata = data.frame(group = character()),
     parameters = new("paramList"),
     QC = new("qcData"),
     MSnExp = new("OnDiskMSnExp"),

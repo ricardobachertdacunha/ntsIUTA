@@ -4,19 +4,20 @@
 \alias{addMetadata}
 \title{addMetadata}
 \usage{
-addMetadata(sampleInfo, metadata)
+addMetadata(obj, var = NULL, varname = "var")
 }
 \arguments{
-\item{sampleInfo}{The sampleInfo \code{data.frame} object to be amended with metadata.}
+\item{obj}{An \linkS4class{ntsData} object to integrate sample replicate group metadata.}
 
-\item{metadata}{A \code{data.frame} with the same number of rows as the sampleInfo contaninig 1 or more columns with metadata.
-Note that the column names in the metadata \code{data.frame} will be used as classifiers.}
+\item{var}{A \code{data.frame} or a \code{vector} with the same
+row number or length as the number of sample replicate groups in the \linkS4class{ntsData}.}
+
+\item{varname}{A character vector to name the column in the metadata
+\code{data.frame} when metadata is a \code{vector}. The default is \emph{var}.}
 }
 \value{
-Returns an updated sampleInfo \code{data.frame} objects.
+An \linkS4class{ntsData} with metadata added to the slot metadata.
 }
 \description{
-Adds additional information to the sampleInfo \code{data.frame}. For instance,
-additional information could be concentration data or other known properties or classifiers for each sample in the sampleInfo \code{data.frame}.
-The added metadata can then be used for inferential and statistical analyses.
+Adds sample replicate group metadata to an \linkS4class{ntsData} object.
 }

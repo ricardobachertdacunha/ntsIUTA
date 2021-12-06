@@ -23,7 +23,7 @@ An \linkS4class{ntsData} object with peaks
 grouped and annotated across samples as features.
 }
 \description{
-createFeatures
+Wrapper function for peak picking, grouping and annotation when parameters are defined.
 }
 \note{
 The  \linkS4class{ntsData} object should contain the parameters

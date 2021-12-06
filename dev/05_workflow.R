@@ -225,10 +225,21 @@ plotly::subplot(list(p1, p2), nrows = 1, margin = 0.04)
 
 ### Basic Workflow -------------------------------------------------------------------------------------------
 
+dt <- dtall[1:6]
+
+#### Add metadata --------------------------------------------------------------------------------------------
+
+var <- data.frame(type = c(rep("clean"), rep("dirty")))
+
+dt <- addMetadata(dt, var)
+
+metadata(dt)
+
+
+
+
 #### Raw Data ------------------------------------------------------------------------------------------------
 # TODO when applying rtFilter for import raw data reuse when peak picking with patRoon
-
-dt <- dtall[1:6]
 
 dt <- importRawData(dt,
   rtFilter = NULL,
