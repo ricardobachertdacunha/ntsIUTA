@@ -88,7 +88,7 @@ remotes::install_github("ricardobachertdacunha/ntsIUTA")
 
 
 #If the installation fails with an error stating patRoon was not installed for i386, please use this command instead:
-remotes::install_github("ricardobachertdacunha/ntsIUTA", INSTALL_opts = "--no-multiarch"
+remotes::install_github("ricardobachertdacunha/ntsIUTA", INSTALL_opts = "--no-multiarch")
 
 ```
 
