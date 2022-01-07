@@ -4,12 +4,17 @@
 \docType{class}
 \name{ntsData-class}
 \alias{ntsData-class}
-\alias{show,ntsData-method}
+\alias{projectInfo,ntsData-method}
+\alias{path,ntsData-method}
 \alias{samples,ntsData-method}
-\alias{sampleGroups,ntsData-method}
-\alias{sampleGroups<-,ntsData-method}
+\alias{replicates,ntsData-method}
+\alias{replicates<-,ntsData-method}
 \alias{blanks,ntsData-method}
 \alias{blanks<-,ntsData-method}
+\alias{acquisitionMethods,ntsData-method}
+\alias{acquisitionMethods<-,ntsData-method}
+\alias{polarity,ntsData-method}
+\alias{polarity<-,ntsData-method}
 \alias{metadata,ntsData-method}
 \alias{QC,ntsData-method}
 \alias{QC<-,ntsData-method}
@@ -18,6 +23,7 @@
 \alias{peaks,ntsData-method}
 \alias{features,ntsData-method}
 \alias{components,ntsData-method}
+\alias{show,ntsData-method}
 \alias{peakPickingParameters,ntsData,missing,missing-method}
 \alias{peakPickingParameters,ntsData,character,ANY-method}
 \alias{peakGroupingParameters,ntsData,missing,missing-method}
@@ -28,23 +34,33 @@
 \alias{annotationParameters,ntsData,character,ANY-method}
 \title{ntsData}
 \usage{
-\S4method{show}{ntsData}(object)
+\S4method{projectInfo}{ntsData}(object, title = NULL, description = NULL, date = NULL)
+
+\S4method{path}{ntsData}(object)
 
 \S4method{samples}{ntsData}(object)
 
-\S4method{sampleGroups}{ntsData}(object)
+\S4method{replicates}{ntsData}(object)
 
-\S4method{sampleGroups}{ntsData}(object) <- value
+\S4method{replicates}{ntsData}(object) <- value
 
 \S4method{blanks}{ntsData}(object)
 
 \S4method{blanks}{ntsData}(object) <- value
 
-\S4method{metadata}{ntsData}(x, vars)
+\S4method{acquisitionMethods}{ntsData}(object)
+
+\S4method{acquisitionMethods}{ntsData}(object) <- value
+
+\S4method{polarity}{ntsData}(object, groupby)
+
+\S4method{polarity}{ntsData}(object) <- value
+
+\S4method{metadata}{ntsData}(x, varname)
 
 \S4method{QC}{ntsData}(object)
 
-\S4method{QC}{ntsData}(object) <- value
+\S4method{QC}{ntsData}(object, remove = FALSE, nametype = "replicates") <- value
 
 \S4method{[}{ntsData,ANY,missing,missing}(x, i, j, ..., drop = TRUE)
 
@@ -87,6 +103,8 @@
   onlyRelated = TRUE
 )
 
+\S4method{show}{ntsData}(object)
+
 \S4method{peakPickingParameters}{ntsData,missing,missing}(object)
 
 \S4method{peakPickingParameters}{ntsData,character,ANY}(object, algorithm, param)
@@ -106,12 +124,27 @@
 \arguments{
 \item{object}{An \linkS4class{ntsData} object.}
 
-\item{value}{A character vector with the names of the sample replicate group/s
+\item{title}{The project title.}
+
+\item{description}{The project description.}
+
+\item{date}{The project date.}
+
+\item{value}{A character vector with the names of the samples or sample replicate name/s
 to be used for QC.}
+
+\item{groupby}{Either \code{samples} (the default) or \code{replicates} as character string
+to return the polarites either for each sample or each replicate.}
 
 \item{x}{An \linkS4class{ntsData} object.}
 
-\item{vars}{The name of the variables to extract.}
+\item{varname}{The name of the variables to extract.}
+
+\item{remove}{A logical value. When \code{TRUE}, specified sample or replicate names
+are moved from the QC slot to the samples slot of the \linkS4class{ntsData} object.}
+
+\item{nametype}{A character string specifying if sample or replicate names should be used.
+Posiible values are \emph{samples} or \emph{replicates} (the default).}
 
 \item{i}{The indice/s or name/s of the samples to keep in the \code{x} object.}
 
@@ -152,30 +185,68 @@ to the features of interest.}
 }
 \value{
 An S4 class object named \linkS4class{ntsData}.
+
+An \linkS4class{ntsData} object with updated project information.
+
+A character vector with project path.
+
+A character vector with sample names.
+
+A character vector with sample replicate names.
+
+Adds the value vector with sample replicate names
+to the replicate column of the samples data table in the object.
+
+A character vector with blank sample replicate names.
+
+Adds the value vector with blank sample replicate names
+to the blank column of the samples data table in the object.
+
+A vector with acquisition method names used for each sample
+or when only one method is present, the single acquisition method name.
+
+Adds the \code{value} vector with acquisition method names
+to the method column of the samples data table in the object.
+
+A vector with the polarity mode of each sample (i.e., file).
+
+Adds the \code{value} vector with polarity modes
+to the polarity column of the samples data table in the object.
+
+A data table with the requested metadata.
 }
 \description{
-S4 class object to organize and store project processed data
-within the \pkg{ntsIUTA} package.
+A S4 class object to store project processed data within the \pkg{ntsIUTA} package.
 }
 \section{Methods (by generic)}{
 \itemize{
-\item \code{show}: Informative printing.
+\item \code{projectInfo}: setter and getter for project information.
 
-\item \code{samples}: Getter for samples.
+\item \code{path}: Getter for project path.
 
-\item \code{sampleGroups}: Getter for sample replicate groups.
+\item \code{samples}: Getter for sample names.
 
-\item \code{sampleGroups<-}: Setter for sample replicate groups.
+\item \code{replicates}: Getter for sample replicate names.
 
-\item \code{blanks}: Getter for blank replicate groups.
+\item \code{replicates<-}: Setter for sample replicate names.
+
+\item \code{blanks}: Getter for blank replicate names.
 
 \item \code{blanks<-}: Setter for blank replicate groups.
 
+\item \code{acquisitionMethods}: Getter for acquisition method names.
+
+\item \code{acquisitionMethods<-}: Setter for acquisition method names.
+
+\item \code{polarity}: Getter for the polarity of each sample/replicate.
+
+\item \code{polarity<-}: Setter for the polarity mode of the samples (i.e., files).
+
 \item \code{metadata}: Getter for metadata.
 
-\item \code{QC}: Getter for QC replicate sample groups.
+\item \code{QC}: Getter for QC samples data table.
 
-\item \code{QC<-}: Setter for QC replicate sample groups.
+\item \code{QC<-}: Setter for QC samples or sample replicates.
 
 \item \code{[}: Subset on samples, using sample index or name.
 
@@ -186,6 +257,8 @@ within the \pkg{ntsIUTA} package.
 \item \code{features}: Getter for features (i.e., grouped peaks).
 
 \item \code{components}: Getter for components (i.e., annotated features).
+
+\item \code{show}: Informative printing of the \linkS4class{ntsData} object.
 
 \item \code{peakPickingParameters}: Getter for peak picking parameters.
 
@@ -209,72 +282,50 @@ within the \pkg{ntsIUTA} package.
 \describe{
 \item{\code{title}}{A character string with the project title.}
 
-\item{\code{info}}{A list to store project details.
-The first position is for description of the project.}
-
-\item{\code{path}}{A character string with the project path.
-as defined with \code{\link{setupProject}}.}
+\item{\code{description}}{A character string with the project description.}
 
 \item{\code{date}}{The project date.}
 
-\item{\code{polarity}}{A string character defining the polarity mode of
-the MS files in the \linkS4class{ntsData} object.
-Possible values are "positive" or "negative".}
+\item{\code{path}}{A character string with the project path.}
 
-\item{\code{samples}}{A \code{data.frame} as obtained by \code{\link{setupProject}}.}
+\item{\code{samples}}{A data.table with six columns:
+file (character string with the file path),
+sample (character string with the file name),
+replicate (character string with the assigned sample replicate group),
+blank (character string with associated blank replicate),
+polarity (the polarity mode of the respective file; possible values are "positive" or "negative") and
+method (a character string with the method used to acquire the data file).}
 
-\item{\code{metadata}}{A \code{data.frame} with the same number of rows
-as the \code{samples} containing metadata to support data interpretation.}
+\item{\code{metadata}}{A data.table with the same number of rows
+as the unique replicates in \code{samples}, containing metadata for each replicate added as extra columns.}
 
-\item{\code{parameters}}{A list containing process parameters for the workflow steps.}
+\item{\code{parameters}}{A \linkS4class{paramList} object containing process parameters for the basic workflow.
+See \code{?"paranList-class"} for more information.}
 
-\item{\code{QC}}{Slot for assigning the QC sample replicate group and results.
-Note that the assigned group is not included in the basic workflow
-but only used for quality control, using the function \code{\link{checkQC}},
-and for optimization of workflow parameters. A screening list with target substances
-must be provided for running quality control.}
+\item{\code{QC}}{A \linkS4class{qcData} object used for quality control. More information in \code{?"qcData-class"}.}
 
-\item{\code{MSnExp}}{An \linkS4class{OnDiskMSnExp} as generated by \code{\link{setupProject}}.}
+\item{\code{pat}}{A list of \linkS4class{features} or \linkS4class{featureGroups} objects
+for each sample replicate derived from the basic workflow
+(peak picking, alignment and grouping) using the \pkg{patRoon} package.}
 
-\item{\code{patdata}}{A \linkS4class{features} or \linkS4class{featureGroups}
-object derived from the basic NTS workflow
-(peak picking, alignment and grouping).}
+\item{\code{peaks}}{A list of data.tables with peaks for each sample.}
 
-\item{\code{peaks}}{A list with a data.frame containing the peak information
-for each sample in the slot \code{samples}.}
+\item{\code{features}}{A list of data.tables with the features for each replicate.}
 
-\item{\code{features}}{A data.frame with the features information,
-including feature quality data and filtering information.}
+\item{\code{unified}}{A data.table with unified features across different replicates.}
 
-\item{\code{annotation}}{Slot for storage of annotation of isotopes and adducts and
-source fragments. Features with similar chromatographic behaviour
-are grouped by components. Isotopologues are grouped by \code{isonumber} and
-are created for each sample replicate group. Similarly, adducts are searched
-for each sample replicate group and share the same molecular ion (\code{Mion}).
-The functionality of the package \pkg{CAMERA} was adapted to work better for
-environmental analyses, where sample replicate groups are, in principle,
-very different from each other. When specified other functionalities
-from the package \pkg{patRoon} can be used but the default
-is the package \pkg{CAMERA} directly. The slot is composed of a list of length 2,
-where the first entry is a data frame with summarized results for each feature
-and the second is the raw data from the \pkg{CAMERA} package.}
+\item{\code{filters}}{A list of applied filters to the unified features data.table.}
 
-\item{\code{IS}}{Slot to store the list of internal standards (IS) and the results
-from IS control of the samples in the \code{ntsData} object.}
+\item{\code{removed}}{A data table with the removed unified features.}
 
-\item{\code{filters}}{A list of applied filters to the features data.frame.}
-
-\item{\code{removed}}{A data frame with the removed features.}
-
-\item{\code{workflows}}{A list of objects inherent of downstream workflows, such as
+\item{\code{workflows}}{A list of objects inherent of downstream data processing steps, such as
 suspect screening.}
 }}
 
 \note{
-Slot \code{MSnExp} is used to save the \linkS4class{OnDiskMSnExp}
-object obtained by \pkg{MSnbase} during the \code{\link{setupProject}}.
-Slot \code{patdata} will contain the object \linkS4class{features} or
-\linkS4class{featureGroups} generated from the \pkg{patRoon} package.
-Both objects can be used within native functions of \pkg{MSnbase} and
-\pkg{patRoon}.
+The slot \code{pat} contains the object \linkS4class{features} or
+\linkS4class{featureGroups} which can be used within native functions of the \pkg{patRoon} package.
+
+When no arguments are given in the call for \code{projectInfo} a list
+with the title, description and date is returned instead of the \code{object}.
 }

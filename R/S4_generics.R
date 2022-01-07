@@ -1,4 +1,11 @@
 
+#' projectInfo
+#'
+#' @param object Object to change or get the information.
+#'
+#' @return Get or change title, description and/or date of the a project.
+#'
+setGeneric("projectInfo", function(object, ...) standardGeneric("projectInfo"))
 
 #' samples
 #'
@@ -8,22 +15,22 @@
 #'
 setGeneric("samples", function(object) standardGeneric("samples"))
 
-#' sampleGroups
+#' replicates
 #'
-#' @param object Object to collect sample replicate groups. 
+#' @param object Object to collect sample replicate names.
 #'
-#' @return A vector with sample replicate group names.
+#' @return A vector with sample replicate names.
 #'
-setGeneric("sampleGroups", function(object) standardGeneric("sampleGroups"))
+setGeneric("replicates", function(object) standardGeneric("replicates"))
 
-#' sampleGroups<-
+#' replicates<-
 #'
-#' @param object Object to assign sample replicate groups. 
-#' @param value A character vector with one or more sample replicate group names.
+#' @param object Object to assign sample replicate names.
+#' @param value A character vector with one or more sample replicate names.
 #'
-#' @return An object updated with sample replicate group names.
+#' @return An object updated with sample replicate names.
 #'
-setGeneric("sampleGroups<-", function(object, value) standardGeneric("sampleGroups<-"))
+setGeneric("replicates<-", function(object, value) standardGeneric("replicates<-"))
 
 #' blanks
 #'
@@ -43,6 +50,23 @@ setGeneric("blanks", function(object) standardGeneric("blanks"))
 #'
 setGeneric("blanks<-", function(object, value) standardGeneric("blanks<-"))
 
+#' acquisitionMethods
+#'
+#' @param object Object to collect method names used for data acquisition.
+#'
+#' @return A vector with method names.
+#'
+setGeneric("acquisitionMethods", function(object) standardGeneric("acquisitionMethods"))
+
+#' acquisitionMethods<-
+#'
+#' @param object Object to assign acquisition method names to an object.
+#' @param value A character vector with acquisition method names.
+#'
+#' @return An object updated with method names.
+#'
+setGeneric("acquisitionMethods<-", function(object, value) standardGeneric("acquisitionMethods<-"))
+
 #' QC
 #'
 #' @param object Object to collect the samples used for QC.
@@ -56,10 +80,11 @@ setGeneric("QC", function(object) standardGeneric("QC"))
 #' @param object Object to collect the samples to be used as QC.
 #' @param value A character vector the names of the sample replicate group/s
 #' to be used as QC.
+#' @param ... Other argumments.
 #'
 #' @return Ac object with experimental samples assigned to QC.
 #'
-setGeneric("QC<-", function(object, value) standardGeneric("QC<-"))
+setGeneric("QC<-", function(object, value, ...) standardGeneric("QC<-"))
 
 #' peakPickingParameters
 #'

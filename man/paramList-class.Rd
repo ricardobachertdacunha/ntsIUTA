@@ -5,23 +5,28 @@
 \alias{paramList-class}
 \title{paramList}
 \value{
-A \linkS4class{paramList} object to be used for
-the basic workflow of \pkg{ntsIUTA}.
+A \linkS4class{paramList} object to be used for the basic workflow of \pkg{ntsIUTA}.
 }
 \description{
-paramList
+A S4 class object to store the parameter sets for
+each data processing step of the basic workflow.
+Each parameter set is stored as \linkS4class{paramSet} object.
+For MS2 data, the parameters are stored in a \linkS4class{paramMS2} object.
+See \code{?"paramSet-class"} and \code{?"paramMS2-class"} for more information.
 }
 \section{Slots}{
 
 \describe{
-\item{\code{peakPicking}}{A paramSet object for performing peak picking.}
+\item{\code{peakPicking}}{A paramSet object for performing peak picking in each ms file.}
 
-\item{\code{peakGrouping}}{A paramSet object for grouping peaks across samples.}
+\item{\code{peakGrouping}}{A paramSet object for grouping and alignment of peaks withn replicate samples.}
 
-\item{\code{fillMissing}}{A paramSet object for performing recursive peak integration.}
+\item{\code{fillMissing}}{A paramSet object for performing recursive peak integration within replicates.}
 
-\item{\code{annotation}}{A paramSet object for annotation of peaks and features in the \linkS4class{ntsData} object}
+\item{\code{annotateIsotopes}}{A paramSet object for annotation of isotopes within replicates.}
 
-\item{\code{MS2}}{An \linkS4class{MS2param} object with settings for extraction of MS2 data.}
+\item{\code{annotateAdducts}}{A paramSet object for annotation of adducts across unified features.}
+
+\item{\code{MS2}}{An \linkS4class{paramMS2} object with settings for extraction of MS2 data.}
 }}
 

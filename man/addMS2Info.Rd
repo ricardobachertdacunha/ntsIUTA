@@ -8,7 +8,7 @@ addMS2Info(
   wfobj = NULL,
   sampleGroup = NULL,
   suspectList = NULL,
-  param = MS2param(),
+  param = paramMS2(),
   updateRT = TRUE,
   updateIntControl = TRUE,
   save = TRUE

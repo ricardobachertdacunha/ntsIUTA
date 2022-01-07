@@ -33,7 +33,7 @@ setClass("ntsSuspectData",
                  adduct = NULL,
                  excludeBlanks = TRUE,
                  withMS2 = TRUE,
-                 MS2param = new("MS2param")),
+                 MS2param = new("paramMS2")),
     data = list(),
     inSilico = list(),
     results = data.frame()
@@ -68,7 +68,7 @@ setClass("ntsSuspectData",
 #' @param excludeBlanks Logical, set to \code{TRUE} to ignore replicate groups
 #' assigned as blanks in the \code{samples} slot of the \code{obj}.
 #' @param withMS2 Logical, set to \code{TRUE} for using confirmation via MS2.
-#' @param param An \linkS4class{MS2param} object with parameters for MS2 extraction.
+#' @param param An \linkS4class{paramMS2} object with parameters for MS2 extraction.
 #'
 #' @return An \linkS4class{ntsData} object with screening results
 #' added to the workflows slot.
@@ -93,7 +93,7 @@ suspectScreening <- function(obj,
                              adduct = NULL,
                              excludeBlanks = TRUE,
                              withMS2 = TRUE,
-                             param = MS2param()) {
+                             param = paramMS2()) {
 
   assertClass(obj, "ntsData")
 
@@ -313,7 +313,7 @@ suspectScreening <- function(obj,
   sS@param$adduct <- adduct
   sS@param$excludeBlanks <- excludeBlanks
   sS@param$withMS2 <- withMS2
-  sS@param$MS2param <- param
+  sS@param$paramMS2 <- param
   
   sS@data <- data
   sS@inSilico <- inSilico

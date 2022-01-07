@@ -4,13 +4,15 @@
 \alias{QC<-}
 \title{QC<-}
 \usage{
-QC(object) <- value
+QC(object, ...) <- value
 }
 \arguments{
 \item{object}{Object to collect the samples to be used as QC.}
 
 \item{value}{A character vector the names of the sample replicate group/s
 to be used as QC.}
+
+\item{...}{Other argumments.}
 }
 \value{
 Ac object with experimental samples assigned to QC.

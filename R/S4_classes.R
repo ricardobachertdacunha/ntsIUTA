@@ -36,6 +36,9 @@ setClass("suspectList",
 
 #' @title paramSet
 #'
+#' @description A set of parameters for a data processing step of the basic workflow.
+#' The \linkS4class{paramSet} object contains the algorithm to be used and the list of respective parameters. 
+#' 
 #' @slot algorithm A character string with the name of the algorithm to be used.
 #' @slot param A list of parameters dependent on the algorithm used.
 #'
@@ -101,9 +104,9 @@ setClass("AlteredCameraParam",
 
 
 
-### MS2param -----
+### paramMS2 -----
 
-#' @title MS2param-class
+#' @title paramMS2-class
 #'
 #' @slot maxMSRtWindow .
 #' @slot precursorMzWindow .
@@ -112,12 +115,12 @@ setClass("AlteredCameraParam",
 #' @slot minIntensityPre .
 #' @slot minIntensityPost .
 #'
-#' @return An \linkS4class{MS2param} object containing parameters for
+#' @return An \linkS4class{paramMS2} object containing parameters for
 #' extraction of MS2 spectra of given precursor ions in an \linkS4class{ntsData} object.
 #'
 #' @export
 #'
-setClass("MS2param",
+setClass("paramMS2",
   slots = c(
     maxMSRtWindow = "numeric",
     precursorMzWindow = "numeric",
@@ -136,21 +139,27 @@ setClass("MS2param",
   )
 )
 
-
+# TODO Improve the extraction of MS2 data
 
 
 ### paramList -----
 
 #' @title paramList
 #'
-#' @slot peakPicking A paramSet object for performing peak picking.
-#' @slot peakGrouping A paramSet object for grouping peaks across samples.
-#' @slot fillMissing A paramSet object for performing recursive peak integration.
-#' @slot annotation A paramSet object for annotation of peaks and features in the \linkS4class{ntsData} object
-#' @slot MS2 An \linkS4class{MS2param} object with settings for extraction of MS2 data.
+#' @description A S4 class object to store the parameter sets for
+#' each data processing step of the basic workflow.
+#' Each parameter set is stored as \linkS4class{paramSet} object.
+#' For MS2 data, the parameters are stored in a \linkS4class{paramMS2} object.
+#' See \code{?"paramSet-class"} and \code{?"paramMS2-class"} for more information. 
 #'
-#' @return A \linkS4class{paramList} object to be used for
-#' the basic workflow of \pkg{ntsIUTA}.
+#' @slot peakPicking A paramSet object for performing peak picking in each ms file.
+#' @slot peakGrouping A paramSet object for grouping and alignment of peaks withn replicate samples.
+#' @slot fillMissing A paramSet object for performing recursive peak integration within replicates.
+#' @slot annotateIsotopes A paramSet object for annotation of isotopes within replicates.
+#' @slot annotateAdducts A paramSet object for annotation of adducts across unified features.
+#' @slot MS2 An \linkS4class{paramMS2} object with settings for extraction of MS2 data.
+#'
+#' @return A \linkS4class{paramList} object to be used for the basic workflow of \pkg{ntsIUTA}.
 #'
 #' @export
 #'
@@ -160,14 +169,14 @@ setClass("paramList",
     peakGrouping = "paramSet",
     fillMissing = "paramSet",
     annotation = "paramSet",
-    MS2 = "MS2param"
+    MS2 = "paramMS2"
   ),
   prototype = list(
     peakPicking = new("paramSet"),
     peakGrouping = new("paramSet"),
     fillMissing = new("paramSet"),
     annotation = new("paramSet"),
-    MS2 = new("MS2param")
+    MS2 = new("paramMS2")
   )
 )
 
@@ -195,35 +204,43 @@ setClass("paramList",
 #'
 #' @export
 #'
+#' @importFrom data.table data.table
+#' 
 setClass("qcData",
   slots = c(
-    samples = "data.frame",
+    title = "character",
+    description = "character",
+    date = "Date",
+    samples = "data.table",
     targets = "suspectList",
     rtWindow = "numeric",
     ppm = "numeric",
-    MSnExp = "OnDiskMSnExp",
-    patdata = "workflowStep",
-    peaks = "data.frame",
-    features = "data.frame",
-    annotation = "list",
-    results = "data.frame"
+    pat = "list",
+    peaks = "data.table",
+    features = "data.table",
+    unified = "data.table",
+    results = "data.table"
   ),
   prototype = list(
-    samples = data.frame(
+    title = NA_character_,
+    description = NA_character_,
+    date = date,
+    samples = data.table::data.table(
       file = character(),
       sample = character(),
-      group = character(),
-      blank = character()
+      replicate = character(),
+      blank = character(),
+      polarity = character(),
+      method = character()
     ),
     targets = new("suspectList"),
     rtWindow = 30,
     ppm = 15,
-    MSnExp = new("OnDiskMSnExp"),
-    patdata = new("featuresXCMS3"),
-    peaks = data.frame(),
-    features = data.frame(),
-    annotation = list(),
-    results = data.frame()
+    pat = list(),
+    peaks = data.table::data.table(),
+    features = data.table::data.table(),
+    unified = data.table::data.table(),
+    results = data.table::data.table()
   )
 )
 
@@ -269,115 +286,86 @@ setClass("isData",
 ### ntsData -----
 
 #' @title ntsData
-#' @description S4 class object to organize and store project processed data
-#' within the \pkg{ntsIUTA} package.
+#'
+#' @description A S4 class object to store project processed data within the \pkg{ntsIUTA} package.
 #'
 #' @slot title A character string with the project title.
-#' @slot info A list to store project details.
-#' The first position is for description of the project.
-#' @slot path A character string with the project path.
-#' as defined with \code{\link{setupProject}}.
+#' @slot description A character string with the project description.
 #' @slot date The project date.
-#' @slot polarity A string character defining the polarity mode of
-#' the MS files in the \linkS4class{ntsData} object.
-#' Possible values are "positive" or "negative".
-#' @slot samples A \code{data.frame} as obtained by \code{\link{setupProject}}.
-#' @slot metadata A \code{data.frame} with the same number of rows
-#' as the \code{samples} containing metadata to support data interpretation.
-#' @slot parameters A list containing process parameters for the workflow steps.
-#' @slot QC Slot for assigning the QC sample replicate group and results.
-#' Note that the assigned group is not included in the basic workflow
-#' but only used for quality control, using the function \code{\link{checkQC}},
-#' and for optimization of workflow parameters. A screening list with target substances
-#' must be provided for running quality control.
-#' @slot MSnExp An \linkS4class{OnDiskMSnExp} as generated by \code{\link{setupProject}}.
-#' @slot patdata A \linkS4class{features} or \linkS4class{featureGroups}
-#' object derived from the basic NTS workflow
-#' (peak picking, alignment and grouping).
-#' @slot peaks A list with a data.frame containing the peak information
-#' for each sample in the slot \code{samples}.
-#' @slot features A data.frame with the features information,
-#' including feature quality data and filtering information.
-#' @slot annotation Slot for storage of annotation of isotopes and adducts and
-#' source fragments. Features with similar chromatographic behaviour
-#' are grouped by components. Isotopologues are grouped by \code{isonumber} and
-#' are created for each sample replicate group. Similarly, adducts are searched
-#' for each sample replicate group and share the same molecular ion (\code{Mion}).
-#' The functionality of the package \pkg{CAMERA} was adapted to work better for
-#' environmental analyses, where sample replicate groups are, in principle,
-#' very different from each other. When specified other functionalities
-#' from the package \pkg{patRoon} can be used but the default
-#' is the package \pkg{CAMERA} directly. The slot is composed of a list of length 2,
-#' where the first entry is a data frame with summarized results for each feature
-#' and the second is the raw data from the \pkg{CAMERA} package.
-#' @slot IS Slot to store the list of internal standards (IS) and the results
-#' from IS control of the samples in the \code{ntsData} object.
-#' @slot filters A list of applied filters to the features data.frame.
-#' @slot removed A data frame with the removed features.
-#' @slot workflows A list of objects inherent of downstream workflows, such as
+#' @slot path A character string with the project path.
+#' @slot samples A data.table with six columns:
+#' file (character string with the file path),
+#' sample (character string with the file name),
+#' replicate (character string with the assigned sample replicate group),
+#' blank (character string with associated blank replicate),
+#' polarity (the polarity mode of the respective file; possible values are "positive" or "negative") and
+#' method (a character string with the method used to acquire the data file).
+#' @slot metadata A data.table with the same number of rows
+#' as the unique replicates in \code{samples}, containing metadata for each replicate added as extra columns.
+#' @slot parameters A \linkS4class{paramList} object containing process parameters for the basic workflow.
+#' See \code{?"paranList-class"} for more information.
+#' @slot QC A \linkS4class{qcData} object used for quality control. More information in \code{?"qcData-class"}.
+#' @slot pat A list of \linkS4class{features} or \linkS4class{featureGroups} objects
+#' for each sample replicate derived from the basic workflow
+#' (peak picking, alignment and grouping) using the \pkg{patRoon} package.
+#' @slot peaks A list of data.tables with peaks for each sample.
+#' @slot features A list of data.tables with the features for each replicate.
+#' @slot unified A data.table with unified features across different replicates.
+#' @slot filters A list of applied filters to the unified features data.table.
+#' @slot removed A data table with the removed unified features.
+#' @slot workflows A list of objects inherent of downstream data processing steps, such as
 #' suspect screening.
 #'
 #' @return An S4 class object named \linkS4class{ntsData}.
 #'
-#' @note Slot \code{MSnExp} is used to save the \linkS4class{OnDiskMSnExp}
-#' object obtained by \pkg{MSnbase} during the \code{\link{setupProject}}.
-#' Slot \code{patdata} will contain the object \linkS4class{features} or
-#' \linkS4class{featureGroups} generated from the \pkg{patRoon} package.
-#' Both objects can be used within native functions of \pkg{MSnbase} and
-#' \pkg{patRoon}.
+#' @note The slot \code{pat} contains the object \linkS4class{features} or
+#' \linkS4class{featureGroups} which can be used within native functions of the \pkg{patRoon} package.
 #'
 #' @export
+#'
+#' @importFrom data.table data.table
+#' @importClassesFrom patRoon featuresXCMS3
 #'
 setClass("ntsData",
   slots = c(
     title = "character",
-    info = "list",
-    path = "character",
+    description = "character",
     date = "Date",
-    polarity = "character",
-    samples = "data.frame",
-    metadata = "data.frame",
+    path = "character",
+    samples = "data.table",
+    metadata = "data.table",
     parameters = "paramList",
     QC = "qcData",
-    MSnExp = "OnDiskMSnExp",
-    patdata = "workflowStep",
-    peaks = "data.frame",
-    features = "data.frame",
-    annotation = "list",
-    IS = "isData",
+    pat = "list", 
+    peaks = "list",
+    features = "list",
+    unified = "data.table",
     filters = "list",
-    removed = "data.frame",
+    removed = "data.table",
     workflows = "list"
   ),
   prototype = list(
-    title = "New Project",
-    info = list(
-      description = NA_character_,
-      history = list()
-    ),
-    path = NA_character_,
+    title = NA_character_,
+    description = NA_character_,
     date = Sys.Date(),
-    polarity = "positive",
-    samples = data.frame(
+    path = NA_character_,
+    samples = data.table::data.table(
       file = character(),
       sample = character(),
-      group = character(),
-      blank = character()
+      replicate = character(),
+      blank = character(),
+      polarity = character(),
+      method = character()
     ),
-    metadata = data.frame(group = character()),
+    metadata = data.table::data.table(replicate = character()),
     parameters = new("paramList"),
     QC = new("qcData"),
-    MSnExp = new("OnDiskMSnExp"),
-    patdata = new("featuresXCMS3"),
-    peaks = data.frame(),
-    features = data.frame(),
-    annotation = list(
-      comp = data.frame(),
-      raw = list()
-    ),
-    IS = new("isData"),
+    pat = list(),
+    peaks = list(),
+    features = list(),
+    unified = data.table::data.table(),
     filters = list(),
-    removed = data.frame(),
+    removed = data.table::data.table(),
     workflows = list()
   )
 )

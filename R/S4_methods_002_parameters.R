@@ -45,7 +45,7 @@ AlteredCameraParam <- function(
 
 
 
-#' MS2param
+#' paramMS2
 #'
 #' @param maxMSRtWindow .
 #' @param precursorMzWindow .
@@ -54,19 +54,19 @@ AlteredCameraParam <- function(
 #' @param minIntensityPre .
 #' @param minIntensityPost .
 #'
-#' @return An \linkS4class{MS2param} object containing parameters for
+#' @return An \linkS4class{paramMS2} object containing parameters for
 #' extraction of MS2 spectra of given precursor ions in an \linkS4class{ntsData} object.
 #'
 #' @export
 #'
-MS2param <- function(maxMSRtWindow = 10,
+paramMS2 <- function(maxMSRtWindow = 10,
                      precursorMzWindow = 1.3,
                      clusterMzWindow = 0.003,
                      topMost = 50,
                      minIntensityPre = 10,
                      minIntensityPost = 10) {
 
-  paramobj <- do.call(new, c("MS2param", as.list(environment())))
+  paramobj <- do.call(new, c("paramMS2", as.list(environment())))
 
   paramobj
 

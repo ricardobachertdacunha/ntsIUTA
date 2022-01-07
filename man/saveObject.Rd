@@ -11,11 +11,13 @@ saveObject(format = "rds", filename = NULL, path = getwd(), ...)
 which is saved in rdata folder.
 Other formats are saved in the results folder.}
 
-\item{filename}{A character string with the desired RDS file name.}
+\item{filename}{A character string with the desired RDS file name.
+Within funtions, when save is \code{TRUE}, \linkS4class{ntsData} objects are always saved as \emph{ntsData.rds}.
+Outside functions, a filename can be specified to save an \linkS4class{ntsData} object with a different name.}
 
-\item{path}{The project path to save the \code{obj}.
+\item{path}{The project path to save the \code{object}.
 The default is the working directory as obtained by \code{getwd()}.
-Not needed if \code{obj} is of class \linkS4class{ntsData}
+Not needed if \code{object} is of class \linkS4class{ntsData}
 since the path is taken from the slot \code{path}.}
 
 \item{...}{An object to save.}

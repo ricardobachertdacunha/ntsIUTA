@@ -1,19 +1,22 @@
 
 
 #' @title saveObject
+#'
 #' @description Saves project objects as RDS in the rdata folder (the default)
 #' or as other formats in the results folder, when specified.
 #' If not present, the folders are created.
 #'
-#' @param ... An object to save.
 #' @param format The saving format. The default is \code{rds},
 #' which is saved in rdata folder.
 #' Other formats are saved in the results folder.
 #' @param filename A character string with the desired RDS file name.
-#' @param path The project path to save the \code{obj}.
+#' Within funtions, when save is \code{TRUE}, \linkS4class{ntsData} objects are always saved as \emph{ntsData.rds}.
+#' Outside functions, a filename can be specified to save an \linkS4class{ntsData} object with a different name.
+#' @param path The project path to save the \code{object}.
 #' The default is the working directory as obtained by \code{getwd()}.
-#' Not needed if \code{obj} is of class \linkS4class{ntsData}
+#' Not needed if \code{object} is of class \linkS4class{ntsData}
 #' since the path is taken from the slot \code{path}.
+#' @param ... An object to save.
 #'
 #' @export
 #'
@@ -41,7 +44,7 @@ saveObject <- function(format = "rds",
 
   }
 
-  # TODO Implement saving for other file types, ex. plots and tables
+  #TODO Implement saving for other file types, ex. plots and tables
 
 }
 
@@ -294,7 +297,7 @@ filterFeatureGroups <- function(x, i) {
 #'
 #' @param obj A \linkS4class{featureGroups} or an \linkS4class{ntsData} object to
 #' extract MS2 data according to percursor ions.
-#' @param param A \linkS4class{MS2param} object with parameters for MS2 extraction.
+#' @param param A \linkS4class{paramMS2} object with parameters for MS2 extraction.
 #'
 #' @return A \linkS4class{MSPeakLists} when \code{obj} is a \linkS4class{featureGroups}
 #' or an \linkS4class{ntsData} updated with MS2 data
@@ -307,7 +310,7 @@ filterFeatureGroups <- function(x, i) {
 #'
 #'
 extractMS2 <- function(obj = NULL,
-                       param = MS2param()) {
+                       param = paramMS2()) {
 
   pat <- obj
 
@@ -328,7 +331,7 @@ extractMS2 <- function(obj = NULL,
     avgFGroupParams = control_avgPListParams
   ))
 
-  # TODO add option to add MS2 to the ntsData object
+  #TODO add option to add MS2 to the ntsData object
 
   return(MS2)
 

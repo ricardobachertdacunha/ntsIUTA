@@ -9,7 +9,8 @@ A \linkS4class{paramSet} object to be used for
 the basic workflow of \pkg{ntsIUTA}.
 }
 \description{
-paramSet
+A set of parameters for a data processing step of the basic workflow.
+The \linkS4class{paramSet} object contains the algorithm to be used and the list of respective parameters.
 }
 \section{Slots}{
 

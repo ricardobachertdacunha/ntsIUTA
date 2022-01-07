@@ -34,12 +34,53 @@ rtr <- c(rt - rtw, rt + rtw)
 library(mzR)
 library(data.table)
 
-ms <- as.list(msFilesLowLevel[1:3])
-system.time(ms <- lapply(ms, openMSfile))
+ms <- as.list(msFilesLowLevel[1])
+system.time(ms <- lapply(ms, function(x) openMSfile(x, backend = "pwiz")))
 hd <- lapply(ms, header)
 hd <- lapply(hd, as.data.table)
 
 #### get MS1 EIC -----
+
+
+ms <- mzR::openMSfile("C:/Users/Ricardo/Documents/R_Dev_mzML_example/QC-r001.mzML")
+hd <- data.table::as.data.table(mzR::header(ms))
+
+runInfo(ms)
+
+
+instrumentInfo(ms)
+## Individual accessors from instrumentInfo
+# ionisation(ms)
+# softwareInfo(ms)
+# sampleInfo(ms)
+# sourceInfo(ms)
+# model(ms)
+# analyzer(ms)
+# detector(ms)
+
+# mzidInfo(ms)
+# modifications(ms)
+# psms(ms)
+# tolerance(ms)
+# score(ms)
+# para(ms)
+# specParams(ms)
+
+
+EIC <- chromatogramHeader(ms[[1]])
+
+nChrom(ms[[1]])
+
+head(tic(ms[[1]]))
+
+class(ms[[1]])
+
+mzR::chromatogram(ms[[1]])
+
+mzR::peaks(ms[[1]], 1:2)
+
+mzR::chromatogram()
+
 
 system.time(
 EIC <- lapply(seq_len(length(hd)), function(x, ms, hd, rtr, mzr) {
@@ -71,17 +112,24 @@ EIC_ntsIUTA <- ntsIUTA::extractEIC(setup,
 EIC_ntsIUTA[EIC_ntsIUTA$file == 1, ]
 
 
-ms <- openMSfile(msFilesLowLevel[1:3])
+ms <- openMSfile(msFilesLowLevel[1])
 
 hd <- header(ms)
+
+class(ms)
 
 class(hd)
 
 View(hd)
 
 #scan 1 and 2
-mzR::peaks(ms, 1:2)
-instrumentInfo(hd)
+mzR::peaks(ms, c(480,500))
+
+instrumentInfo(ms)
+runInfo(ms)
+analyzer(ms)
+
+
 
 hd2 <- hd[hd$msLevel == 2, ]
 i <- which.max(hd2$basePeakIntensity)
@@ -104,7 +152,7 @@ plot(pj, type = "h", xlim = c(mz - 0.5, mz + 0.5))
 
 
 
-### with xcms ------------------------------------------------------------------
+### with xcmsRaw ------------------------------------------------------------------
 
 library(xcms)
 
@@ -124,13 +172,50 @@ EIC_xcms[[1]]
 
 
 
+### with xcmsnExp --------------------------------------------------------------------------------------------
+
+library(xcms)
+library(MSnbase)
 
 
-getEIC(setup@MSnExp, mzrange = mzr, rtrange = rtr)
+Exp <- setup@MSnExp
+
+bpis <- chromatogram(Exp, aggregationFun = "max")
+plot(bpis)
+
+system.time(chr_raw <- chromatogram(filterFile(Exp, 1), mz = mzr, rt = rtr))
+
+fData(Exp)
 
 
+Exp[["F1.S0003"]]
+
+head(rtime(Exp))
+
+EIC_msn <- filterRt(Exp, rt = rtr)
+EIC_msn <- filterMz(EIC_msn, mzlim = mzr)
+EIC_msn <- filterMsLevel(EIC_msn, msLevel. = 1)
+system.time(EIC_msn <- chromatogram(EIC_msn))
+
+scans <- fData(EIC_msn)
 
 
+plot(EIC_msn)
+
+
+### with patRoon -----
+
+#ms <- patRoon:::loadSpectra(msFilesLowLevel[1])
+
+ms <- as.list(msFilesLowLevel[1:3])
+system.time(ms <- lapply(ms, function(x) patRoon:::loadSpectra(x)))
+system.time(EIC <- lapply(ms, function(x) patRoon:::loadEICs(x, mzMins = c(mzr[1], mzr[1]), mzMaxs = c(mzr[2], mzr[2]),
+                                                             rtMins = c(rtr[1], rtr[1]), rtMaxs = c(rtr[2], rtr[2]))))
+EIC[[1]]
+
+ms <- "/path" #path of the msFile
+ms <- patRoon:::loadSpectra(ms)
+ms <- patRoon:::loadEICs(ms, mzMins = c(10, 20), mzMaxs = c(12, 22), rtMins = c(500, 600), rtMaxs = c(560, 660))
 
 
 

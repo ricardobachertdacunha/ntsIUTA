@@ -4,13 +4,13 @@
 \alias{extractMS2}
 \title{extractMS2}
 \usage{
-extractMS2(obj = NULL, param = MS2param())
+extractMS2(obj = NULL, param = paramMS2())
 }
 \arguments{
 \item{obj}{A \linkS4class{featureGroups} or an \linkS4class{ntsData} object to
 extract MS2 data according to percursor ions.}
 
-\item{param}{A \linkS4class{MS2param} object with parameters for MS2 extraction.}
+\item{param}{A \linkS4class{paramMS2} object with parameters for MS2 extraction.}
 }
 \value{
 A \linkS4class{MSPeakLists} when \code{obj} is a \linkS4class{featureGroups}

@@ -11,94 +11,218 @@ devtools::load_all()
 
 ### Project Setup -------------------------------------------------------------------------------------------
 
-path <- system.file(package = "ntsIUTA", dir = "extdata")
+path <- "C:\\Users\\Ricardo\\Documents\\R_Demo Project"
 
-dtall <- setupProject(path, polarity = "positive", save = FALSE, makeNewProject = FALSE)
-
-
-
-
-#### Real FullData -----
-
-# test <- setupProject(title = "Test Project", date = Sys.Date(),
-#   polarity = "positive", save = FALSE, makeNewProject = FALSE
-# )
-
-
-
-
-#### New Session ------
-
+object <- setupProject(
+  path = path,
+  title = "Demo Project",
+  description = "Demonstration of ntsIUTA.",
+  date = Sys.Date(),
+  convertFiles = FALSE,
+  convertFrom = NULL,
+  convertToCentroid = TRUE,
+  replicates = NULL,
+  polarity = "positive",
+  method = NA_character_,
+  save = TRUE,
+  makeNewProject = FALSE
+)
 
 
 
-### ntsData Methods ----------------------------------------------------------------------------------------------
+#### addFiles ------------------------------------------------------------
+
+## method to add files after project setup. Files from other locations
+#then the project path can be added via the addFiles.
+object <- addFiles(
+  files = utils::choose.files(),
+  object = object,
+  copy = FALSE,
+  replicates = NULL,
+  polarity = "positive",
+  method = NULL
+)
 
 
-#### Sample Groups -------------------------------------------------------------
 
-#Assign/Correct sample replicate groups
-sampleGroups(dtall) <- c(
+#### mzMLconverter -------------------------------------------------------
+
+## function to convert vendor files to mzML with or without centroiding.
+mzMLconverter(
+  path = path(object),
+  files = NULL,
+  convertFrom = "agilent",
+  centroidMethod = "vendor",
+  outPath = NULL,
+  overwrite = TRUE
+)
+
+
+### ntsData methods and functions ----------------------------------------------------------------------------
+
+#### show path -----------------------------------------------------------
+
+## getter for the project path
+path(object)
+
+
+
+#### projectInfo ---------------------------------------------------------
+
+## setter for the projectInfo
+object <- projectInfo(
+  object,
+  title = "Demo Project Changed Title",
+  description = "Another description example.",
+  date = NULL
+  )
+
+#NOTE: when an argumment is missing and/or NULL, such as the date, is not updated/changed.
+
+## getter for the project information
+projectInfo(object)
+
+#NOTE: When projectInfo is called without arguments
+#it return a list with the title, description and date of the project.
+
+
+
+#### samples -------------------------------------------------------------
+
+## getter for sample names (i.e. file names)
+samples(object)
+
+#NOTE: there is no setter for samples method, as samples reflects the file name
+
+
+
+#### replicates ----------------------------------------------------------
+
+## setter for sample replicate names
+replicates(object) <- c(
   rep("Blank", 3),
   rep("IN", 3),
   rep("OZ", 3),
   rep("UV", 3),
   rep("AC", 3),
+  rep("QC", 3),
   rep("Centroid", 3),
   rep("Profile", 3)
 )
 
-#getter for sample replicate group names
-sampleGroups(dtall)
-
-#getter for sample names (i.e. file names)
-samples(dtall) #there is no setter
+## getter for sample replicate names
+replicates(object)
 
 
 
+#### blanks --------------------------------------------------------------
 
-#### Blanks --------------------------------------------------------------------
+## setter for the blank sample replicate/s
+blanks(object) <- "Blank"
 
-#Assign the blank replicate sample group/s
-blanks(dtall) <- "Blank"
-
-#getter for blank replicate group names
-blanks(dtall)
-
+## getter for the blank sample replicate/s
+blanks(object)
 
 
 
-#### QC ------------------------------------------------------------------------
+#### polarity ------------------------------------------------------------
 
-#When needed, assigning the QC sample replicate group
-QC(dtall) <- "QC"
-
-#getter for the QC sample names
-QC(dtall)
+## setter for the polarity mode of each sample/file
+polarity(object) <- "positive"
 
 
-
-
-#### show ntsData --------------------------------------------------------------
-
-#show method
-dtall
-
-# TODO Add metadata to sample table when show ntsData
-
-# TODO Add accessors to slots, such as title, path, etc.
-
-# TODO show the addFiles function
-
-# TODO show the convert files function
+## getter for the polarity mode of each sample or replicate
+polarity(object)
+#or
+polarity(object, groupby = "replicates")
 
 
 
+#### acquisitionMethods --------------------------------------------------
 
-### Manipulate Raw Data --------------------------------------------------------------------------------------
+## setter for acquisition method names
+acquisitionMethods(object) <- "NTS_MethodNameExample"
 
-#sub-setting by samples
-dtcent <- dtall[16:18]
+#NOTE: For different method in the set, the names should be given per sample.
+
+## getter for acquisition method names
+acquisitionMethods(object)
+
+
+
+#### metadata ------------------------------------------------------------
+
+## function to add metadata in an ntsData object
+object <- addMetadata(
+  object,
+  var = c(rep("WW",5), "QC", rep("Dev", 2)),
+  varname = "datatype"
+)
+
+## getter for metadata
+metadata(object, varname = "datatype")
+
+## remove metadata
+object <- removeMetadata(
+  object,
+  varname = "datatype"
+)
+
+
+
+#### QC ------------------------------------------------------------------
+
+## setter of QC sample replicate/s
+QC(object) <- "QC"
+
+#NOTE: Sample name/s can be given instead of replicates
+#by adding argument nametype = "samples".
+
+## getter for the QC samples date table
+QC(object)
+
+## method for restauring QC samples/replicates back to the samples slot
+QC(object, remove = TRUE) <- "QC"
+
+#NOTE: The same argumment nametype = "samples" can be applied
+#for moving samples from the QC slot to the samples slot.
+
+
+
+#### show ntsData --------------------------------------------------------
+
+## method to show details from the ntsData object
+object
+
+
+
+#### sub-setting simple [#] ----------------------------------------------
+
+object[1:3]
+
+
+
+
+
+
+
+
+### Inspect Raw Data ----------------------------------------------------------------------------------------
+
+## sub-setting by samples
+example01 <- object[19:21]
+
+#### TIC -----------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
 
 dtcent <- importRawData(dtcent,
   rtFilter = c(13.8, 16.3),
@@ -1222,6 +1346,12 @@ exportPlots(dt3@workflows$processMonitoring, path = "C:/Users/MZmine/Desktop", i
 
 ### Other ---------------------------------------------------------------------------------------------------
 
+
+#### Real FullData -----
+
+# object <- setupProject(title = "Test Project", date = Sys.Date(),
+#   polarity = "positive", save = FALSE, makeNewProject = FALSE
+# )
 
 
 
