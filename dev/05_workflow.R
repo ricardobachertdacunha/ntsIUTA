@@ -29,7 +29,6 @@ object <- setupProject(
 )
 
 
-
 #### addFiles ------------------------------------------------------------
 
 ## method to add files after project setup. Files from other locations
@@ -42,7 +41,6 @@ object <- addFiles(
   polarity = "positive",
   method = NULL
 )
-
 
 
 #### mzMLconverter -------------------------------------------------------
@@ -58,13 +56,15 @@ mzMLconverter(
 )
 
 
+
+
 ### ntsData methods and functions ----------------------------------------------------------------------------
 
-#### show path -----------------------------------------------------------
+
+#### path ----------------------------------------------------------------
 
 ## getter for the project path
 path(object)
-
 
 
 #### projectInfo ---------------------------------------------------------
@@ -75,7 +75,7 @@ object <- projectInfo(
   title = "Demo Project Changed Title",
   description = "Another description example.",
   date = NULL
-  )
+)
 
 #NOTE: when an argumment is missing and/or NULL, such as the date, is not updated/changed.
 
@@ -86,6 +86,17 @@ projectInfo(object)
 #it return a list with the title, description and date of the project.
 
 
+#### samplesTable --------------------------------------------------------
+
+## getter for the samples table
+samplesTable(object)
+
+
+#### filePaths -----------------------------------------------------------
+
+## getter for the file paths
+filePaths(object)
+
 
 #### samples -------------------------------------------------------------
 
@@ -93,7 +104,6 @@ projectInfo(object)
 samples(object)
 
 #NOTE: there is no setter for samples method, as samples reflects the file name
-
 
 
 #### replicates ----------------------------------------------------------
@@ -107,12 +117,12 @@ replicates(object) <- c(
   rep("AC", 3),
   rep("QC", 3),
   rep("Centroid", 3),
-  rep("Profile", 3)
+  rep("Profile", 3),
+  "Centroid_mzMLconverter"
 )
 
 ## getter for sample replicate names
 replicates(object)
-
 
 
 #### blanks --------------------------------------------------------------
@@ -122,7 +132,6 @@ blanks(object) <- "Blank"
 
 ## getter for the blank sample replicate/s
 blanks(object)
-
 
 
 #### polarity ------------------------------------------------------------
@@ -137,7 +146,6 @@ polarity(object)
 polarity(object, groupby = "replicates")
 
 
-
 #### acquisitionMethods --------------------------------------------------
 
 ## setter for acquisition method names
@@ -149,13 +157,12 @@ acquisitionMethods(object) <- "NTS_MethodNameExample"
 acquisitionMethods(object)
 
 
-
 #### metadata ------------------------------------------------------------
 
 ## function to add metadata in an ntsData object
 object <- addMetadata(
   object,
-  var = c(rep("WW",5), "QC", rep("Dev", 2)),
+  var = c(rep("WW", 5), "QC", rep("Dev", 3)),
   varname = "datatype"
 )
 
@@ -167,7 +174,6 @@ object <- removeMetadata(
   object,
   varname = "datatype"
 )
-
 
 
 #### QC ------------------------------------------------------------------
@@ -188,12 +194,10 @@ QC(object, remove = TRUE) <- "QC"
 #for moving samples from the QC slot to the samples slot.
 
 
-
 #### show ntsData --------------------------------------------------------
 
 ## method to show details from the ntsData object
 object
-
 
 
 #### sub-setting simple [#] ----------------------------------------------
@@ -203,185 +207,296 @@ object[1:3]
 
 
 
-
-
-
-
 ### Inspect Raw Data ----------------------------------------------------------------------------------------
 
 ## sub-setting by samples
-example01 <- object[19:21]
-
-#### TIC -----------------------------------------------------------------
+example01 <- object[16:18]
 
 
+#### Raw Info ------------------------------------------------------------
+
+## getter for the data table with raw information for all or specified files
+getRawInfo(example01, samples = 1)
+
+## adds the raw information directly into the ntsData object
+example01 <- addRawInfo(example01)
+samplesTable(example01)
 
 
+#### TICs -----------------------------------------------------------------
+
+## samples can be defined by index or name
+tic_ex <- TICs(example01, samples = NULL)
+
+##### visualization ---------
+
+plotTICs(example01, interactive = TRUE)
+
+plotTICs(tic_ex)
 
 
+#### EICs -----------------------------------------------------------------
 
+## extract EIC based on target mz and rt pair with fixed mass and time deviations
+mz_01 <- c(247.1651, 239.0628)
+rt_01 <- c(839, 937)
 
+eic_ex1 <- EICs(example01, samples = NULL, mz = mz_01, rt = rt_01, ppm = 10, sec = 30)
 
+## extract EIC based on minimum and maximum m\z and retention time
+mz_02 <- data.frame(mzmin = c(247.1626, 239.0604), mzmax = c(247.1676, 239.0652))
+rt_02 <- data.frame(rtmin = c(809, 907), rtmax = c(869, 967))
 
+eic_ex2 <- EICs(example01, samples = NULL, mz = mz_02, rt = rt_02, ppm = 10, sec = 30)
+#Note: ppm and sec are ignored as both mass and time ranges are given by mz and rt argumments
 
-dtcent <- importRawData(dtcent,
-  rtFilter = c(13.8, 16.3),
-  rtUnit = "min",
-  centroidedData = NA,
-  removeEmptySpectra = TRUE,
-  save = FALSE
+mz_03 <- data.frame(
+  id = c("target1", "target2"),
+  mz = c(247.1651, 239.0628),
+  rt = c(839, 937)
 )
+eic_ex3 <- EICs(example01, samples = NULL, mz = mz_03, rt = NULL, ppm = 10, sec = 30)
+#Note: rt taken from mz and ppm and sec are used to calculate deviations
 
-
-
-
-#### TIC, BPC and EIC ----------------------------------------------------------
-
-extractEIC(dtcent,
-  samples = 1:2,
-  mz = 242.1434, ppm = 20,
-  rt = 14.8, rtWindow = 0.5,
-  rtUnit = "min"
+mz_04 <- data.frame(
+  id = c("target1", "target2"),
+  mzmin = c(247.1626, 239.0604), mzmax = c(247.1676, 239.0652),
+  rtmin = c(809, 907), rtmax = c(869, 967)
 )
+eic_ex4 <- EICs(example01, samples = NULL, mz = mz_04, rt = NULL, ppm = 10, sec = 30)
+#Note: the ppm and sec deviations are not used, as ranges are already given
 
 
+##### visualization ---------
 
-
-#### Inspecting ----------------------------------------------------------------
-
-plotRawChrom(obj = dtcent,
+#static
+plotEICs(
+  example01,
   samples = NULL,
-  type = "tic",
-  mz = 242.1434, ppm = 20,
-  rt = 14.8, rtWindow = 0.5,
+  mz = mz_04, ppm = 10,
+  rt = NULL, sec = 30,
+  colorBy = "targets",
+  legendNames = NULL,
+  interactive = FALSE
+)
+
+#static, with NULL rt which gets the full time range
+plotEICs(
+  example01,
+  samples = NULL,
+  mz = mz_01, ppm = 10,
+  rt = NULL, sec = 30,
   colorBy = "samples",
-  rtUnit = "min",
+  legendNames = NULL,
   interactive = FALSE
 )
 
 #iterative
-plotRawChrom(obj = dtcent,
-  samples = NULL,
-  type = "tic",
-  mz = 242.1434,
-  ppm = 20,
-  rt = 14.8,
-  rtWindow = 0.5,
-  rtUnit = "min",
-  colorBy = "samples",
+plotEICs(
+  example01,
+  samples = 1:2,
+  mz = mz_01, ppm = 10,
+  rt = rt_01, sec = 30,
+  colorBy = "targets",
+  legendNames = NULL,
   interactive = TRUE
 )
 
-#plot centroids
-plotTargetCentroids(obj = dtcent,
+## Note: The colorBy argument can also be set to targets to color
+# against each EIC or a legendNames character vector with the same length as
+# the number of EICs (i.e., mz/rt pairs) can be given to use as legend.
+# TODO read about replayPlot(obj) not needed
+
+#with a data table from the EICs method
+plotEICs(
+  eic_ex1,
   samples = NULL,
-  mz = 242.1434, ppm = 20,
-  rt = 14.8, rtWindow = 0.5,
-  rtUnit = "min",
-  plotTargetMark = TRUE
+  targets = unique(eic_ex1$id),
+  colorBy = "samples",
+  legendNames = NULL,
+  interactive = FALSE
+)
+
+## Note: Ploting from a existing EIC data table, the mz and rt do not work
+# as when object is an ntsData object. Instead, the targets argument can be defined with the id
+# of targets for plotting using the id column of the EIC data table.
+
+
+#### XICs -----------------------------------------------------------------
+
+xic_ex1 <- XICs(example01, samples = NULL, mz = mz_01, rt = rt_01, ppm = 10, sec = 30)
+
+xic_ex2 <- XICs(example01, samples = NULL, mz = mz_02, rt = rt_02, ppm = 10, sec = 30)
+
+##### Visualisation ---------
+
+## with defined mz and rt pairs and standard deviations
+plotXICs(
+  object,
+  samples = 3:4,
+  mz = mz_01, ppm = 20,
+  rt = rt_01, sec = 30,
+  legendNames = NULL,
+  plotTargetMark = TRUE,
+  targetsMark = NULL,
+  ppmMark = 5,
+  secMark = 10,
+  numberRows = 2
+)
+
+## with defined mz and rt spaces using a data.frame/data.table
+# Note that targets are not plotted as mz and rt are NULL
+plotXICs(
+  object,
+  samples = 3:4,
+  mz = mz_02, ppm = NULL,
+  rt = rt_02, sec = NULL,
+  legendNames = c("Target01", "Target02"),
+  plotTargetMark = TRUE,
+  targetsMark = data.frame(mz = mz_01, rt = rt_01),
+  ppmMark = 5,
+  secMark = 10,
+  numberRows = 2
+)
+
+## via a data.table produced using XICs()
+# Note that target mark is build as mean of the given mz_id and rt_id ranges in xic_ex2
+plotXICs(
+  xic_ex2,
+  samples = 1:2,
+  targets = NULL,
+  legendNames = c("Target01", "Target02"),
+  plotTargetMark = TRUE,
+  targetsMark = NULL,
+  ppmMark = 5,
+  secMark = 10,
+  numberRows = 2
+)
+
+
+#### MS2 -----------------------------------------------------------------
+
+# same functionality as EICs for setting mz/rt pairs
+# below the example for a combined table of rt and mz predefined deviations for two targets
+ms2_ex01 <- MS2s(
+  object = object,
+  samples = 3:4,
+  mz = mz_04, ppm = 20,
+  rt = NULL, sec = 60,
+  ppmClustering = 50,
+  minIntensityPre = 250,
+  minIntensityPost = 250,
+  mergeCEs = TRUE,
+  mergeBy = NULL
+)
+
+##### visualization ---------
+
+# ploting through an ntsData object
+plotMS2s(
+  object = object,
+  samples = 3:4,
+  mz = mz_04, ppm = 20,
+  rt = NULL, sec = 60,
+  clusteringUnit = "ppm",
+  clusteringMethod = "distance",
+  clusteringUnit = "ppm",
+  clusteringWindow = 15,
+  minIntensityPre = 250,
+  minIntensityPost = 250,
+  mergeCEs = TRUE,
+  mergeBy = NULL,
+  colorBy = "targets"
+)
+
+# plots already produce table from MS2s
+plotMS2s(
+  object = ms2_ex01,
+  colorBy = "targets",
+  interactive = TRUE
+)
+
+# when merging by replicates and ploting the same target for two replicates
+plotMS2s(
+  object = object,
+  samples = 3:4,
+  mz = mz_04[1, ], ppm = 20,
+  rt = NULL, sec = 60,
+  clusteringMethod = "distance",
+  clusteringUnit = "ppm",
+  clusteringWindow = 15,
+  minIntensityPre = 100,
+  minIntensityPost = 150,
+  mergeCEs = TRUE,
+  mergeBy = "replicates",
+  colorBy = "replicates",
+  interactive = TRUE
 )
 
 
 
 
-#### Profile vs Centroid -------------------------------------------------------
-
-dtprof <- dtall[19:21]
-
-dtprof <- importRawData(dtprof,
-  rtFilter = c(13.8, 16.3),
-  rtUnit = "min",
-  centroidedData = FALSE,
-  removeEmptySpectra = TRUE,
-  save = FALSE
-)
-
-# TODO Is centroided data working or not working
-#check using raw data without centroids
-table(MSnbase::isCentroidedFromFile(dtcent@MSnExp), MSnbase::msLevel(dtcent@MSnExp))
-table(MSnbase::isCentroidedFromFile(dtprof@MSnExp), MSnbase::msLevel(dtprof@MSnExp))
-
-# plot centroided and profile data
-p1 <- plotTargetCentroids(dtcent, samples = 1,
-  mz = 242.1434, ppm = 150,
-  rt = 14.8, rtWindow = 0.8,
-  rtUnit = "min", plotTargetMark = TRUE
-)
-
-p2 <- plotTargetCentroids(dtprof, samples = 1,
-  mz = 242.1434, ppm = 150,
-  rt = 14.8, rtWindow = 0.8,
-  rtUnit = "min", plotTargetMark = TRUE
-)
-
-plotly::subplot(list(p1, p2), nrows = 1, margin = 0.04)
 
 
 
 
-#### Centroiding Data ----------------------------------------------------------
 
-dtprof <- centroidProfileData(obj = dtprof,
-  halfwindow = 3,
-  SNR = 3,
-  noiseMethod = "MAD",
-  methodRefineMz = "kNeighbors",
-  k = 1,
-  smoothing = FALSE,
-  save = FALSE
-)
 
-p1 <- plotTargetCentroids(dtcent, samples = 1,
-  mz = 242.1434, ppm = 30,
-  rt = 14.75, rtWindow = 0.8,
-  rtUnit = "min", plotTargetMark = TRUE
-)
 
-p2 <- plotTargetCentroids(dtprof, samples = 1,
-  mz = 242.1434, ppm = 30,
-  rt = 14.75, rtWindow = 0.8,
-  rtUnit = "min", plotTargetMark = TRUE
-)
 
-plotly::subplot(list(p1, p2), nrows = 1, margin = 0.04)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 ### Basic Workflow -------------------------------------------------------------------------------------------
 
-dt <- dtall[1:6]
+dt <- object[1:6]
 
-#### Add metadata --------------------------------------------------------------------------------------------
 
-var <- data.frame(type = c(rep("clean"), rep("dirty")))
+#### add metadata --------------------------------------------------------
 
+var <- data.table::data.table(matrix = c("clean", "dirty"))
 dt <- addMetadata(dt, var)
 
 metadata(dt)
 
 
+#### check TICs ----------------------------------------------------------
 
+tic <- TICs(dt, samples = NULL)
 
-#### Raw Data ------------------------------------------------------------------------------------------------
-# TODO when applying rtFilter for import raw data reuse when peak picking with patRoon
-
-dt <- importRawData(dt,
-  rtFilter = NULL,
-  rtUnit = "min",
-  centroidedData = NA,
-  removeEmptySpectra = TRUE,
-  save = FALSE
-)
+plotTICs(tic, samples = NULL, colorBy = "replicates")
 
 
 
+#### replicates quality --------------------------------------------------
 
-##### Assess Raw Data -------------------
-
-plotRawChrom(dt)
-
+# TODO Make an alternative using mzR
 plotCorReplicates(dt, binsize = 3)
-
 getCorReplicates(dt, exportResults = FALSE)
 
 
@@ -1345,6 +1460,67 @@ exportPlots(dt3@workflows$processMonitoring, path = "C:/Users/MZmine/Desktop", i
 
 
 ### Other ---------------------------------------------------------------------------------------------------
+
+#### Profile vs Centroid -------------------------------------------------------
+
+dtprof <- dtall[19:21]
+
+dtprof <- importRawData(dtprof,
+  rtFilter = c(13.8, 16.3),
+  rtUnit = "min",
+  centroidedData = FALSE,
+  removeEmptySpectra = TRUE,
+  save = FALSE
+)
+
+# TODO Is centroided data working or not working
+#check using raw data without centroids
+table(MSnbase::isCentroidedFromFile(dtcent@MSnExp), MSnbase::msLevel(dtcent@MSnExp))
+table(MSnbase::isCentroidedFromFile(dtprof@MSnExp), MSnbase::msLevel(dtprof@MSnExp))
+
+# plot centroided and profile data
+p1 <- plotTargetCentroids(dtcent, samples = 1,
+  mz = 242.1434, ppm = 150,
+  rt = 14.8, rtWindow = 0.8,
+  rtUnit = "min", plotTargetMark = TRUE
+)
+
+p2 <- plotTargetCentroids(dtprof, samples = 1,
+  mz = 242.1434, ppm = 150,
+  rt = 14.8, rtWindow = 0.8,
+  rtUnit = "min", plotTargetMark = TRUE
+)
+
+plotly::subplot(list(p1, p2), nrows = 1, margin = 0.04)
+
+
+
+
+#### Centroiding Data ----------------------------------------------------------
+
+dtprof <- centroidProfileData(obj = dtprof,
+  halfwindow = 3,
+  SNR = 3,
+  noiseMethod = "MAD",
+  methodRefineMz = "kNeighbors",
+  k = 1,
+  smoothing = FALSE,
+  save = FALSE
+)
+
+p1 <- plotTargetCentroids(dtcent, samples = 1,
+  mz = 242.1434, ppm = 30,
+  rt = 14.75, rtWindow = 0.8,
+  rtUnit = "min", plotTargetMark = TRUE
+)
+
+p2 <- plotTargetCentroids(dtprof, samples = 1,
+  mz = 242.1434, ppm = 30,
+  rt = 14.75, rtWindow = 0.8,
+  rtUnit = "min", plotTargetMark = TRUE
+)
+
+plotly::subplot(list(p1, p2), nrows = 1, margin = 0.04)
 
 
 #### Real FullData -----

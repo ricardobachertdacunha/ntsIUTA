@@ -50,13 +50,14 @@ saveObject <- function(format = "rds",
 
 
 
+
 #' @title getColors
 #'
-#' @param x An \linkS4class{ntsData} object with one or more files or the number of colours to be produced.
-#' @param which Possible entries are \code{samples}, \code{sampleGroups} and \code{groups} for getting
-#' individual sample, sample replicate group and individual group colours, respectively.
+#' @description Function to produce colors for a character vector.
 #'
-#' @return A vector of colours, named according to a \linkS4class{ntsData} object if given.
+#' @param obj A character vector to associate with the colors.
+#'
+#' @return A vector of colours. The vector is named according the \code{obj}.
 #'
 #' @export
 #'
@@ -64,64 +65,54 @@ saveObject <- function(format = "rds",
 #' @importFrom grDevices colorRampPalette
 #' @importFrom dplyr count
 #'
-getColors <- function(x, which = c("samples", "sampleGroups", "groups")) {
+getColors <- function(obj) {
 
-  colors <- c(RColorBrewer::brewer.pal(8, "Greys")[6],
-              RColorBrewer::brewer.pal(8, "Greens")[6],
-              RColorBrewer::brewer.pal(8, "Blues")[6],
-              RColorBrewer::brewer.pal(8, "Oranges")[6],
-              RColorBrewer::brewer.pal(8, "Purples")[6],
-              RColorBrewer::brewer.pal(8, "PuRd")[6],
-              RColorBrewer::brewer.pal(8, "YlOrRd")[6],
-              RColorBrewer::brewer.pal(8, "PuBuGn")[6],
-              RColorBrewer::brewer.pal(8, "GnBu")[6],
-              RColorBrewer::brewer.pal(8, "BuPu")[6],
-              RColorBrewer::brewer.pal(8, "Dark2"))
+  colors <- c(brewer.pal(8, "Greys")[6],
+              brewer.pal(8, "Greens")[6],
+              brewer.pal(8, "Blues")[6],
+              brewer.pal(8, "Oranges")[6],
+              brewer.pal(8, "Purples")[6],
+              brewer.pal(8, "PuRd")[6],
+              brewer.pal(8, "YlOrRd")[6],
+              brewer.pal(8, "PuBuGn")[6],
+              brewer.pal(8, "GnBu")[6],
+              brewer.pal(8, "BuPu")[6],
+              brewer.pal(8, "Dark2"))
 
-  if (!class(x) == "numeric" & !class(x) == "integer") {
+  Ncol <- length(unique(obj))
 
-    if (which != "samples") nameOfcolors <- unique(sampleGroups(x))
-    if (which == "samples") nameOfcolors <- samples(x)
-
-    numberOfGroups <- length(nameOfcolors)
-
-    if (numberOfGroups > 18) {
-      colors <- grDevices::colorRampPalette(colors)(numberOfGroups)
-    }
-
-    vec_colors <- colors[1:numberOfGroups]
-
-    if (which == "groups") {
-      names(vec_colors) <- nameOfcolors
-      return(vec_colors)
-    }
-
-    if (which == "sampleGroups") {
-      count <- count(x@samples[, c("sample", "group")], group)
-      vec_colors <- rep(vec_colors, times = count[, "n"])
-      names(vec_colors) <- samples(x)
-      return(vec_colors)
-    }
-
-    if (which == "samples") {
-      names(vec_colors) <- samples(x)
-      return(vec_colors)
-    }
-
-  } else {
-
-    numberOfGroups <- x
-
-    if (numberOfGroups > 18) {
-      colors <- grDevices::colorRampPalette(colors)(numberOfGroups)
-    }
-
-    vec_colors <- colors[1:numberOfGroups]
-
-    return(vec_colors)
+  if (Ncol > 18) {
+    colors <- colorRampPalette(colors)(Ncol)
   }
 
+  if (length(unique(obj)) < length(obj)) {
+    Vcol <- colors[seq_len(Ncol)]
+    Ncol <- length(obj)
+    count <- dplyr::count(data.frame(n = seq_len(Ncol), char = obj), char)
+    Vcol <- rep(Vcol, times = count[, "n"])
+    names(Vcol) <- obj
+  } else {
+    Vcol <- colors[seq_len(Ncol)]
+    names(Vcol) <- obj
+  }
+
+  return(Vcol)
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

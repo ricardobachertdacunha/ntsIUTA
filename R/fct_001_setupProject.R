@@ -30,7 +30,7 @@
 #' Possible values are \emph{positive}, \emph{negative} or \emph{both} for positive, negative or both modes, respectively.
 #' The default is \code{positive} and will be filled automatically for all found MS files.
 #' When files from different polarities are present, the polarity of each file must be specified using the method X
-#' or changing it manually in the \code{samples} slot of the \linkS4class{ntsIUTA}.
+#' or changing it manually in the \code{samples} slot of the \linkS4class{ntsData}.
 #' @param method A character vector with the method used for acquiring the MS data.
 #' When different methods were used, the method should be given per file.
 #' Note that the character vector must have the same length as the number of mzML/mzXML files in the project folder.
@@ -170,7 +170,7 @@ setup <- readRDS('rData/ntsData.rds')",
 #' Possible values are \emph{positive}, \emph{negative} or \emph{both} for positive, negative or both modes, respectively.
 #' The default is \code{positive} and will be filled automatically for all found MS files.
 #' When files from different polarities are present (\emph{both}), the polarity of each file must be specified using the method X
-#' or changing it manually in the \code{samples} slot of the \linkS4class{ntsIUTA}.
+#' or changing it manually in the \code{samples} slot of the \linkS4class{ntsData}.
 #' @param method A character vector with the method used for acquiring the MS data.
 #' When different methods were used, the method should be given per file.
 #' So the character vector must have the same length as the number of MS files to add.
@@ -264,7 +264,7 @@ addFiles <- function(files = utils::choose.files(),
 
 
 #' @title addMetadata
-#' 
+#'
 #' @description Adds metadata for each sample replicate in an \linkS4class{ntsData} object.
 #' If metadata already exists in the \linkS4class{ntsData} object,
 #' the new variable/s are added as new column/s.
@@ -314,7 +314,7 @@ addMetadata <- function(object, var = NULL, varname = "var") {
 
 
 #' @title removeMetadata
-#' 
+#'
 #' @description Removes metadata in an \linkS4class{ntsData} object.
 #'
 #' @param object An \linkS4class{ntsData} object.
@@ -351,6 +351,7 @@ removeMetadata <- function(object, varname = NULL) {
 
 
 #' @title mzMLconverter
+#'
 #' @description Converts raw MS files from different formats to mzML using the external tool \emph{msConvert}
 #' from [ProtesWizard](http://proteowizard.sourceforge.net/) through the interface of \pkg{patRoon} \insertCite{Helmus2021}{ntsIUTA}.
 #' Possible formats are: \emph{thermo}, \emph{bruker}, \emph{agilent}, \emph{ab} (from AB Sciex) and \emph{waters}.

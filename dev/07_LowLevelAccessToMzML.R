@@ -213,9 +213,14 @@ system.time(EIC <- lapply(ms, function(x) patRoon:::loadEICs(x, mzMins = c(mzr[1
                                                              rtMins = c(rtr[1], rtr[1]), rtMaxs = c(rtr[2], rtr[2]))))
 EIC[[1]]
 
-ms <- "/path" #path of the msFile
+ms <- example01@samples$file[1] #path of the msFile
 ms <- patRoon:::loadSpectra(ms)
-ms <- patRoon:::loadEICs(ms, mzMins = c(10, 20), mzMaxs = c(12, 22), rtMins = c(500, 600), rtMaxs = c(560, 660))
+ms <- patRoon:::loadEICs(ms, mzMins = c(233.023, 242.142), mzMaxs = c(233.025, 242.145), rtMins = c(15 * 60, 14.2 * 60), rtMaxs = c(16 * 60, 15.4 * 60))
+
+ms <- patRoon:::loadEICs(ms, mzMins = c(200), mzMaxs = c(300), rtMins = c(800), rtMaxs = c(900))
+
+
+
 
 
 

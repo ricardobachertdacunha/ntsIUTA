@@ -4,17 +4,14 @@
 \alias{getColors}
 \title{getColors}
 \usage{
-getColors(x, which = c("samples", "sampleGroups", "groups"))
+getColors(obj)
 }
 \arguments{
-\item{x}{An \linkS4class{ntsData} object with one or more files or the number of colours to be produced.}
-
-\item{which}{Possible entries are \code{samples}, \code{sampleGroups} and \code{groups} for getting
-individual sample, sample replicate group and individual group colours, respectively.}
+\item{obj}{A character vector to associate with the colors.}
 }
 \value{
-A vector of colours, named according to a \linkS4class{ntsData} object if given.
+A vector of colours. The vector is named according the \code{obj}.
 }
 \description{
-getColors
+Function to produce colors for a character vector.
 }

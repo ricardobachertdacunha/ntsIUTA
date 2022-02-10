@@ -7,6 +7,31 @@
 #'
 setGeneric("projectInfo", function(object, ...) standardGeneric("projectInfo"))
 
+#' path
+#'
+#' @param object Object to change or get the information.
+#' @param ... Other arguments.
+#'
+#' @return Get the path of the object.
+#'
+setGeneric("path", function(object, ...) standardGeneric("path"))
+
+#' samplesTable
+#'
+#' @param object Object to collect samples table.
+#'
+#' @return A data table with sample information.
+#'
+setGeneric("samplesTable", function(object) standardGeneric("samplesTable"))
+
+#' filePaths
+#'
+#' @param object Object to collect file paths.
+#'
+#' @return A vector with file paths.
+#'
+setGeneric("filePaths", function(object) standardGeneric("filePaths"))
+
 #' samples
 #'
 #' @param object Object to collect sample names.
@@ -67,6 +92,33 @@ setGeneric("acquisitionMethods", function(object) standardGeneric("acquisitionMe
 #'
 setGeneric("acquisitionMethods<-", function(object, value) standardGeneric("acquisitionMethods<-"))
 
+#' polarity
+#'
+#' @param object Object to collect polarities.
+#' @param ... Other arguments.
+#'
+#' @return A vector with polarity modes for entries in the object.
+#'
+setGeneric("polarity", function(object, ...) standardGeneric("polarity"))
+
+#' polarity<-
+#'
+#' @param object Object to assign polarity modes.
+#' @param value A character vector with polarities mode to assign to the object.
+#'
+#' @return An object updated with polarity modes.
+#'
+setGeneric("polarity<-", function(object, value) standardGeneric("polarity<-"))
+
+#' metadata
+#'
+#' @param x Object to collect metadata.
+#' @param ... Other argumments.
+#'
+#' @return A \link[data.table]{data.table} with metadata in x.
+#'
+setGeneric("metadata", function(x, ...) standardGeneric("metadata"))
+
 #' QC
 #'
 #' @param object Object to collect the samples used for QC.
@@ -85,6 +137,72 @@ setGeneric("QC", function(object) standardGeneric("QC"))
 #' @return Ac object with experimental samples assigned to QC.
 #'
 setGeneric("QC<-", function(object, value, ...) standardGeneric("QC<-"))
+
+#' EICs
+#'
+#' @param object Object to get extracted ion chromatograms (EICs).
+#'
+#' @return A \link[data.table]{data.table} with EICs in the object.
+#'
+setGeneric("EICs", function(object, ...) standardGeneric("EICs"))
+
+#' plotEICs
+#'
+#' @param object Object to extract extract ion chromatograms (EICs).
+#'
+#' @return A plot with EICs for defined samples in the object.
+#'
+setGeneric("plotEICs", function(object, ...) standardGeneric("plotEICs"))
+
+#' TICs
+#'
+#' @param object Object to extract total ion chromatograms (TICs).
+#'
+#' @return A \link[data.table]{data.table} with TICs from the object.
+#'
+setGeneric("TICs", function(object, ...) standardGeneric("TICs"))
+
+#' plotTICs
+#'
+#' @param object Object to extract total ion chromatograms (TICs).
+#'
+#' @return A plot with TICs from the object.
+#'
+setGeneric("plotTICs", function(object, ...) standardGeneric("plotTICs"))
+
+#' XICs
+#'
+#' @param object Object to get three dimentional (\emph{m/z}, time and intensity)
+#' extracted ion chromatograms (XICs).
+#'
+#' @return A \link[data.table]{data.table} with XICs from the object.
+#'
+setGeneric("XICs", function(object, ...) standardGeneric("XICs"))
+
+#' plotXICs
+#'
+#' @param object Object to plot three dimentional (\emph{m/z}, time and intensity)
+#' extracted ion chromatograms (XICs).
+#'
+#' @return A plot with XICs from the object.
+#'
+setGeneric("plotXICs", function(object, ...) standardGeneric("plotXICs"))
+
+#' MS2s
+#'
+#' @param object Object to get level 2 fragmentation data (MS/MS or MS2).
+#'
+#' @return A \link[data.table]{data.table} with MS2 from the object.
+#'
+setGeneric("MS2s", function(object, ...) standardGeneric("MS2s"))
+
+#' plotMS2s
+#'
+#' @param object Object to get level 2 fragmentation data (MS/MS or MS2).
+#'
+#' @return A plot with MS2 from the object.
+#'
+setGeneric("plotMS2s", function(object, ...) standardGeneric("plotMS2s"))
 
 #' peakPickingParameters
 #'

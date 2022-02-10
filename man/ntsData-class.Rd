@@ -6,6 +6,8 @@
 \alias{ntsData-class}
 \alias{projectInfo,ntsData-method}
 \alias{path,ntsData-method}
+\alias{samplesTable,ntsData-method}
+\alias{filePaths,ntsData-method}
 \alias{samples,ntsData-method}
 \alias{replicates,ntsData-method}
 \alias{replicates<-,ntsData-method}
@@ -19,6 +21,18 @@
 \alias{QC,ntsData-method}
 \alias{QC<-,ntsData-method}
 \alias{[,ntsData,ANY,missing,missing-method}
+\alias{EICs,ntsData-method}
+\alias{plotEICs,ntsData-method}
+\alias{plotEICs,data.table-method}
+\alias{TICs,ntsData-method}
+\alias{plotTICs,ntsData-method}
+\alias{plotTICs,data.table-method}
+\alias{XICs,ntsData-method}
+\alias{plotXICs,ntsData-method}
+\alias{plotXICs,data.table-method}
+\alias{MS2s,ntsData-method}
+\alias{plotMS2s,ntsData-method}
+\alias{plotMS2s,data.table-method}
 \alias{[,ntsData,ANY,ANY,missing-method}
 \alias{peaks,ntsData-method}
 \alias{features,ntsData-method}
@@ -38,6 +52,10 @@
 
 \S4method{path}{ntsData}(object)
 
+\S4method{samplesTable}{ntsData}(object)
+
+\S4method{filePaths}{ntsData}(object)
+
 \S4method{samples}{ntsData}(object)
 
 \S4method{replicates}{ntsData}(object)
@@ -52,7 +70,7 @@
 
 \S4method{acquisitionMethods}{ntsData}(object) <- value
 
-\S4method{polarity}{ntsData}(object, groupby)
+\S4method{polarity}{ntsData}(object, colorBy)
 
 \S4method{polarity}{ntsData}(object) <- value
 
@@ -60,9 +78,128 @@
 
 \S4method{QC}{ntsData}(object)
 
-\S4method{QC}{ntsData}(object, remove = FALSE, nametype = "replicates") <- value
+\S4method{QC}{ntsData}(object, remove = FALSE, nameType = "replicates") <- value
 
 \S4method{[}{ntsData,ANY,missing,missing}(x, i, j, ..., drop = TRUE)
+
+\S4method{EICs}{ntsData}(object, samples = NULL, mz = NULL, ppm = 20, rt = NULL, sec = 60)
+
+\S4method{plotEICs}{ntsData}(
+  object,
+  samples = NULL,
+  mz = NULL,
+  ppm = 20,
+  rt = NULL,
+  sec = 30,
+  colorBy = "targets",
+  legendNames = NULL,
+  title = NULL,
+  interactive = FALSE
+)
+
+\S4method{plotEICs}{data.table}(
+  object,
+  samples = NULL,
+  colorBy = "targets",
+  legendNames = NULL,
+  targets = NULL,
+  title = NULL,
+  interactive = FALSE
+)
+
+\S4method{TICs}{ntsData}(object, samples = NULL)
+
+\S4method{plotTICs}{ntsData}(
+  object,
+  samples = NULL,
+  colorBy = "samples",
+  title = NULL,
+  interactive = FALSE
+)
+
+\S4method{plotTICs}{data.table}(
+  object,
+  samples = NULL,
+  colorBy = "samples",
+  title = NULL,
+  interactive = FALSE
+)
+
+\S4method{XICs}{ntsData}(object, samples = NULL, mz = NULL, ppm = 20, rt = NULL, sec = 60)
+
+\S4method{plotXICs}{ntsData}(
+  object,
+  samples = NULL,
+  mz = NULL,
+  ppm = 20,
+  rt = NULL,
+  sec = 60,
+  legendNames = NULL,
+  plotTargetMark = TRUE,
+  targetsMark = NULL,
+  ppmMark = 5,
+  secMark = 10,
+  numberRows = 1
+)
+
+\S4method{plotXICs}{data.table}(
+  object,
+  samples = NULL,
+  targets = NULL,
+  legendNames = NULL,
+  plotTargetMark = TRUE,
+  targetsMark = NULL,
+  ppmMark = 5,
+  secMark = 10,
+  numberRows = 1
+)
+
+\S4method{MS2s}{ntsData}(
+  object = NULL,
+  samples = NULL,
+  mz = NULL,
+  ppm = 20,
+  rt = NULL,
+  sec = 60,
+  clusteringMethod = "euclidean",
+  clusteringUnit = "mz",
+  clusteringWindow = 0.008,
+  minIntensityPre = 250,
+  minIntensityPost = 100,
+  mergeCEs = FALSE,
+  mergeBy = "samples"
+)
+
+\S4method{plotMS2s}{ntsData}(
+  object = NULL,
+  samples = NULL,
+  mz = NULL,
+  ppm = 20,
+  rt = NULL,
+  sec = 60,
+  clusteringMethod = "euclidean",
+  clusteringUnit = "mz",
+  clusteringWindow = 0.008,
+  minIntensityPre = 250,
+  minIntensityPost = 100,
+  mergeCEs = FALSE,
+  mergeBy = "samples",
+  legendNames = NULL,
+  title = NULL,
+  colorBy = NULL,
+  interactive = FALSE
+)
+
+\S4method{plotMS2s}{data.table}(
+  object = NULL,
+  samples = NULL,
+  replicates = NULL,
+  targets = NULL,
+  legendNames = NULL,
+  title = NULL,
+  colorBy = "targets",
+  interactive = FALSE
+)
 
 \S4method{[}{ntsData,ANY,ANY,missing}(x, i, j, ..., drop = TRUE)
 
@@ -124,27 +261,23 @@
 \arguments{
 \item{object}{An \linkS4class{ntsData} object.}
 
-\item{title}{The project title.}
+\item{title}{A character string to be used as title.}
 
-\item{description}{The project description.}
+\item{description}{A character string with a description for the project.}
 
-\item{date}{The project date.}
+\item{date}{\link{Date} object.}
 
-\item{value}{A character vector with the names of the samples or sample replicate name/s
-to be used for QC.}
+\item{value}{A character vector applicable to the respective method.}
 
-\item{groupby}{Either \code{samples} (the default) or \code{replicates} as character string
-to return the polarites either for each sample or each replicate.}
+\item{colorBy}{A length one character vector applicable to the respective method.}
 
 \item{x}{An \linkS4class{ntsData} object.}
 
-\item{varname}{The name of the variables to extract.}
+\item{varname}{A character vector applicable to the respective method.}
 
-\item{remove}{A logical value. When \code{TRUE}, specified sample or replicate names
-are moved from the QC slot to the samples slot of the \linkS4class{ntsData} object.}
+\item{remove}{A logical value applicable to the respective method.}
 
-\item{nametype}{A character string specifying if sample or replicate names should be used.
-Posiible values are \emph{samples} or \emph{replicates} (the default).}
+\item{nameType}{A character string of length one applicable to the respective method.}
 
 \item{i}{The indice/s or name/s of the samples to keep in the \code{x} object.}
 
@@ -156,14 +289,56 @@ Posiible values are \emph{samples} or \emph{replicates} (the default).}
 
 \item{samples}{The indice/s or name/s of samples to keep in the \code{object}.}
 
-\item{ID}{The ID of features of interest.}
-
 \item{mz}{Alternatively to \code{ID}, the \emph{m/z} of interest.
 can be of length two, defining a mass range.}
 
 \item{ppm}{The mass deviation, in ppm, of a given \code{mz}.}
 
 \item{rt}{The retention time to find features.}
+
+\item{sec}{A numeric vector of length one with the time deviation, in seconds, to calculate ranges.
+See ?\link{makeTargets} for more information.}
+
+\item{legendNames}{A character vector with the same length as the number of targets in the respective function.}
+
+\item{interactive}{Logical value, set to \code{TRUE} to use
+the \pkg{plotly} instead of \pkg{base}. The default is \code{FALSE}.}
+
+\item{targets}{A character vector with target names.}
+
+\item{plotTargetMark}{Logical, set to \code{TRUE} to plot a target mark.}
+
+\item{targetsMark}{A two columns \link[data.table]{data.table} or \link{data.frame} with
+\emph{m/z} and time targets. The column must be named with "mz" and "rt" for
+\emph{m/z} and time values, respectively.}
+
+\item{ppmMark}{A numeric vector of length one to define the mass deviation, in ppm,
+of the target mark.}
+
+\item{secMark}{A numeric vector of length one to define the time deviation, in seconds,
+of the target mark.}
+
+\item{numberRows}{A numeric vector of length one to define
+the number of rows to grid the plots.}
+
+\item{clusteringMethod}{A character vector specifying the clustering unit.}
+
+\item{clusteringUnit}{A character vector specifying the clustering unit.}
+
+\item{clusteringWindow}{A length one numeric vector with the mass deviation for clustering.}
+
+\item{minIntensityPre}{A length one numeric vector with the minimum intensity.}
+
+\item{minIntensityPost}{A length one numeric vector with the minimum intensity.}
+
+\item{mergeCEs}{Logical, set to TRUE to cluster different collision energies.}
+
+\item{mergeBy}{A character string applicable to the respective method.}
+
+\item{replicates}{A numeric or character vector with the indice/s or name/s
+of replicates from the \code{object}.}
+
+\item{ID}{The ID of features of interest.}
 
 \item{rtWindow}{The time deviation. Can be of length two, defining a time range.}
 
@@ -182,73 +357,169 @@ to the features of interest.}
 \item{algorithm}{A character vector with the name of the algorithm to be applied.}
 
 \item{param}{A list with parameters matching the defined algorithm.}
-}
-\value{
-An S4 class object named \linkS4class{ntsData}.
 
-An \linkS4class{ntsData} object with updated project information.
-
-A character vector with project path.
-
-A character vector with sample names.
-
-A character vector with sample replicate names.
-
-Adds the value vector with sample replicate names
-to the replicate column of the samples data table in the object.
-
-A character vector with blank sample replicate names.
-
-Adds the value vector with blank sample replicate names
-to the blank column of the samples data table in the object.
-
-A vector with acquisition method names used for each sample
-or when only one method is present, the single acquisition method name.
-
-Adds the \code{value} vector with acquisition method names
-to the method column of the samples data table in the object.
-
-A vector with the polarity mode of each sample (i.e., file).
-
-Adds the \code{value} vector with polarity modes
-to the polarity column of the samples data table in the object.
-
-A data table with the requested metadata.
+\item{groupBy}{A length one character string.}
 }
 \description{
 A S4 class object to store project processed data within the \pkg{ntsIUTA} package.
 }
 \section{Methods (by generic)}{
 \itemize{
-\item \code{projectInfo}: setter and getter for project information.
+\item \code{projectInfo}: setter for project basic information.
+When the \code{title}, \code{description} and \code{date} arguments
+are missing it returns a list with the project basic information.
+If arguments are given, the project basic information is updated
+based on the specified arguments, returning the \linkS4class{ntsData} object.
 
 \item \code{path}: Getter for project path.
+
+\item \code{samplesTable}: Getter for samples data table.
+
+\item \code{filePaths}: Getter for file paths.
 
 \item \code{samples}: Getter for sample names.
 
 \item \code{replicates}: Getter for sample replicate names.
 
 \item \code{replicates<-}: Setter for sample replicate names.
+The \code{value} is a character vector with the same length as the number of samples
+in the \code{object}, containing sample replicate names for each sample.
 
 \item \code{blanks}: Getter for blank replicate names.
 
 \item \code{blanks<-}: Setter for blank replicate groups.
+The \code{value} is a character vector with the same length as the number of samples
+in the \code{object}, containing blank replicate name to associate to each sample.
 
 \item \code{acquisitionMethods}: Getter for acquisition method names.
 
 \item \code{acquisitionMethods<-}: Setter for acquisition method names.
+The \code{value} is a character vector with the same length as the number of samples
+in the \code{object}, containing the name of the aquisition method used for each sample.
+When the length is one, the name is applied to all samples.
 
 \item \code{polarity}: Getter for the polarity of each sample/replicate.
+The \code{groupBy} argument is either \code{samples} (the default) or \code{replicates}
+as character string to return the polarites either for each sample or each replicate.
 
 \item \code{polarity<-}: Setter for the polarity mode of the samples (i.e., files).
+The \code{value} is a character vector with either \emph{positive} or \emph{negative} strings
+with the same length as the number of samples in the set. If only one polarity mode is used for all the samples,
+the \code{value} can be of length one and either \emph{positive} or \emph{negative}.
+The polarity mode is used for all the samples.
 
-\item \code{metadata}: Getter for metadata.
+\item \code{metadata}: Getter for metadata as \link[data.table]{data.table}.
+The \code{varname} argument is a character string to specify
+which metadata variable/s to extract.
 
-\item \code{QC}: Getter for QC samples data table.
+\item \code{QC}: Getter for the QC samples \link[data.table]{data.table}.
 
 \item \code{QC<-}: Setter for QC samples or sample replicates.
+The \code{value} is a character vector with the names of the samples or sample replicate name/s
+to be used for QC as predefined by the \code{nameType} argument when using
+"samples" or "replicates", respectively. If the \code{remove} argument is \code{TRUE}
+the specified sample or replicate names are moved from
+the QC to the samples of the \linkS4class{ntsData} object.
 
 \item \code{[}: Subset on samples, using sample index or name.
+
+\item \code{EICs}: get extracted ion chromatograms (EICs)
+for specified \emph{m/z} and retention time (seconds) targets
+in given samples. The arguments \code{mz}, \code{ppm}, \code{rt}
+and \code{sec} are used to construct the targets.
+See ?\link{makeTargets} for more information.
+
+\item \code{plotEICs}: A method for plotting extracted ion chromatograms (EICs)
+of data in an \linkS4class{ntsData} object.
+The \code{colorBy} argument can be be \code{"samples"}, \code{replicates} or \code{targets}
+(the default), for colouring by samples, replicates or EICs targets, respectively.
+The \code{legendNames} is a character vector with the same length as targets for plotting and
+can be used to lengend the plot. Note that, by setting \code{legendNames} the \code{colorBy}
+is set to "targets".
+
+\item \code{plotEICs}: A method for plotting extracted ion chromatograms (EICs)
+of data in a \link[data.table]{data.table} object obtained with the \link{EICs} method.
+The \code{colorBy} argument can be be \code{"samples"}, \code{replicates} or \code{targets}
+(the default), for colouring by samples, replicates or EICs targets, respectively.
+The \code{legendNames} is a character vector with the same length as targets for plotting and
+can be used to lengend the plot. Note that, by setting \code{legendNames} the \code{colorBy}
+is set to "targets". A subset of the targets in the object
+can be plotted using the \code{targets} argument.
+
+\item \code{TICs}: Extract total ion chromatograms (TICs)
+for samples in an \linkS4class{ntsData} object.
+
+\item \code{plotTICs}: Plots a total ion chromatogram (TIC)
+from each sample in an \linkS4class{ntsData} object.
+\code{colorBy} can be \code{"samples"} (the default)
+or \code{replicates} for colouring by samples or replicates, respectively.
+
+\item \code{plotTICs}: Plots a total ion chromatogram (TIC)
+from each sample in a \link[data.table]{data.table} object as produced
+by the \link{TICs} method.
+
+\item \code{XICs}: get three dimentional (\emph{m/z}, time and intensity)
+extracted ion chromatograms (XICs) for specified \emph{m/z} and retention time pair targets
+in samples of an \linkS4class{ntsData} object. The arguments \code{mz}, \code{ppm}, \code{rt}
+and \code{sec} are used to construct the targets.
+See ?\link{makeTargets} for more information.
+
+\item \code{plotXICs}: plots three dimentional (\emph{m/z}, time and intensity)
+extracted ion chromatograms (XICs) for specified \emph{m/z} and retention time pair targets
+in samples of an \linkS4class{ntsData} object. The arguments \code{mz}, \code{ppm}, \code{rt}
+and \code{sec} are used to construct the targets. See ?\link{makeTargets} for more information.
+When \code{plotTargetMark} is \code{TRUE} a target is plotted representing the deviations as defined
+by the arguments \code{ppmMark} and \code{secMark} in ppm and seconds, respectively.
+When ranges were given to build the XIC, exact \emph{m/z} and time targets can be specified with
+the argument \code{targetsMark}. \code{targetsMark} should be a two column table named mz and rt with
+exact \emph{m/z} and time targets. Note that the number of rows should be the same as the number of target
+in the XIC. The number of rows to plot multiple targets can be defined by the \code{numberRows} argument.
+
+\item \code{plotXICs}: plots three dimentional (\emph{m/z}, time and intensity)
+extracted ion chromatograms (XICs) for specified \emph{m/z} and retention time pair targets
+in samples of a \link[data.table]{data.table} object as produced
+by the \link{XICs} method. \code{samples} and \code{targets} can be used to filter the XIC table.
+When \code{plotTargetMark} is \code{TRUE} a target is plotted representing the deviations as defined
+by the arguments \code{ppmMark} and \code{secMark} in ppm and seconds, respectively.
+When ranges were given to build the XIC, exact \emph{m/z} and time targets can be specified with
+the argument \code{targetsMark}. \code{targetsMark} should be a two column table named mz and rt with
+exact \emph{m/z} and time targets. Note that the number of rows should be the same as the number of target
+in the XIC. The number of rows to plot multiple targets can be defined by the \code{numberRows} argument.
+
+\item \code{MS2s}: get MS2 data for specified \emph{m/z} and retention time (seconds) targets
+in samples of an \linkS4class{ntsData} object. The \code{clusteringUnit} defines the method used for clustering.
+Possible values are \emph{euclidean} (the default) or \emph{distance}.
+The \code{clusteringUnit} and \code{clusteringWindow} define
+the mass deviation unit and deviation to cluster mass traces from different spectra, respectively.
+For the \code{clusteringUnit}, possible values are \emph{mz} (the default) or \emph{ppm}.
+The \code{minIntensityPre} and \code{minIntensityPost}
+define the minimum intensity for mass traces before and after clustering, respectively.
+Set \code{mergeCEs} to \code{TRUE} for merging spectra acquired with different collision energies.
+The \code{mergeBy} argument is used to merge spectra by "samples" or "replicates".
+When \code{NULL}, MS2 is given per target and per sample.
+
+\item \code{plotMS2s}: plots MS2 data for specified \emph{m/z} and retention time (seconds) targets
+in samples of an \linkS4class{ntsData} object. The \code{clusteringUnit} defines the method used for clustering.
+Possible values are \emph{euclidean} (the default) or \emph{distance}.
+The \code{clusteringUnit} and \code{clusteringWindow} define
+the mass deviation unit and deviation to cluster mass traces from different spectra, respectively.
+For the \code{clusteringUnit}, possible values are \emph{mz} (the default) or \emph{ppm}.
+The \code{minIntensityPre} and \code{minIntensityPost}
+define the minimum intensity for mass traces before and after clustering, respectively.
+Set \code{mergeCEs} to \code{TRUE} for merging spectra acquired with different collision energies.
+The \code{mergeBy} argument is used to merge spectra by "samples" or "replicates".
+When \code{NULL}, MS2 is given per target and per sample. The possible values for the
+\code{colorBy} argument are "targets", "samples", "replicates" and "CEs" to color by
+each target, sample, replicate or collision energy, respectively.
+
+\item \code{plotMS2s}: plots MS2 data for specified \emph{m/z} and retention time (seconds) targets
+in a \link[data.table]{data.table} as obtained by the \link{MS2s}. The targets in the
+object can be filtered using the \code{targets} argument. Also, "samples" and "replicates"
+can be filtered using the \code{samples} and \code{replicates} arguments, respectively.
+Note that the column sample/replicate should be present.
+The possible values for the \code{colorBy} argument are
+"targets", "samples", "replicates" and "CEs" to color by
+each target, sample, replicate or collision energy, respectively.
 
 \item \code{[}: Subset on samples, using sample index or name.
 
@@ -284,29 +555,35 @@ A S4 class object to store project processed data within the \pkg{ntsIUTA} packa
 
 \item{\code{description}}{A character string with the project description.}
 
-\item{\code{date}}{The project date.}
+\item{\code{date}}{The \link{Date} of the project.}
 
 \item{\code{path}}{A character string with the project path.}
 
 \item{\code{samples}}{A data.table with six columns:
-file (character string with the file path),
-sample (character string with the file name),
-replicate (character string with the assigned sample replicate group),
-blank (character string with associated blank replicate),
-polarity (the polarity mode of the respective file; possible values are "positive" or "negative") and
-method (a character string with the method used to acquire the data file).}
+\enumerate{
+ \item file: character string with the file path;
+ \item sample: character string with the file name;
+ \item replicate: character string with the assigned sample replicate group;
+ \item blank: character string with associated blank replicate;
+ \item polarity: the polarity mode of the respective file; possible values are "positive" or "negative");
+ \item method: a character string with the method used to acquire the data file.
+}}
 
 \item{\code{metadata}}{A data.table with the same number of rows
-as the unique replicates in \code{samples}, containing metadata for each replicate added as extra columns.}
+as the number of \code{samples}, containing metadata for each sample added as extra columns.}
 
 \item{\code{parameters}}{A \linkS4class{paramList} object containing process parameters for the basic workflow.
 See \code{?"paranList-class"} for more information.}
 
 \item{\code{QC}}{A \linkS4class{qcData} object used for quality control. More information in \code{?"qcData-class"}.}
 
-\item{\code{pat}}{A list of \linkS4class{features} or \linkS4class{featureGroups} objects
+\item{\code{pat}}{A length two list with:
+\enumerate{
+ \item A list of \linkS4class{features} or \linkS4class{featureGroups} objects
 for each sample replicate derived from the basic workflow
-(peak picking, alignment and grouping) using the \pkg{patRoon} package.}
+(peak picking, alignment and grouping) using the \pkg{patRoon} package;
+ \item A \linkS4class{featureGroups} object from the \pkg{patRoon} package with unified features.
+}}
 
 \item{\code{peaks}}{A list of data.tables with peaks for each sample.}
 
@@ -323,9 +600,6 @@ suspect screening.}
 }}
 
 \note{
-The slot \code{pat} contains the object \linkS4class{features} or
+The slot \code{pat} contains objects \linkS4class{features} or
 \linkS4class{featureGroups} which can be used within native functions of the \pkg{patRoon} package.
-
-When no arguments are given in the call for \code{projectInfo} a list
-with the title, description and date is returned instead of the \code{object}.
 }

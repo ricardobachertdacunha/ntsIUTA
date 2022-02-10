@@ -205,7 +205,7 @@ setClass("paramList",
 #' @export
 #'
 #' @importFrom data.table data.table
-#' 
+#'
 setClass("qcData",
   slots = c(
     title = "character",
@@ -291,23 +291,29 @@ setClass("isData",
 #'
 #' @slot title A character string with the project title.
 #' @slot description A character string with the project description.
-#' @slot date The project date.
+#' @slot date The \link{Date} of the project.
 #' @slot path A character string with the project path.
 #' @slot samples A data.table with six columns:
-#' file (character string with the file path),
-#' sample (character string with the file name),
-#' replicate (character string with the assigned sample replicate group),
-#' blank (character string with associated blank replicate),
-#' polarity (the polarity mode of the respective file; possible values are "positive" or "negative") and
-#' method (a character string with the method used to acquire the data file).
+#' \enumerate{
+#'  \item file: character string with the file path;
+#'  \item sample: character string with the file name;
+#'  \item replicate: character string with the assigned sample replicate group;
+#'  \item blank: character string with associated blank replicate;
+#'  \item polarity: the polarity mode of the respective file; possible values are "positive" or "negative");
+#'  \item method: a character string with the method used to acquire the data file.
+#' }
 #' @slot metadata A data.table with the same number of rows
-#' as the unique replicates in \code{samples}, containing metadata for each replicate added as extra columns.
+#' as the number of \code{samples}, containing metadata for each sample added as extra columns.
 #' @slot parameters A \linkS4class{paramList} object containing process parameters for the basic workflow.
 #' See \code{?"paranList-class"} for more information.
 #' @slot QC A \linkS4class{qcData} object used for quality control. More information in \code{?"qcData-class"}.
-#' @slot pat A list of \linkS4class{features} or \linkS4class{featureGroups} objects
+#' @slot pat A length two list with:
+#' \enumerate{
+#'  \item A list of \linkS4class{features} or \linkS4class{featureGroups} objects
 #' for each sample replicate derived from the basic workflow
-#' (peak picking, alignment and grouping) using the \pkg{patRoon} package.
+#' (peak picking, alignment and grouping) using the \pkg{patRoon} package;
+#'  \item A \linkS4class{featureGroups} object from the \pkg{patRoon} package with unified features.
+#' }
 #' @slot peaks A list of data.tables with peaks for each sample.
 #' @slot features A list of data.tables with the features for each replicate.
 #' @slot unified A data.table with unified features across different replicates.
@@ -316,15 +322,12 @@ setClass("isData",
 #' @slot workflows A list of objects inherent of downstream data processing steps, such as
 #' suspect screening.
 #'
-#' @return An S4 class object named \linkS4class{ntsData}.
-#'
-#' @note The slot \code{pat} contains the object \linkS4class{features} or
+#' @note The slot \code{pat} contains objects \linkS4class{features} or
 #' \linkS4class{featureGroups} which can be used within native functions of the \pkg{patRoon} package.
 #'
 #' @export
 #'
 #' @importFrom data.table data.table
-#' @importClassesFrom patRoon featuresXCMS3
 #'
 setClass("ntsData",
   slots = c(
@@ -336,7 +339,7 @@ setClass("ntsData",
     metadata = "data.table",
     parameters = "paramList",
     QC = "qcData",
-    pat = "list", 
+    pat = "list",
     peaks = "list",
     features = "list",
     unified = "data.table",
@@ -360,7 +363,7 @@ setClass("ntsData",
     metadata = data.table::data.table(replicate = character()),
     parameters = new("paramList"),
     QC = new("qcData"),
-    pat = list(),
+    pat = list(replicates = list(), unified = list()),
     peaks = list(),
     features = list(),
     unified = data.table::data.table(),
