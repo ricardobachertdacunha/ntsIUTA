@@ -15,3 +15,6 @@ A plot with TICs from the object.
 \description{
 plotTICs
 }
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
+}

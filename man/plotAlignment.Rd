@@ -7,7 +7,7 @@
 plotAlignment(x = features)
 }
 \arguments{
-\item{x}{The \linkS4class{XCMSnExp} object obtained from the \code{\link{makeFeatures}} function.}
+\item{x}{The \linkS4class{XCMSnExp} object obtained from the \code{\link{peakGrouping}} function.}
 }
 \value{
 A plot with the retention time alignment differences for each samples.

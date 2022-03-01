@@ -5,33 +5,38 @@
 \title{findFragments}
 \usage{
 findFragments(
-  obj,
-  targets = NULL,
+  object,
+  database = NULL,
   replicates = NULL,
-  ID = NULL,
+  targets = NULL,
   title = NULL,
-  ppm = 10,
-  intMin = 10,
-  MS2param = NULL
+  ppm = 15,
+  ppmLoss = 40,
+  minFeatureIntensity = 5000,
+  topMost = 5,
+  inSilico = "sirius",
+  MS2settings = NULL
 )
 }
 \arguments{
-\item{obj}{An \linkS4class{ntsData} object with features for finding fragment in MS2 data.}
+\item{object}{An \linkS4class{ntsData} object with features for finding fragments in MS2 data.}
 
-\item{targets}{A data frame with target values for matching fragments.
-See details for more information.}
+\item{database}{A \link[data.table]{data.table} with target fragments for matching in the MS2 data.}
 
 \item{replicates}{A character vector with the name of the sample replicate groups to use for finding fragments.}
 
-\item{ID}{A character vector with the ID of the features of interest.}
+\item{targets}{A character vector with the ID of the features of interest.}
 
 \item{title}{Optional, title to use for the entry in the workflows slot of the \linkS4class{ntsData} object.}
 
 \item{ppm}{The mass deviation, in ppm, for matching fragments.}
 
-\item{intMin}{The minimum intensity of fragments.}
+\item{minFeatureIntensity}{The minimum intensity of the features for searching for fragments.}
 
-\item{MS2param}{A list of parameters to use for extracting MS2 data.}
+\item{inSilico}{A character vector with the name of the in silico software
+for confirmation of fragments formulae. Possible values are "sirius" and "fenform".}
+
+\item{MS2settings}{A list of parameter settings to use for extracting MS2 data.}
 }
 \value{
 An \linkS4class{ntsData} object with an \linkS4class{ntsFragmentsData} object

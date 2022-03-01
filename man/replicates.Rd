@@ -15,3 +15,6 @@ A vector with sample replicate names.
 \description{
 replicates
 }
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
+}

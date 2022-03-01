@@ -49,7 +49,7 @@ See \code{?"sampleGroups<-"} for more information.}
 Possible values are \emph{positive}, \emph{negative} or \emph{both} for positive, negative or both modes, respectively.
 The default is \code{positive} and will be filled automatically for all found MS files.
 When files from different polarities are present, the polarity of each file must be specified using the method X
-or changing it manually in the \code{samples} slot of the \linkS4class{ntsIUTA}.}
+or changing it manually in the \code{samples} slot of the \linkS4class{ntsData}.}
 
 \item{method}{A character vector with the method used for acquiring the MS data.
 When different methods were used, the method should be given per file.

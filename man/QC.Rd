@@ -15,3 +15,6 @@ A vector with sample names used for QC.
 \description{
 QC
 }
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
+}

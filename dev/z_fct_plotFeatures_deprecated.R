@@ -1,6 +1,6 @@
 
 
-#' @title plotFeatures
+#' @title plotFeatures_old
 #' @description Method for plotting features from a \linkS4class{ntsData} object.
 #'
 #' @param obj An \linkS4class{ntsData} object.
@@ -38,7 +38,7 @@
 #' @importFrom dplyr between filter
 #' @importFrom plotly toRGB plot_ly add_trace layout
 #'
-plotFeatures <- function(obj, samples = NULL,
+plotFeatures_old <- function(obj, samples = NULL,
                          ID = NULL,
                          mz = NULL, ppm = 20,
                          rt = NULL, rtWindow = NULL,

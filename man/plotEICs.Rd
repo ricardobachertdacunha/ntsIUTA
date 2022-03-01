@@ -15,3 +15,6 @@ A plot with EICs for defined samples in the object.
 \description{
 plotEICs
 }
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
+}

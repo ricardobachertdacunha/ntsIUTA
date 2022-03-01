@@ -26,7 +26,7 @@ saveObject <- function(format = "rds",
 
   dots <- list(...)
 
-  if (class(dots[[1]]) == "ntsData") path <- dots[[1]]@path
+  if (class(dots[[1]]) == "ntsData") path <- path(dots[[1]])
 
   if (format == "rds") {
     rdata <- paste0(path, "\\rdata")
@@ -43,9 +43,7 @@ saveObject <- function(format = "rds",
     saveRDS(dots[[1]], file = paste0(rdata, "\\", filename, ".rds"))
 
   }
-
   #TODO Implement saving for other file types, ex. plots and tables
-
 }
 
 
@@ -284,46 +282,4 @@ filterFeatureGroups <- function(x, i) {
 
 
 
-#' extractMS2
-#'
-#' @param obj A \linkS4class{featureGroups} or an \linkS4class{ntsData} object to
-#' extract MS2 data according to percursor ions.
-#' @param param A \linkS4class{paramMS2} object with parameters for MS2 extraction.
-#'
-#' @return A \linkS4class{MSPeakLists} when \code{obj} is a \linkS4class{featureGroups}
-#' or an \linkS4class{ntsData} updated with MS2 data
-#' when \code{obj} is an \linkS4class{ntsData} object.
-#'
-#' @export
-#'
-#' @importFrom patRoon getDefAvgPListParams
-#' @importMethodsFrom patRoon generateMSPeakLists
-#'
-#'
-extractMS2 <- function(obj = NULL,
-                       param = paramMS2()) {
 
-  pat <- obj
-
-  if (class(obj) == "ntsData") pat <- pat@patdata
-
-  control_avgPListParams <- getDefAvgPListParams(
-    clusterMzWindow = param@clusterMzWindow,
-    topMost = param@topMost,
-    minIntensityPre = param@minIntensityPre,
-    minIntensityPost = param@minIntensityPost
-  )
-
-  MS2 <- suppressWarnings(generateMSPeakLists(
-    pat, "mzr",
-    maxMSRtWindow = param@maxMSRtWindow,
-    precursorMzWindow = param@precursorMzWindow,
-    avgFeatParams = control_avgPListParams,
-    avgFGroupParams = control_avgPListParams
-  ))
-
-  #TODO add option to add MS2 to the ntsData object
-
-  return(MS2)
-
-}

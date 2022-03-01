@@ -5,6 +5,8 @@
 #'
 #' @return Get or change title, description and/or date of the a project.
 #'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
 setGeneric("projectInfo", function(object, ...) standardGeneric("projectInfo"))
 
 #' path
@@ -14,6 +16,8 @@ setGeneric("projectInfo", function(object, ...) standardGeneric("projectInfo"))
 #'
 #' @return Get the path of the object.
 #'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
 setGeneric("path", function(object, ...) standardGeneric("path"))
 
 #' samplesTable
@@ -21,6 +25,8 @@ setGeneric("path", function(object, ...) standardGeneric("path"))
 #' @param object Object to collect samples table.
 #'
 #' @return A data table with sample information.
+#'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
 #'
 setGeneric("samplesTable", function(object) standardGeneric("samplesTable"))
 
@@ -30,6 +36,8 @@ setGeneric("samplesTable", function(object) standardGeneric("samplesTable"))
 #'
 #' @return A vector with file paths.
 #'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
 setGeneric("filePaths", function(object) standardGeneric("filePaths"))
 
 #' samples
@@ -38,6 +46,8 @@ setGeneric("filePaths", function(object) standardGeneric("filePaths"))
 #'
 #' @return A vector with sample names.
 #'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
 setGeneric("samples", function(object) standardGeneric("samples"))
 
 #' replicates
@@ -45,6 +55,8 @@ setGeneric("samples", function(object) standardGeneric("samples"))
 #' @param object Object to collect sample replicate names.
 #'
 #' @return A vector with sample replicate names.
+#'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
 #'
 setGeneric("replicates", function(object) standardGeneric("replicates"))
 
@@ -55,6 +67,8 @@ setGeneric("replicates", function(object) standardGeneric("replicates"))
 #'
 #' @return An object updated with sample replicate names.
 #'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
 setGeneric("replicates<-", function(object, value) standardGeneric("replicates<-"))
 
 #' blanks
@@ -62,6 +76,8 @@ setGeneric("replicates<-", function(object, value) standardGeneric("replicates<-
 #' @param object Object to collect blank sample replicate groups.
 #'
 #' @return A vector with the blank sample replicate group names.
+#'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
 #'
 setGeneric("blanks", function(object) standardGeneric("blanks"))
 
@@ -73,6 +89,8 @@ setGeneric("blanks", function(object) standardGeneric("blanks"))
 #'
 #' @return An object updated with blank sample replicate groups.
 #'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
 setGeneric("blanks<-", function(object, value) standardGeneric("blanks<-"))
 
 #' acquisitionMethods
@@ -80,6 +98,8 @@ setGeneric("blanks<-", function(object, value) standardGeneric("blanks<-"))
 #' @param object Object to collect method names used for data acquisition.
 #'
 #' @return A vector with method names.
+#'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
 #'
 setGeneric("acquisitionMethods", function(object) standardGeneric("acquisitionMethods"))
 
@@ -90,6 +110,8 @@ setGeneric("acquisitionMethods", function(object) standardGeneric("acquisitionMe
 #'
 #' @return An object updated with method names.
 #'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
 setGeneric("acquisitionMethods<-", function(object, value) standardGeneric("acquisitionMethods<-"))
 
 #' polarity
@@ -98,6 +120,8 @@ setGeneric("acquisitionMethods<-", function(object, value) standardGeneric("acqu
 #' @param ... Other arguments.
 #'
 #' @return A vector with polarity modes for entries in the object.
+#'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
 #'
 setGeneric("polarity", function(object, ...) standardGeneric("polarity"))
 
@@ -108,6 +132,8 @@ setGeneric("polarity", function(object, ...) standardGeneric("polarity"))
 #'
 #' @return An object updated with polarity modes.
 #'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
 setGeneric("polarity<-", function(object, value) standardGeneric("polarity<-"))
 
 #' metadata
@@ -117,6 +143,8 @@ setGeneric("polarity<-", function(object, value) standardGeneric("polarity<-"))
 #'
 #' @return A \link[data.table]{data.table} with metadata in x.
 #'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
 setGeneric("metadata", function(x, ...) standardGeneric("metadata"))
 
 #' QC
@@ -124,6 +152,8 @@ setGeneric("metadata", function(x, ...) standardGeneric("metadata"))
 #' @param object Object to collect the samples used for QC.
 #'
 #' @return A vector with sample names used for QC.
+#'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
 #'
 setGeneric("QC", function(object) standardGeneric("QC"))
 
@@ -136,6 +166,8 @@ setGeneric("QC", function(object) standardGeneric("QC"))
 #'
 #' @return Ac object with experimental samples assigned to QC.
 #'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
 setGeneric("QC<-", function(object, value, ...) standardGeneric("QC<-"))
 
 #' EICs
@@ -143,6 +175,8 @@ setGeneric("QC<-", function(object, value, ...) standardGeneric("QC<-"))
 #' @param object Object to get extracted ion chromatograms (EICs).
 #'
 #' @return A \link[data.table]{data.table} with EICs in the object.
+#'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
 #'
 setGeneric("EICs", function(object, ...) standardGeneric("EICs"))
 
@@ -152,6 +186,8 @@ setGeneric("EICs", function(object, ...) standardGeneric("EICs"))
 #'
 #' @return A plot with EICs for defined samples in the object.
 #'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
 setGeneric("plotEICs", function(object, ...) standardGeneric("plotEICs"))
 
 #' TICs
@@ -160,6 +196,8 @@ setGeneric("plotEICs", function(object, ...) standardGeneric("plotEICs"))
 #'
 #' @return A \link[data.table]{data.table} with TICs from the object.
 #'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
 setGeneric("TICs", function(object, ...) standardGeneric("TICs"))
 
 #' plotTICs
@@ -167,6 +205,8 @@ setGeneric("TICs", function(object, ...) standardGeneric("TICs"))
 #' @param object Object to extract total ion chromatograms (TICs).
 #'
 #' @return A plot with TICs from the object.
+#'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
 #'
 setGeneric("plotTICs", function(object, ...) standardGeneric("plotTICs"))
 
@@ -177,6 +217,8 @@ setGeneric("plotTICs", function(object, ...) standardGeneric("plotTICs"))
 #'
 #' @return A \link[data.table]{data.table} with XICs from the object.
 #'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
 setGeneric("XICs", function(object, ...) standardGeneric("XICs"))
 
 #' plotXICs
@@ -186,6 +228,8 @@ setGeneric("XICs", function(object, ...) standardGeneric("XICs"))
 #'
 #' @return A plot with XICs from the object.
 #'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
 setGeneric("plotXICs", function(object, ...) standardGeneric("plotXICs"))
 
 #' MS2s
@@ -193,6 +237,8 @@ setGeneric("plotXICs", function(object, ...) standardGeneric("plotXICs"))
 #' @param object Object to get level 2 fragmentation data (MS/MS or MS2).
 #'
 #' @return A \link[data.table]{data.table} with MS2 from the object.
+#'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
 #'
 setGeneric("MS2s", function(object, ...) standardGeneric("MS2s"))
 
@@ -202,56 +248,102 @@ setGeneric("MS2s", function(object, ...) standardGeneric("MS2s"))
 #'
 #' @return A plot with MS2 from the object.
 #'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
 setGeneric("plotMS2s", function(object, ...) standardGeneric("plotMS2s"))
 
-#' peakPickingParameters
+#' pickingParameters
 #'
-#' @param object An object to add or get peak picking parameters.
-#' @param algorithm Algorithm for the set of parameters.
-#' @param param List of parameters.
+#' @param object An object to add or get peak picking parameter settings.
+#' @param algorithm Algorithm for the parameters.
+#' @param settings List of respective settings.
 #'
-#' @return A list of parameters or the object with added parameters.
+#' @return A list of parameter settings or the object with added parameter settings.
 #'
-setGeneric("peakPickingParameters", function(object, algorithm, param) standardGeneric("peakPickingParameters"))
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
+setGeneric("pickingParameters", function(object, algorithm, settings) standardGeneric("pickingParameters"))
 
-#' peakGroupingParameters
+#' groupingParameters
 #'
-#' @param object An object to add or get peak grouping parameters.
-#' @param algorithm Algorithm for the set of parameters.
-#' @param param List of parameters.
+#' @param object An object to add or get peak grouping parameter settings.
+#' @param algorithm Algorithm for the parameters.
+#' @param settings List of respective settings.
 #'
-#' @return A list of parameters or the object with added parameters.
+#' @return A list of parameter settings or the object with added the parameter settings.
 #'
-setGeneric("peakGroupingParameters", function(object, algorithm, param) standardGeneric("peakGroupingParameters"))
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
+setGeneric("groupingParameters", function(object, algorithm, settings) standardGeneric("groupingParameters"))
 
-#' fillMissingParameters
+#' fragmentsParameters
 #'
-#' @param object An object to add or get fill missing parameters.
-#' @param algorithm Algorithm for the set of parameters.
-#' @param param List of parameters.
+#' @param object An object to add or get fragments extraction parameter settings.
+#' @param algorithm Algorithm for the parameters.
+#' @param settings List of parameter settings.
 #'
 #' @return A list of parameters or the object with added parameters.
 #'
-setGeneric("fillMissingParameters", function(object, algorithm, param) standardGeneric("fillMissingParameters"))
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
+setGeneric("fragmentsParameters", function(object, algorithm, settings) standardGeneric("fragmentsParameters"))
 
-#' annotationParameters
+#' fillingParameters
 #'
-#' @param object An object to add or get annotationParameters parameters.
-#' @param algorithm Algorithm for the set of parameters.
-#' @param param List of parameters.
+#' @param object An object to add or get filling parameter settings.
+#' @param algorithm Algorithm for the parameters.
+#' @param settings List of parameter settings.
 #'
 #' @return A list of parameters or the object with added parameters.
 #'
-setGeneric("annotationParameters", function(object, algorithm, param) standardGeneric("annotationParameters"))
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
+setGeneric("fillingParameters", function(object, algorithm, settings) standardGeneric("fillingParameters"))
+
+#' isotopesParameters
+#'
+#' @param object An object to add or get isotopic search parameter settings.
+#' @param algorithm Algorithm for the parameters.
+#' @param settings List of parameter settings.
+#'
+#' @return A list of parameters or the object with added parameters.
+#'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
+setGeneric("isotopesParameters", function(object, algorithm, settings) standardGeneric("isotopesParameters"))
 
 #' peaks
 #'
 #' @param object An object to extract chromatographic peaks.
 #' @param ... Other method dependent parameters.
 #'
-#' @return A data.frame with peak details.
+#' @return A data.table with peak details.
+#'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
 #'
 setGeneric("peaks", function(object, ...) standardGeneric("peaks"))
+
+#' plotPeaks
+#'
+#' @param object An object to with EICs for plotting chromatographic peaks.
+#' @param ... Other method dependent parameters.
+#'
+#' @return A plot with chromatographic peaks, including integrated areas.
+#'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
+setGeneric("plotPeaks", function(object, ...) standardGeneric("plotPeaks"))
+
+#' mapPeaks
+#'
+#' @param object An object to with EICs for mapping chromatographic peaks.
+#' @param ... Other method dependent parameters.
+#'
+#' @return A plot with mapped peaks, including time and mass peak space.
+#'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
+setGeneric("mapPeaks", function(object, ...) standardGeneric("mapPeaks"))
 
 #' features
 #'
@@ -262,14 +354,17 @@ setGeneric("peaks", function(object, ...) standardGeneric("peaks"))
 #'
 setGeneric("features", function(object, ...) standardGeneric("features"))
 
-#' components
+#' plotFeatures
 #'
-#' @param object An object to extract feature components.
+#' @param object An object with features for plotting the respective peaks.
 #' @param ... Other method dependent parameters.
 #'
-#' @return A data.frame with feature component details.
+#' @return A plot with chromatographic peaks, including integrated areas,
+#' belonging to given features.
 #'
-setGeneric("components", function(object, ...) standardGeneric("components"))
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
+setGeneric("plotFeatures", function(object, ...) standardGeneric("plotFeatures"))
 
 #' exportPlots
 #'

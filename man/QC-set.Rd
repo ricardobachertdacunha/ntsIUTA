@@ -20,3 +20,6 @@ Ac object with experimental samples assigned to QC.
 \description{
 QC<-
 }
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
+}

@@ -3,7 +3,7 @@
 #' @title plotAlignment
 #' @description Plots the results from the retention time alignment across samples.
 #'
-#' @param x The \linkS4class{XCMSnExp} object obtained from the \code{\link{makeFeatures}} function.
+#' @param x The \linkS4class{XCMSnExp} object obtained from the \code{\link{peakGrouping}} function.
 #'
 #' @return A plot with the retention time alignment differences for each samples.
 #'

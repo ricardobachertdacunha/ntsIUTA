@@ -1,5 +1,232 @@
 
 
+#### pickingParameters -----
+
+#' @describeIn ntsData Getter for peak picking parameter settings.
+#'
+#' @export
+#'
+setMethod("pickingParameters", c("ntsData", "missing", "missing"), function(object) object@parameters@picking)
+
+
+#' @describeIn ntsData Setter for peak picking parameter settings.
+#'
+#' @param algorithm A character vector with the name of the algorithm to be applied.
+#' @param settings A list with parameter settings.
+#'
+#' @export
+#'
+#' @importFrom checkmate testChoice
+#'
+setMethod("pickingParameters", c("ntsData", "character", "ANY"), function(object, algorithm, settings) {
+
+  if (!testChoice(algorithm, c("xcms3", "xcms", "openms", "envipick", "sirius", "kpic2", "safd"))) {
+    warning("Peak picking algorithm not recognized. See ?peakPicking for more information.")
+    return(object)
+  }
+
+  if (!checkmate::testClass(settings, "list")) settings <- list(settings)
+
+  object@parameters@picking@algorithm <- algorithm
+
+  object@parameters@picking@settings <- settings
+
+  return(object)
+})
+
+
+
+
+#### groupingParameters -----
+
+#' @describeIn ntsData Getter for peak grouping parameters.
+#'
+#' @param object An \linkS4class{ntsData} object.
+#'
+#' @export
+#'
+setMethod("groupingParameters", c("ntsData", "missing", "missing"), function(object) object@parameters@grouping)
+
+
+#' @describeIn ntsData Setter for peak grouping parameters.
+#'
+#' @export
+#'
+#' @importFrom checkmate testChoice
+#'
+setMethod("groupingParameters", c("ntsData", "character", "ANY"), function(object, algorithm, settings) {
+
+  if (!testChoice(algorithm, c("xcms3", "xcms", "openms"))) {
+    warning("Algorithm not recognized. See ?makeFeatures for more information.")
+    return(object)
+  }
+
+  if (!checkmate::testClass(settings, "list")) settings <- list(settings)
+
+  object@parameters@grouping@algorithm <- algorithm
+
+  object@parameters@grouping@settings <- settings
+
+  return(object)
+})
+
+
+
+
+#### fillingParameters -----
+
+#' @describeIn ntsData Getter for fill missing parameters.
+#'
+#' @param object An \linkS4class{ntsData} object.
+#'
+#' @export
+#'
+setMethod("fillingParameters", c("ntsData", "missing", "missing"), function(object) object@parameters@filling)
+
+
+#' @describeIn ntsData Setter for fill missing parameters.
+#'
+#' @param object An \linkS4class{ntsData} object.
+#' @param algorithm A character vector with the name of the algorithm to be applied.
+#' @param settings A list with parameters matching the defined algorithm.
+#'
+#' @export
+#'
+#' @importFrom checkmate testChoice
+#'
+setMethod("fillingParameters", c("ntsData", "character", "ANY"), function(object, algorithm, settings) {
+  
+  if (!testChoice(algorithm, c("xcms3"))) {
+    warning("Algorithm not recognized for filling features with missing peaks.
+            See ?makeFeatures for more information.")
+    return(object)
+  }
+  
+  if (class(param) != "list") param <- list(param)
+  
+  object@parameters@fillMissing@algorithm <- algorithm
+  
+  object@parameters@fillMissing@param <- param
+  
+  return(object)
+  
+})
+
+
+
+
+#### fragmentsParameters -----
+
+#' @describeIn ntsData Getter for fragments extraction parameters.
+#'
+#' @param object An \linkS4class{ntsData} object.
+#'
+#' @export
+#'
+setMethod("fragmentsParameters", c("ntsData", "missing", "missing"), function(object) object@parameters@fragments)
+
+
+#' @describeIn ntsData Setter for fragments extraction parameters.
+#'
+#' @export
+#'
+#' @importFrom checkmate testChoice
+#'
+setMethod("fragmentsParameters", c("ntsData", "character", "ANY"), function(object, algorithm, settings) {
+
+  if (algorithm == "patroon") {
+    ms2p <- patFragmentSettingsDefault()
+    algorithm <- ms2p@algorithm
+    settings <- ms2p@settings
+  }
+
+  if (algorithm == "ntsiuta" & missing(settings)) {
+    ms2p <- fragmentSettingsDefault()
+    settings <- ms2p@settings
+  }
+
+  if (!checkmate::testClass(settings, "list")) settings <- list(settings)
+
+  object@parameters@fragments@algorithm <- algorithm
+
+  object@parameters@fragments@settings <- settings
+
+  return(object)
+})
+
+
+
+
+#### isotopesParameters -----
+
+#' @describeIn ntsData Getter for annotation parameters.
+#'
+#' @param object An \linkS4class{ntsData} object.
+#'
+#' @export
+#'
+setMethod("isotopesParameters", c("ntsData", "missing", "missing"), function(object) object@parameters@annotation)
+
+
+#' @describeIn ntsData Setter for annotation parameters.
+#'
+#' @param object An \linkS4class{ntsData} object.
+#' @param algorithm A character vector with the name of the algorithm to be applied.
+#' @param settings A list with parameters matching the defined algorithm.
+#'
+#' @export
+#'
+#' @importFrom checkmate testChoice
+#'
+setMethod("isotopesParameters", c("ntsData", "character", "ANY"), function(object, algorithm, settings) {
+
+  if (!testChoice(algorithm, c("alteredcamera"))) {
+    warning("Algorithm not recognized for annotation of features.
+            See ?annotateFeatures for more information.")
+    return(object)
+  }
+  
+  if (class(param) != "list") param <- list(param)
+  
+  object@parameters@annotation@algorithm <- algorithm
+  
+  object@parameters@annotation@param <- param
+  
+  return(object)
+  
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #' @title AlteredCameraParam
 #'
 #' @param sigma The multiplier of the standard deviation for grouping features
@@ -77,161 +304,6 @@ paramMS2 <- function(maxMSRtWindow = 10,
 
 
 
-### add parameters methods -----
-
-#### peak picking -----
-
-#' @describeIn ntsData Getter for peak picking parameters.
-#'
-#' @param object An \linkS4class{ntsData} object.
-#'
-#' @export
-#'
-setMethod("peakPickingParameters", c("ntsData", "missing", "missing"), function(object) object@parameters@peakPicking)
-
-
-#' @describeIn ntsData Setter for peak picking parameters.
-#'
-#' @param object An \linkS4class{ntsData} object.
-#' @param algorithm A character vector with the name of the algorithm to be applied.
-#' @param param A list with parameters matching the defined algorithm.
-#'
-#' @export
-#'
-#' @importFrom checkmate testChoice
-#'
-setMethod("peakPickingParameters", c("ntsData", "character", "ANY"), function(object, algorithm, param) {
-
-  if (!testChoice(algorithm, c("xcms3", "xcms", "openms", "envipick", "sirius", "kpic2", "safd"))) {
-    warning("Peak picking algorithm not recognized. See ?peakPicking for more information.")
-    return(object)
-  }
-
-  if (class(param) != "list") param <- list(param)
-
-  object@parameters@peakPicking@algorithm <- algorithm
-  
-  object@parameters@peakPicking@param <- param
-
-  return(object)
-
-})
-
-#### peak grouping -----
-
-#' @describeIn ntsData Getter for peak grouping parameters.
-#'
-#' @param object An \linkS4class{ntsData} object.
-#'
-#' @export
-#'
-setMethod("peakGroupingParameters", c("ntsData", "missing", "missing"), function(object) object@parameters@peakGrouping)
-
-
-#' @describeIn ntsData Setter for peak grouping parameters.
-#'
-#' @param object An \linkS4class{ntsData} object.
-#' @param algorithm A character vector with the name of the algorithm to be applied.
-#' @param param A list with parameters matching the defined algorithm.
-#'
-#' @export
-#'
-#' @importFrom checkmate testChoice
-#'
-setMethod("peakGroupingParameters", c("ntsData", "character", "ANY"), function(object, algorithm, param) {
-  
-  if (!testChoice(algorithm, c("xcms3", "xcms", "openms"))) {
-    warning("Algorithm not recognized. See ?makeFeatures for more information.")
-    return(object)
-  }
-  
-  if (class(param) != "list") param <- list(param)
-  
-  object@parameters@peakGrouping@algorithm <- algorithm
-  
-  object@parameters@peakGrouping@param <- param
-  
-  return(object)
-  
-})
-
-#### fill missing -----
-
-#' @describeIn ntsData Getter for fill missing parameters.
-#'
-#' @param object An \linkS4class{ntsData} object.
-#'
-#' @export
-#'
-setMethod("fillMissingParameters", c("ntsData", "missing", "missing"), function(object) object@parameters@fillMissing)
-
-
-#' @describeIn ntsData Setter for fill missing parameters.
-#'
-#' @param object An \linkS4class{ntsData} object.
-#' @param algorithm A character vector with the name of the algorithm to be applied.
-#' @param param A list with parameters matching the defined algorithm.
-#'
-#' @export
-#'
-#' @importFrom checkmate testChoice
-#'
-setMethod("fillMissingParameters", c("ntsData", "character", "ANY"), function(object, algorithm, param) {
-  
-  if (!testChoice(algorithm, c("xcms3"))) {
-    warning("Algorithm not recognized for filling features with missing peaks.
-            See ?makeFeatures for more information.")
-    return(object)
-  }
-  
-  if (class(param) != "list") param <- list(param)
-  
-  object@parameters@fillMissing@algorithm <- algorithm
-  
-  object@parameters@fillMissing@param <- param
-  
-  return(object)
-  
-})
-
-#### annotation -----
-
-#' @describeIn ntsData Getter for annotation parameters.
-#'
-#' @param object An \linkS4class{ntsData} object.
-#'
-#' @export
-#'
-setMethod("annotationParameters", c("ntsData", "missing", "missing"), function(object) object@parameters@annotation)
-
-
-#' @describeIn ntsData Setter for annotation parameters.
-#'
-#' @param object An \linkS4class{ntsData} object.
-#' @param algorithm A character vector with the name of the algorithm to be applied.
-#' @param param A list with parameters matching the defined algorithm.
-#'
-#' @export
-#'
-#' @importFrom checkmate testChoice
-#'
-setMethod("annotationParameters", c("ntsData", "character", "ANY"), function(object, algorithm, param) {
-  
-  if (!testChoice(algorithm, c("alteredcamera"))) {
-    warning("Algorithm not recognized for annotation of features.
-            See ?annotateFeatures for more information.")
-    return(object)
-  }
-  
-  if (class(param) != "list") param <- list(param)
-  
-  object@parameters@annotation@algorithm <- algorithm
-  
-  object@parameters@annotation@param <- param
-  
-  return(object)
-  
-})
 
 
 

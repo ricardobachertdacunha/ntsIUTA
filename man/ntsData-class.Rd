@@ -33,19 +33,23 @@
 \alias{MS2s,ntsData-method}
 \alias{plotMS2s,ntsData-method}
 \alias{plotMS2s,data.table-method}
-\alias{[,ntsData,ANY,ANY,missing-method}
 \alias{peaks,ntsData-method}
+\alias{plotPeaks,ntsData-method}
+\alias{mapPeaks,ntsData-method}
+\alias{[,ntsData,ANY,ANY,missing-method}
 \alias{features,ntsData-method}
-\alias{components,ntsData-method}
+\alias{plotFeatures,ntsData-method}
 \alias{show,ntsData-method}
-\alias{peakPickingParameters,ntsData,missing,missing-method}
-\alias{peakPickingParameters,ntsData,character,ANY-method}
-\alias{peakGroupingParameters,ntsData,missing,missing-method}
-\alias{peakGroupingParameters,ntsData,character,ANY-method}
-\alias{fillMissingParameters,ntsData,missing,missing-method}
-\alias{fillMissingParameters,ntsData,character,ANY-method}
-\alias{annotationParameters,ntsData,missing,missing-method}
-\alias{annotationParameters,ntsData,character,ANY-method}
+\alias{pickingParameters,ntsData,missing,missing-method}
+\alias{pickingParameters,ntsData,character,ANY-method}
+\alias{groupingParameters,ntsData,missing,missing-method}
+\alias{groupingParameters,ntsData,character,ANY-method}
+\alias{fillingParameters,ntsData,missing,missing-method}
+\alias{fillingParameters,ntsData,character,ANY-method}
+\alias{fragmentsParameters,ntsData,missing,missing-method}
+\alias{fragmentsParameters,ntsData,character,ANY-method}
+\alias{isotopesParameters,ntsData,missing,missing-method}
+\alias{isotopesParameters,ntsData,character,ANY-method}
 \title{ntsData}
 \usage{
 \S4method{projectInfo}{ntsData}(object, title = NULL, description = NULL, date = NULL)
@@ -70,7 +74,7 @@
 
 \S4method{acquisitionMethods}{ntsData}(object) <- value
 
-\S4method{polarity}{ntsData}(object, colorBy)
+\S4method{polarity}{ntsData}(object, groupBy)
 
 \S4method{polarity}{ntsData}(object) <- value
 
@@ -161,11 +165,14 @@
   ppm = 20,
   rt = NULL,
   sec = 60,
-  clusteringMethod = "euclidean",
+  isolationTimeWindow = 10,
+  isolationMassWindow = 1.3,
+  clusteringMethod = "distance",
   clusteringUnit = "mz",
-  clusteringWindow = 0.008,
-  minIntensityPre = 250,
-  minIntensityPost = 100,
+  clusteringWindow = 0.005,
+  minIntensityPre = 200,
+  minIntensityPost = 200,
+  asPatRoon = FALSE,
   mergeCEs = FALSE,
   mergeBy = "samples"
 )
@@ -177,11 +184,13 @@
   ppm = 20,
   rt = NULL,
   sec = 60,
-  clusteringMethod = "euclidean",
+  isolationTimeWindow = 10,
+  isolationMassWindow = 1.3,
+  clusteringMethod = "distance",
   clusteringUnit = "mz",
-  clusteringWindow = 0.008,
-  minIntensityPre = 250,
-  minIntensityPost = 100,
+  clusteringWindow = 0.005,
+  minIntensityPre = 200,
+  minIntensityPost = 200,
   mergeCEs = FALSE,
   mergeBy = "samples",
   legendNames = NULL,
@@ -201,62 +210,92 @@
   interactive = FALSE
 )
 
-\S4method{[}{ntsData,ANY,ANY,missing}(x, i, j, ..., drop = TRUE)
-
 \S4method{peaks}{ntsData}(
   object,
   samples = NULL,
-  ID = NULL,
+  targets = NULL,
   mz = NULL,
   ppm = 20,
   rt = NULL,
-  rtWindow = NULL,
-  rtUnit = "sec"
+  sec = 60
 )
+
+\S4method{plotPeaks}{ntsData}(
+  object,
+  samples = NULL,
+  targets = NULL,
+  mz = NULL,
+  ppm = 20,
+  rt = NULL,
+  sec = 30,
+  colorBy = "targets",
+  legendNames = NULL,
+  title = NULL,
+  interactive = FALSE
+)
+
+\S4method{mapPeaks}{ntsData}(
+  object,
+  samples = NULL,
+  targets = NULL,
+  mz = NULL,
+  ppm = 20,
+  rt = NULL,
+  sec = 30,
+  colorBy = "targets",
+  legendNames = NULL,
+  xlim = 30,
+  ylim = 0.05,
+  title = NULL
+)
+
+\S4method{[}{ntsData,ANY,ANY,missing}(x, i, j, ..., drop = TRUE)
 
 \S4method{features}{ntsData}(
   object,
   samples = NULL,
-  ID = NULL,
+  targets = NULL,
   mz = NULL,
   ppm = 20,
   rt = NULL,
-  rtWindow = NULL,
-  rtUnit = "sec"
+  sec = 60
 )
 
-\S4method{components}{ntsData}(
+\S4method{plotFeatures}{ntsData}(
   object,
   samples = NULL,
-  ID = NULL,
+  targets = NULL,
   mz = NULL,
-  ppm = 5,
+  ppm = 20,
   rt = NULL,
-  rtWindow = 1,
-  rtUnit = "sec",
-  compNumber = NULL,
-  entireComponents = TRUE,
-  onlyAnnotated = FALSE,
-  onlyRelated = TRUE
+  sec = 30,
+  colorBy = "targets",
+  legendNames = NULL,
+  title = NULL,
+  interactive = FALSE
 )
 
 \S4method{show}{ntsData}(object)
 
-\S4method{peakPickingParameters}{ntsData,missing,missing}(object)
+\S4method{pickingParameters}{ntsData,missing,missing}(object)
 
-\S4method{peakPickingParameters}{ntsData,character,ANY}(object, algorithm, param)
+\S4method{pickingParameters}{ntsData,character,ANY}(object, algorithm, settings)
 
-\S4method{peakGroupingParameters}{ntsData,missing,missing}(object)
+\S4method{groupingParameters}{ntsData,missing,missing}(object)
 
-\S4method{peakGroupingParameters}{ntsData,character,ANY}(object, algorithm, param)
+\S4method{groupingParameters}{ntsData,character,ANY}(object, algorithm, settings)
 
-\S4method{fillMissingParameters}{ntsData,missing,missing}(object)
+\S4method{fillingParameters}{ntsData,missing,missing}(object)
 
-\S4method{fillMissingParameters}{ntsData,character,ANY}(object, algorithm, param)
+\S4method{fillingParameters}{ntsData,character,ANY}(object, algorithm, settings)
 
-\S4method{annotationParameters}{ntsData,missing,missing}(object)
+\S4method{fragmentsParameters}{ntsData,missing,missing}(object)
 
-\S4method{annotationParameters}{ntsData,character,ANY}(object, algorithm, param)
+\S4method{fragmentsParameters}{ntsData,character,ANY}(object, algorithm, settings)
+
+\S4method{isotopesParameters}{ntsData,missing,missing}(object)
+
+\S4method{isotopesParameters}{ntsData,character,ANY}(object, algorithm, settings)
 }
 \arguments{
 \item{object}{An \linkS4class{ntsData} object.}
@@ -269,7 +308,7 @@
 
 \item{value}{A character vector applicable to the respective method.}
 
-\item{colorBy}{A length one character vector applicable to the respective method.}
+\item{groupBy}{A length one character string.}
 
 \item{x}{An \linkS4class{ntsData} object.}
 
@@ -281,23 +320,24 @@
 
 \item{i}{The indice/s or name/s of the samples to keep in the \code{x} object.}
 
-\item{j}{Ignored.}
+\item{j}{The indice/s or \emph{id}/s for subsettting on features.}
 
-\item{\dots}{Ignored.}
+\item{samples}{A numeric or character vector with the indice/s or name/s
+of samples from the \code{object}.}
 
-\item{drop}{Ignored.}
+\item{mz}{A numeric vector or data.table/data.frame to make targets.
+See ?\link{makeTargets} for more information.}
 
-\item{samples}{The indice/s or name/s of samples to keep in the \code{object}.}
+\item{ppm}{A numeric vector of length one with the mass deviation, in ppm, to calculate ranges.
+See ?\link{makeTargets} for more information.}
 
-\item{mz}{Alternatively to \code{ID}, the \emph{m/z} of interest.
-can be of length two, defining a mass range.}
-
-\item{ppm}{The mass deviation, in ppm, of a given \code{mz}.}
-
-\item{rt}{The retention time to find features.}
+\item{rt}{A numeric vector or data.table/data.frame to make targets.
+See ?\link{makeTargets} for more information.}
 
 \item{sec}{A numeric vector of length one with the time deviation, in seconds, to calculate ranges.
 See ?\link{makeTargets} for more information.}
+
+\item{colorBy}{A length one character vector applicable to the respective method.}
 
 \item{legendNames}{A character vector with the same length as the number of targets in the respective function.}
 
@@ -321,6 +361,10 @@ of the target mark.}
 \item{numberRows}{A numeric vector of length one to define
 the number of rows to grid the plots.}
 
+\item{isolationTimeWindow}{A character vector of length one with the time isolation window, in seconds.}
+
+\item{isolationMassWindow}{A character vector of length one with the mass isolation window, in Da.}
+
 \item{clusteringMethod}{A character vector specifying the clustering unit.}
 
 \item{clusteringUnit}{A character vector specifying the clustering unit.}
@@ -331,6 +375,8 @@ the number of rows to grid the plots.}
 
 \item{minIntensityPost}{A length one numeric vector with the minimum intensity.}
 
+\item{asPatRoon}{Logical, set to \code{TRUE} for return a pkg{patRoon} class object.}
+
 \item{mergeCEs}{Logical, set to TRUE to cluster different collision energies.}
 
 \item{mergeBy}{A character string applicable to the respective method.}
@@ -338,27 +384,13 @@ the number of rows to grid the plots.}
 \item{replicates}{A numeric or character vector with the indice/s or name/s
 of replicates from the \code{object}.}
 
-\item{ID}{The ID of features of interest.}
+\item{xlim}{A length one or two numeric vector for setting the \emph{x} limits of a plot.}
 
-\item{rtWindow}{The time deviation. Can be of length two, defining a time range.}
-
-\item{rtUnit}{The unit of the time arguments. Possible values are "sec" and "min".}
-
-\item{compNumber}{Alternatively, the component number to find features.}
-
-\item{entireComponents}{Logical, set to \code{TRUE} to extract all features
-from the represented components.}
-
-\item{onlyAnnotated}{Logical, set to \code{TRUE} to extract only annotated features.}
-
-\item{onlyRelated}{Logical, set to \code{TRUE} to extract only features that are related
-to the features of interest.}
+\item{ylim}{A length one or two numeric vector for setting the \emph{y} limits of a plot.}
 
 \item{algorithm}{A character vector with the name of the algorithm to be applied.}
 
-\item{param}{A list with parameters matching the defined algorithm.}
-
-\item{groupBy}{A length one character string.}
+\item{settings}{A list with parameters matching the defined algorithm.}
 }
 \description{
 A S4 class object to store project processed data within the \pkg{ntsIUTA} package.
@@ -489,6 +521,8 @@ in the XIC. The number of rows to plot multiple targets can be defined by the \c
 \item \code{MS2s}: get MS2 data for specified \emph{m/z} and retention time (seconds) targets
 in samples of an \linkS4class{ntsData} object. The \code{clusteringUnit} defines the method used for clustering.
 Possible values are \emph{euclidean} (the default) or \emph{distance}.
+The mass (in Da) and time (in seconds) isolation windows to screen for the respective precursors
+are defined with the arguments \code{isolationMassWindow} and \code{isolationTimeWindow}, respectively.
 The \code{clusteringUnit} and \code{clusteringWindow} define
 the mass deviation unit and deviation to cluster mass traces from different spectra, respectively.
 For the \code{clusteringUnit}, possible values are \emph{mz} (the default) or \emph{ppm}.
@@ -501,6 +535,8 @@ When \code{NULL}, MS2 is given per target and per sample.
 \item \code{plotMS2s}: plots MS2 data for specified \emph{m/z} and retention time (seconds) targets
 in samples of an \linkS4class{ntsData} object. The \code{clusteringUnit} defines the method used for clustering.
 Possible values are \emph{euclidean} (the default) or \emph{distance}.
+The mass (in Da) and time (in seconds) isolation windows to screen for the respective precursors
+are defined with the arguments \code{isolationMassWindow} and \code{isolationTimeWindow}, respectively.
 The \code{clusteringUnit} and \code{clusteringWindow} define
 the mass deviation unit and deviation to cluster mass traces from different spectra, respectively.
 For the \code{clusteringUnit}, possible values are \emph{mz} (the default) or \emph{ppm}.
@@ -521,31 +557,61 @@ The possible values for the \code{colorBy} argument are
 "targets", "samples", "replicates" and "CEs" to color by
 each target, sample, replicate or collision energy, respectively.
 
-\item \code{[}: Subset on samples, using sample index or name.
-
 \item \code{peaks}: Getter for chromatographic peaks.
+The arguments \code{targets} and \code{mz}/\code{rt} can be used
+to select specific peaks. The \emph{id} of features can be given in the \code{targets}
+argument to select the respective peaks. Also, samples can be selected using the
+\code{samples} argument.
+
+\item \code{plotPeaks}: A method for plotting chromatographic peaks
+in an \linkS4class{ntsData} object.
+The \code{colorBy} argument can be be \code{"samples"}, \code{replicates} or \code{targets}
+(the default), for colouring by samples, replicates or peak targets, respectively.
+The \code{legendNames} is a character vector with the same length as targets for plotting and
+can be used to lengend the plot. Note that, by setting \code{legendNames} the \code{colorBy}
+is set to "targets" automatically.
+
+\item \code{mapPeaks}: A method for mapping peaks mass and time space
+in an \linkS4class{ntsData} object.
+The \code{colorBy} argument can be be \code{"samples"}, \code{replicates} or \code{targets}
+(the default), for colouring by samples, replicates or peak targets, respectively.
+The \code{legendNames} is a character vector with the same length as targets for plotting and
+can be used to lengend the plot. Note that, by setting \code{legendNames} the \code{colorBy}
+is set to "targets" automatically.
+
+\item \code{[}: Subset on samples, using sample index or name.
 
 \item \code{features}: Getter for features (i.e., grouped peaks).
 
-\item \code{components}: Getter for components (i.e., annotated features).
+\item \code{plotFeatures}: A method for plotting peaks from given features
+in an \linkS4class{ntsData} object.
+The \code{colorBy} argument can be be \code{"samples"}, \code{replicates} or \code{targets}
+(the default), for colouring by samples, replicates or peak targets, respectively.
+The \code{legendNames} is a character vector with the same length as targets for plotting and
+can be used to lengend the plot. Note that, by setting \code{legendNames} the \code{colorBy}
+is set to "targets" automatically.
 
 \item \code{show}: Informative printing of the \linkS4class{ntsData} object.
 
-\item \code{peakPickingParameters}: Getter for peak picking parameters.
+\item \code{pickingParameters}: Getter for peak picking parameter settings.
 
-\item \code{peakPickingParameters}: Setter for peak picking parameters.
+\item \code{pickingParameters}: Setter for peak picking parameter settings.
 
-\item \code{peakGroupingParameters}: Getter for peak grouping parameters.
+\item \code{groupingParameters}: Getter for peak grouping parameters.
 
-\item \code{peakGroupingParameters}: Setter for peak grouping parameters.
+\item \code{groupingParameters}: Setter for peak grouping parameters.
 
-\item \code{fillMissingParameters}: Getter for fill missing parameters.
+\item \code{fillingParameters}: Getter for fill missing parameters.
 
-\item \code{fillMissingParameters}: Setter for fill missing parameters.
+\item \code{fillingParameters}: Setter for fill missing parameters.
 
-\item \code{annotationParameters}: Getter for annotation parameters.
+\item \code{fragmentsParameters}: Getter for fragments extraction parameters.
 
-\item \code{annotationParameters}: Setter for annotation parameters.
+\item \code{fragmentsParameters}: Setter for fragments extraction parameters.
+
+\item \code{isotopesParameters}: Getter for annotation parameters.
+
+\item \code{isotopesParameters}: Setter for annotation parameters.
 }}
 
 \section{Slots}{
@@ -572,34 +638,34 @@ each target, sample, replicate or collision energy, respectively.
 \item{\code{metadata}}{A data.table with the same number of rows
 as the number of \code{samples}, containing metadata for each sample added as extra columns.}
 
-\item{\code{parameters}}{A \linkS4class{paramList} object containing process parameters for the basic workflow.
-See \code{?"paranList-class"} for more information.}
+\item{\code{parameters}}{A \linkS4class{ntsParameters} object containing process parameters for the basic workflow.
+See \code{?"ntsParameters-class"} for more information.}
 
 \item{\code{QC}}{A \linkS4class{qcData} object used for quality control. More information in \code{?"qcData-class"}.}
 
-\item{\code{pat}}{A length two list with:
-\enumerate{
- \item A list of \linkS4class{features} or \linkS4class{featureGroups} objects
-for each sample replicate derived from the basic workflow
-(peak picking, alignment and grouping) using the \pkg{patRoon} package;
- \item A \linkS4class{featureGroups} object from the \pkg{patRoon} package with unified features.
-}}
+\item{\code{pat}}{An \linkS4class{workflowStep} object from the \pkg{patRoon} package;}
 
-\item{\code{peaks}}{A list of data.tables with peaks for each sample.}
+\item{\code{peaks}}{A \link[data.table]{data.table} with peaks for each sample.}
 
-\item{\code{features}}{A list of data.tables with the features for each replicate.}
+\item{\code{features}}{A \link[data.table]{data.table} with features (i.e., grouped peaks across samples in the project).}
 
-\item{\code{unified}}{A data.table with unified features across different replicates.}
+\item{\code{unified}}{A \link[data.table]{data.table} with unified features
+(i.e., features collapsed by their isotopes and adducts
+as well as respective features acquired with a different ionization).}
 
-\item{\code{filters}}{A list of applied filters to the unified features data.table.}
+\item{\code{filters}}{A list of applied filters to the features.}
 
-\item{\code{removed}}{A data table with the removed unified features.}
+\item{\code{removed}}{A \link[data.table]{data.table} with the removed unified features.}
 
 \item{\code{workflows}}{A list of objects inherent of downstream data processing steps, such as
-suspect screening.}
+suspect screening, track of transformations and others.}
 }}
 
 \note{
-The slot \code{pat} contains objects \linkS4class{features} or
-\linkS4class{featureGroups} which can be used within native functions of the \pkg{patRoon} package.
+The slot \code{pat} contains the native \linkS4class{features} or
+\linkS4class{featureGroups} object which can be used
+within native functions of the \pkg{patRoon} package.
+}
+\references{
+\insertRef{Helmus2021}{ntsIUTA}
 }

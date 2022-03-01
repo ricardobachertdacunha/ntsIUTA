@@ -12,8 +12,11 @@ peaks(object, ...)
 \item{...}{Other method dependent parameters.}
 }
 \value{
-A data.frame with peak details.
+A data.table with peak details.
 }
 \description{
 peaks
+}
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
 }

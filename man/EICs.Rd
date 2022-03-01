@@ -15,3 +15,6 @@ A \link[data.table]{data.table} with EICs in the object.
 \description{
 EICs
 }
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
+}

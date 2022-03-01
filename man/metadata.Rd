@@ -17,3 +17,6 @@ A \link[data.table]{data.table} with metadata in x.
 \description{
 metadata
 }
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
+}

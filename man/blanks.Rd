@@ -15,3 +15,6 @@ A vector with the blank sample replicate group names.
 \description{
 blanks
 }
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
+}

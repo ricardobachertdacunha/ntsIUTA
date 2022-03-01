@@ -1,7 +1,7 @@
 
 
-#' makeFeatures
-#' 
+#' @title makeFeatures_Old
+#'
 #' @description Grouping and alignment of peaks across samples.
 #' The peak grouping uses the \pkg{patRoon} package and
 #' the following algorithms are possible: "xcms3", "xcms", "openms".
@@ -43,7 +43,7 @@
 #' @importFrom dplyr select rename everything
 #' @importFrom data.table rbindlist
 #'
-makeFeatures <- function(obj = NULL,
+makeFeatures_Old <- function(obj = NULL,
                          algorithm = NULL,
                          paramGrouping = NULL,
                          paramFill = NULL,
@@ -201,7 +201,9 @@ buildFeatureList <- function(obj) {
 
   pl$group <- factor(pl$group, levels = rg)
 
-  feat$npeaks <- I(lapply(index, function(h) {as.data.frame(table(pl$group[na.omit(h)]))$Freq}))
+  feat$npeaks <- I(lapply(index, function(h) {
+    as.data.frame(table(pl$group[na.omit(h)]))$Freq
+  }))
 
   feat$hasFilled <- unlist(lapply(index, function(x) {
     1 %in% pl[na.omit(x), "is_filled"]

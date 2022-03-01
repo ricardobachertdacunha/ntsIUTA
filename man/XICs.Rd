@@ -16,3 +16,6 @@ A \link[data.table]{data.table} with XICs from the object.
 \description{
 XICs
 }
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
+}

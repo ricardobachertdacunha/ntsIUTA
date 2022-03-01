@@ -143,7 +143,7 @@ polarity(object) <- "positive"
 ## getter for the polarity mode of each sample or replicate
 polarity(object)
 #or
-polarity(object, groupby = "replicates")
+polarity(object, groupBy = "replicates")
 
 
 #### acquisitionMethods --------------------------------------------------
@@ -162,7 +162,7 @@ acquisitionMethods(object)
 ## function to add metadata in an ntsData object
 object <- addMetadata(
   object,
-  var = c(rep("WW", 5), "QC", rep("Dev", 3)),
+  var = c(rep("WW", 15), rep("QC", 3), rep("Dev", 6), "raw"),
   varname = "datatype"
 )
 
@@ -203,7 +203,6 @@ object
 #### sub-setting simple [#] ----------------------------------------------
 
 object[1:3]
-
 
 
 
@@ -383,9 +382,14 @@ ms2_ex01 <- MS2s(
   samples = 3:4,
   mz = mz_04, ppm = 20,
   rt = NULL, sec = 60,
-  ppmClustering = 50,
+  isolationTimeWindow = 10,
+  isolationMassWindow = 1.3,
+  clusteringMethod = "distance",
+  clusteringUnit = "ppm",
+  clusteringWindow = 15,
   minIntensityPre = 250,
   minIntensityPost = 250,
+  asPatRoon = FALSE, #It is advisable to use this option TRUE only via generateMS2 function.
   mergeCEs = TRUE,
   mergeBy = NULL
 )
@@ -398,7 +402,8 @@ plotMS2s(
   samples = 3:4,
   mz = mz_04, ppm = 20,
   rt = NULL, sec = 60,
-  clusteringUnit = "ppm",
+  isolationTimeWindow = 10,
+  isolationMassWindow = 1.3,
   clusteringMethod = "distance",
   clusteringUnit = "ppm",
   clusteringWindow = 15,
@@ -422,6 +427,8 @@ plotMS2s(
   samples = 3:4,
   mz = mz_04[1, ], ppm = 20,
   rt = NULL, sec = 60,
+  isolationTimeWindow = 10,
+  isolationMassWindow = 1.3,
   clusteringMethod = "distance",
   clusteringUnit = "ppm",
   clusteringWindow = 15,
@@ -456,30 +463,42 @@ plotMS2s(
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ### Basic Workflow -------------------------------------------------------------------------------------------
 
-dt <- object[1:6]
+library(ntsIUTA)
+devtools::load_all()
 
+path <- "C:\\Users\\Ricardo\\Documents\\R_Demo Project"
+
+dt <- setupProject(
+  path = path,
+  title = "Demo Project",
+  description = "Demonstration of ntsIUTA.",
+  date = Sys.Date(),
+  convertFiles = FALSE,
+  convertFrom = NULL,
+  convertToCentroid = TRUE,
+  replicates = NULL,
+  polarity = "positive",
+  method = NA_character_,
+  save = TRUE,
+  makeNewProject = FALSE
+)
+
+dt <- dt[1:6]
+
+replicates(dt) <- c(
+  rep("Blank", 3),
+  rep("IN", 3)
+)
+
+blanks(dt) <- rep("Blank", 6)
+
+samplesTable(dt)
 
 #### add metadata --------------------------------------------------------
 
-var <- data.table::data.table(matrix = c("clean", "dirty"))
+var <- data.table::data.table(matrix = c(rep("clean", 3), rep("dirty", 3)))
 dt <- addMetadata(dt, var)
 
 metadata(dt)
@@ -508,23 +527,22 @@ getCorReplicates(dt, exportResults = FALSE)
 
 dtxcms <- dt
 
-dtxcms <- peakPickingParameters(dtxcms,
+dtxcms <- pickingParameters(dtxcms,
   algorithm = "xcms3",
-  param = xcms::CentWaveParam(
-    ppm = 15, peakwidth = c(6, 60),
-    snthresh = 5, prefilter = c(6, 300),
+  settings = xcms::CentWaveParam(
+    ppm = 15, peakwidth = c(5, 60),
+    snthresh = 10, prefilter = c(6, 10000),
     mzCenterFun = "mean", integrate = 2,
     mzdiff = -0.0001, fitgauss = TRUE,
-    noise = 0, verboseColumns = TRUE,
+    noise = 250, verboseColumns = TRUE,
     firstBaselineCheck = FALSE,
     extendLengthMSW = TRUE
   )
 )
 
-peakPickingParameters(dtxcms)
+pickingParameters(dtxcms)
 
-dtxcms <- peakPicking(obj = dtxcms, save = FALSE)
-
+dtxcms <- peakPicking(dtxcms, save = FALSE)
 
 
 
@@ -536,7 +554,7 @@ dtopenms@algorithms$peakPicking <- "openms"
 
 paramOpenms <- list(
   noiseThrInt = 250,
-  chromSNR = 3,
+  chromSNR = 10,
   chromFWHM = 5,
   mzPPM = 15,
   reEstimateMTSD = TRUE,
@@ -629,14 +647,14 @@ dtsafd <- peakPicking(obj = dtsafd, save = FALSE)
 
 ##### Inspecting Peaks ----------------------------------------------------------
 
-#Option 1
-dtxcms@peaks[1, ]
-dtopenms@peaks[1, ]
+#using the S4 method and the mz/rt filtering as presented earlier
+mz_01 <- c(247.1651, 239.0628)
+rt_01 <- c(839, 937)
 
-#Option 2, using the S4 method
-peaks(dtxcms, samples = NULL, mz = 748.4842, ppm = 10, rt = 14.9, rtUnit = "min")
+peaks(dtxcms, samples = 4, mz = mz_01, ppm = 10, rt = rt_01, sec = 30)
 
 plotPeaks(dtxcms, samples = NULL, mz = 748.4842, ppm = 10, rt = 14.9, rtUnit = "min", colorBy = "peaks")
+
 
 View(peaks(dtxcms, samples = NULL, mz = 441.1670, ppm = 10, rt = 15.27, rtUnit = "min"))
 

@@ -18,3 +18,6 @@ An object updated with blank sample replicate groups.
 \description{
 blanks<-
 }
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
+}

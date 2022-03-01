@@ -1,5 +1,532 @@
 
 
+#' @title importRawData_old
+#' @description Function to import MS data from the MS files listed in
+#' the \linkS4class{ntsData} object. Files should contain centroided spectra.
+#' The function \code{\link[MSnbase]{readMSData}} from the
+#' \code{MSnbase} package is used to read the MS files.
+#'
+#' @param obj An \linkS4class{ntsData} object.
+#' @param rtFilter A numeric vector with length 2 defining the minimum
+#' and maximum chromatographic retention time for the listed MS files.
+#' @param rtUnit The unit of the \code{rtFilter}.
+#' Possible values are \code{min} (the default) and \code{sec}.
+#' @param msLevel The MS dimensions for the rtFilter to be applied.
+#' The default is both MS1 and MS2 using \code{c(1,2)}.
+#' @param centroidedData Logical, set to \code{TRUE} for MS files
+#' with centroided data or \code{FALSE} for profile data.
+#' \code{NA} will collect all the data from the MS files.
+#' @param removeEmptySpectra Logical, set to TRUE if empty spectra should be removed.
+#' It is recommended to remove empty spectra as it may cause issues during creation of features.
+#' @param save Logical, set to \code{TRUE} to save updated
+#' \linkS4class{ntsData} object in the \strong{rdata} folder.
+#' Note that \code{TRUE} overwrites the existing \linkS4class{ntsData} object.
+#' Optionally, a character string can be given instead of \code{TRUE}
+#' to be used as file name, avoiding overwriting.
+#'
+#' @return The \linkS4class{ntsData} object including a standard
+#' \linkS4class{OnDiskMSnExp} object in the MSnExp slot. Note, that
+#' the \linkS4class{OnDiskMSnExp} object can also be used within
+#' the workflow of \pkg{Bioconductor} packages.
+#'
+#' @references
+#' \insertRef{MSnbase1}{ntsIUTA}
+#' \insertRef{MSnbase2}{ntsIUTA}
+#'
+#' @export
+#'
+#' @importFrom checkmate assertClass
+#' @importFrom BiocParallel SnowParam register
+#' @importFrom parallel detectCores
+#' @importClassesFrom MSnbase OnDiskMSnExp
+#' @importFrom MSnbase readMSData
+#' @importMethodsFrom MSnbase filterRt filterEmptySpectra
+#' @importFrom methods new
+#'
+#' @examples
+#' path <- system.file(package = "ntsIUTA", dir = "extdata")
+#' dt <- setupProject(path = path, save = FALSE)
+#' dt <- importRawData(dt[1], save = FALSE, centroidedData = TRUE)
+#'
+importRawData_old <- function(
+  obj = NULL,
+  rtFilter = NULL,
+  rtUnit = "min",
+  msLevel = c(1, 2),
+  centroidedData = TRUE,
+  removeEmptySpectra = TRUE,
+  save = FALSE
+) {
+  assertClass(obj, "ntsData")
+
+  snow <- SnowParam(
+    workers = detectCores() - 1,
+    type = "SOCK",
+    exportglobals = FALSE,
+    progressbar = TRUE
+  )
+
+  register(snow, default = TRUE)
+
+  msFiles <- obj@samples$file[drop = TRUE]
+  sample_name <- obj@samples$sample
+  sample_group <- obj@samples$group
+
+  if (length(sample_name) == 0) {
+    warning("There are not samples in the ntsData object.")
+    return(obj)
+  }
+
+  raw <- suppressWarnings(
+    readMSData(
+      msFiles,
+      pdata = new("NAnnotatedDataFrame",
+      data.frame(
+        sample_name = sample_name,
+        sample_group = sample_group)
+      ),
+      msLevel. = NULL,
+      mode = "onDisk",
+      centroided. = centroidedData,
+      smoothed. = FALSE
+    )
+  )
+
+  if (!is.null(rtFilter)) {
+    if (rtUnit == "min") rtFilter <- rtFilter * 60
+    raw <- filterRt(raw, rt = rtFilter, msLevel. = msLevel)
+  }
+
+  if (removeEmptySpectra) raw <- filterEmptySpectra(raw)
+
+  obj@MSnExp <- raw
+
+  if (save) saveObject(obj = obj)
+
+  if (is.character(save)) saveObject(obj = obj, filename = save)
+
+  return(obj)
+}
+
+
+
+
+#' @title centroidProfileData_old
+#' @description Centroiding of profile data with additional possibility
+#' for data smoothing before centroiding and \emph{m/z} refinement.
+#' The \code{centroidProfileData} function combines functions \code{smooth}
+#' and \code{pickPeaks} from the \code{MSnbase} package, see references.
+#'
+#' @param obj A \linkS4class{ntsData} object with profile data for centroiding.
+#' @param halfwindow Sets the window size for centroiding as \code{2 * halfwindow + 1}.
+#' The \code{halfwindow} should be slightly larger than the full width
+#' at half maximum of the profile peak.
+#' @param SNR The signal-to-noise ratio to consider a local maximum as peak.
+#' @param noiseMethod The method to estimate the noise level.
+#' Possible methods are "MAD" (the default) and "SuperSmoother".
+#' See \code{?MSnbase::pickPeaks} for more information.
+#' @param smoothing Logical, set to \code{TRUE} for applying smothing
+#' to the profile data before centroiding. The default is FALSE.
+#' @param methodSmoothing Method for data smoothing.
+#' The possible methods are "SavitzkyGolay" (the default) and "MovingAverage".
+#' See \code{?MSnbase::smooth} for more information and arguments,
+#' which are passed by \code{...}.
+#' @param ... Arguments for selected smoothing method.
+#' See \code{?MSnbase::smooth} for possible arguments for each method.
+#' @param methodRefineMz Method for refinement.
+#' Possible methods are "none" (the default, for not applying \emph{m/z} refinement),
+#' "kNeighbors" and "descendPeak". See \code{?MSnbase::pickPeaks} for more information.
+#' @param k When refine method is "kNeighbors",
+#' \code{k} is number of closest signals to the centroid.
+#' @param signalPercentage When refine method is "descendPeak",
+#' \code{signalPercentage} is the minimum signal percentage of centroids to refine \emph{m/z}.
+#' @param stopAtTwo Logical, when refine method is "descendPeak",
+#' set to \code{TRUE} for allowing two consecutive equal or higher signals.
+#' \code{FALSE} will stop when one equal or higher centroid is found.
+#' @param save Logical, set to \code{TRUE} to replace
+#' the original files by the centroided files in disk.
+#' The location is taken from the originbal file paths.
+#'
+#' @return Centroided \linkS4class{ntsData} object.
+#' When \code{save} is set to TRUE, the profile data in the original
+#' mzML or mzXML files is replaced by the centroided data.
+#'
+#' @references
+#' \insertRef{MSnbase2}{ntsIUTA}
+#'
+#' @export
+#'
+#' @importClassesFrom MSnbase OnDiskMSnExp
+#' @importMethodsFrom MSnbase fileNames smooth pickPeaks writeMSData
+#'
+centroidProfileData_old <- function(obj,
+                                halfwindow = 2,
+                                SNR = 0,
+                                noiseMethod = "MAD",
+                                smoothing = FALSE,
+                                methodSmoothing = "SavitzkyGolay",
+                                methodRefineMz = "kNeighbors",
+                                k = 1,
+                                signalPercentage = 10, stopAtTwo = TRUE,
+                                save = FALSE, ...) {
+
+  raw <- obj@MSnExp
+
+  if (smoothing) {
+    raw <- raw %>% MSnbase::smooth(method = methodSmoothing, ...)
+  }
+
+  if (methodRefineMz == "kNeighbors") {
+    raw <- pickPeaks(raw,
+                     halfWindowSize = halfwindow,
+                     SNR = SNR,
+                     noiseMethod = noiseMethod,
+                     refineMz = methodRefineMz,
+                     k = k)
+  } else {
+    if (methodRefineMz == "descendPeak") {
+      raw <- pickPeaks(raw,
+                       halfWindowSize = halfwindow,
+                       SNR = SNR,
+                       noiseMethod = noiseMethod,
+                       refineMz = methodRefineMz,
+                       signalPercentage = signalPercentage,
+                       stopAtTwo = TRUE)
+    } else {
+      raw <- pickPeaks(raw,
+                       halfWindowSize = halfwindow,
+                       SNR = SNR,
+                       noiseMethod = noiseMethod,
+                       refineMz = "none")
+    }
+  }
+
+  obj@MSnExp <- raw
+
+  if (save) {
+    fls_new <- fileNames(raw)
+    writeMSData(raw, file = fls_new)
+  }
+
+  return(obj)
+
+}
+
+
+
+### components_Old -----
+
+#' @describeIn ntsData Getter for components (i.e., annotated features).
+#'
+#' @param object An \linkS4class{ntsData} object.
+#' @param samples The indice/s or name/s of samples to keep in the \code{object}.
+#' @param ID The ID of features of interest.
+#' @param mz Alternatively to \code{ID}, the \emph{m/z} of interest.
+#' can be of length two, defining a mass range.
+#' @param ppm The mass deviation, in ppm, of a given \code{mz}.
+#' @param rt The retention time to find features.
+#' @param rtWindow The time deviation. Can be of length two, defining a time range.
+#' @param rtUnit The unit of the time arguments. Possible values are "sec" and "min".
+#' @param compNumber Alternatively, the component number to find features.
+#' @param entireComponents Logical, set to \code{TRUE} to extract all features
+#' from the represented components.
+#' @param onlyAnnotated Logical, set to \code{TRUE} to extract only annotated features.
+#' @param onlyRelated Logical, set to \code{TRUE} to extract only features that are related
+#' to the features of interest.
+#'
+#' @export
+#'
+#' @importFrom checkmate assertSubset
+#' @importFrom dplyr filter between
+#' @importFrom stats na.omit
+#'
+setMethod("components", "ntsData", function(object,
+                                            samples = NULL,
+                                            ID = NULL,
+                                            mz = NULL, ppm = 5,
+                                            rt = NULL, rtWindow = 1, rtUnit = "sec",
+                                            compNumber = NULL,
+                                            entireComponents = TRUE,
+                                            onlyAnnotated = FALSE,
+                                            onlyRelated = TRUE) {
+
+  if (missing(samples)) samples <- NULL
+
+  if (missing(ID)) ID <- NULL
+
+  if (missing(mz)) mz <- NULL
+
+  if (missing(compNumber)) compNumber <- NULL
+
+  comp <- object@annotation$comp
+
+  if (nrow(comp) == 0) return(comp)
+
+  rg <- unique(object@samples$group)
+
+  if (!is.null(samples)) {
+    if (is.character(samples)) {
+      rg <- unique(object@samples$group[object@samples$sample %in% samples])
+    } else {
+      rg <- unique(object@samples$group[samples])
+    }
+  }
+
+  comp <- comp[comp$group %in% rg, ]
+
+  if (nrow(comp) == 0) return(comp)
+
+  if (!is.null(ID)) {
+    comp <- comp[comp$ID %in% ID, ]
+  } else {
+    if (!is.null(mz)) {
+      if (missing(rt)) rt <- NULL
+      if (missing(rtWindow)) rtWindow <- NULL
+      if (missing(rtUnit)) rtUnit <- "sec"
+      if (missing(ppm)) ppm <- 20
+      assertSubset(rtUnit, c("sec", "min"))
+      mzr <- mzrBuilder(mz = mz, ppm = ppm)
+      rtr <- rtrBuilder(rt = rt, rtWindow = rtWindow, rtUnit = rtUnit)
+      comp <- dplyr::filter(comp,
+                            between(mz, mzr[1], mzr[2]),
+                            between(rt, rtr[1], rtr[2]))
+    } else {
+      if (!is.null(compNumber)) {
+        comp <- comp[comp$comp %in% compNumber, ]
+      }
+    }
+  }
+
+  if (nrow(comp) == 0) return(comp)
+
+  comp2 <- comp
+
+  if (!missing(entireComponents)) {
+    if (entireComponents) {
+      comp2 <- object@annotation$comp[object@annotation$comp$comp %in% comp2$comp |
+                                        object@annotation$comp$isogroup %in% comp2$isogroup, ]
+      comp2 <- comp2[comp2$group %in% rg, ]
+    }
+  }
+
+  if (!missing(onlyAnnotated)) {
+    if (onlyAnnotated) comp2 <- comp2[!is.na(comp2$isoclass) | (comp2$nAdducts > 0), ]
+  }
+
+  if (!missing(onlyRelated)) {
+    if (onlyRelated) {
+      isos <- comp2$ID[comp2$Mion %in% stats::na.omit(comp$Mion)]
+      comp2 <- comp2[comp2$ID %in% unique(isos), ]
+    }
+  }
+
+  return(comp2)
+
+})
+
+
+
+
+
+#' @title plotPeaksFunc_Old
+#' @description Method for plotting peaks from a \linkS4class{ntsData} object.
+#'
+#' @param obj An \linkS4class{ntsData} object.
+#' @param samples The index or name of the sample/s.
+#' The default is \code{NULL} and all samples are used.
+#' @param ID The identifier of the peaks of interest.
+#' When not \code{NULL}, overwrites any given \code{mz} and \code{rt} value.
+#' @param mz Optional target \emph{m/z} to find peaks using
+#' the mass deviation specified by the \code{ppm} parameter.
+#' @param ppm The mass deviation to extract the peaks
+#' when \code{mz} is specified.
+#' @param rt The retention time in minutes or seconds,
+#' depending on the defined \code{rtUnit}, see below.
+#' Only used when \code{mz} is specified.
+#' @param rtWindow The time deviation to collect peaks.
+#' The time unit is the defined by \code{rtUnit}.
+#' A time interval can be given with a length 2 vector,
+#' defining the minimum and maximum retention time.
+#' @param rtUnit Possible entries are \code{min} or \code{sec}.
+#' The default is \code{min}.
+#' @param colorBy Possible values are \code{"peaks"} (the default),
+#' \code{"samples"} or \code{sampleGroups},
+#' for colouring by peaks, samples or sample replicate groups, respectively.
+#'
+#' @return A peak/s map plot produced through \pkg{plotly}.
+#'
+#' @export
+#'
+#' @importFrom checkmate assertClass assertSubset
+#' @importFrom dplyr between filter
+#' @importFrom plotly toRGB plot_ly add_trace layout add_segments
+#'
+plotPeaksFunc_Old <- function(obj, samples = NULL,
+                          ID = NULL,
+                          mz = NULL, ppm = 20,
+                          rt = NULL, rtWindow = NULL,
+                          rtUnit = "sec",
+                          colorBy = "samples") {
+  
+  assertClass(obj, "ntsData")
+  
+  assertSubset(rtUnit, c("sec", "min"))
+  
+  assertSubset(colorBy, c("peaks", "samples", "sampleGroups"))
+  
+  if (!is.null(samples)) obj <- filterFileFaster(obj, samples)
+  
+  rtr <- NULL
+  
+  if (!is.null(ID)) {
+    pki <- obj@peaks[obj@peaks$ID %in% ID, ]
+  } else {
+    if (!is.null(mz)) {
+      mzr <- mzrBuilder(mz = mz, ppm = ppm)
+      rtr <- rtrBuilder(rt = rt, rtWindow = rtWindow, rtUnit = rtUnit)
+      if (is.null(rtr)) rtr <- c(min(obj@peaks$rtmin), max(obj@peaks$rtmax))
+      pki <- dplyr::filter(obj@peaks,
+                           dplyr::between(mz, mzr[1], mzr[2]),
+                           dplyr::between(rt, rtr[1], rtr[2]))
+    } else {
+      return(cat("One of ID or mz should be given."))
+    }
+  }
+  
+  if (nrow(pki) == 0) return(cat("No features found."))
+  
+  if (is.null(rtr)) rtr <- c(min(pki$rtmin) - 60, max(pki$rtmax) + 60)
+  
+  if (is.null(ppm)) ppm <- 5
+  
+  sp <- obj@samples$sample
+  
+  rg <- obj@samples$group
+  
+  if (colorBy == "samples") {
+    colors <- getColors(obj, "samples")
+    col_val <- apply(pki, MARGIN = 1, FUN = function(x) colors[names(colors) %in% x["sample"]])
+    leg <- pki$sample
+    sleg <- !duplicated(leg)
+  } else {
+    if (colorBy == "peaks") {
+      colors <- getColors(nrow(pki))
+      col_val <- colors
+      leg <- paste0( pki$ID, "/", round(pki$mz, digits = 4), "/", round(pki$rt, digits = 0))
+      sleg <- !duplicated(leg)
+    } else {
+      colors <- getColors(obj, "sampleGroups")
+      col_val <- apply(pki, MARGIN = 1, FUN = function(x) colors[names(colors) %in% x["sample"]])
+      leg <- pki$group
+      sleg <- !duplicated(leg)
+    }
+  }
+    
+  EIC <- extractEIC(obj,
+                    mz = c(min(pki$mzmin), max(pki$mzmax)),
+                    rtWindow = rtr, rtUnit = "sec")
+  
+  plot <- plot_ly()
+  
+  for (i in seq_len(nrow(pki))) {
+    
+    df <- EIC[EIC$mz >= pki$mzmin[i] &
+                EIC$mz <= pki$mzmax[i] &
+                EIC$file == which(sp == pki$sample[i]), ]
+    
+    
+    
+    plot <- plot %>% add_trace(df,
+                               x = df$rt,
+                               y = df$i,
+                               type = "scatter", mode = "markers",
+                               marker = list(size = 0.2,
+                                             color = col_val[i]),
+                               connectgaps = TRUE,
+                               name = leg[i],
+                               legendgroup = leg[i],
+                               showlegend = sleg[i]
+    )
+    
+    df <- df[df$rt >= pki$rtmin[i] & df$rt <= pki$rtmax[i], ]
+    
+    plot <- plot %>%  add_trace(df,
+                                x = df$rt,
+                                y = df$i,
+                                type = "scatter", mode =  "markers",
+                                fill = "tozeroy", connectgaps = TRUE,
+                                fillcolor = paste(color = col_val[i], 50, sep = ""),
+                                #line = list(width = 0.1, color = col_val[i]),
+                                marker = list(size = 3, color = col_val[i]),
+                                name = leg[i],
+                                legendgroup = leg[i],
+                                showlegend = FALSE,
+                                hoverinfo = "text",
+                                text = paste("</br> peak: ", pki$ID[i],
+                                             "</br> sample: ", pki$sample[i],
+                                             "</br> <i>m/z</i>: ", round(pki$mz[i], digits = 4),
+                                             "</br> dppm: ", round(((pki$mzmax[i] - pki$mzmin[i]) / pki$mz[i]) * 1E6, digits = 0),
+                                             "</br> rt: ", round(pki$rt[i], digits = 0),
+                                             "</br> drt: ", round(pki$rtmax[i] - pki$rtmin[i], digits = 0),
+                                             "</br> Int: ", round(pki$intensity[i], digits = 0),
+                                             "</br> Filled: ",
+                                             if ("is_filled" %in% colnames(pki)) {
+                                               ifelse(pki$is_filled[i] == 1, TRUE, FALSE)
+                                             } else {
+                                               FALSE
+                                             }))
+    
+    plot <- plot %>% add_segments(x = pki$rt[i], xend = pki$rt[i], y = 0, yend = pki$intensity[i],
+                                  legendgroup = leg[i], showlegend = FALSE, line = list(color = col_val[i], size = 0.5))
+    
+  }
+  
+  dppm <- c(round(min(pki$mzmin), digits = 4), round(max(pki$mzmax), digits = 4))
+  dppm_val <- round((dppm[2] - dppm[1])/dppm[2] * 1E6, digits = 0)
+  drt <- c(round(min(pki$rtmin), digits = 0), round(max(pki$rtmax), digits = 0))
+  
+  title_text <- paste0("<i>m/z</i>",": ", dppm[1], " - ", dppm[2],
+                       " (", dppm_val, " ppm)",
+                       "  rt: ", drt[1], " - ", drt[2],
+                       " (",  drt[2] - drt[1], " sec.)")
+  
+  title <- list(text = title_text, x = 0.1, y = 0.98,
+                font = list(size = 9, color = "black"))
+  
+  xaxis <- list(linecolor = toRGB("black"),
+                linewidth = 2, title = "Retention Time (sec.)",
+                titlefont = list(size = 12, color = "black"),
+                range = c(rtr[1], rtr[2]),
+                autotick = TRUE, ticks = "outside")
+  
+  yaxis <- list(linecolor = toRGB("black"),
+                linewidth = 2, title = "Intensity",
+                titlefont = list(size = 12, color = "black"))
+  
+  plot <- plot %>% plotly::layout(xaxis = xaxis,
+                                  yaxis = yaxis,
+                                  title = title)
+  
+  return(plot)
+  
+  # TODO Idea for 3D plotly
+  # if (td) {
+  #   
+  #   df <- EIC
+  #   df$file <- sapply(df$file,FUN = function(x) sp[x])
+  #   df$file <- factor(df$file, levels = sp, ordered = FALSE)
+  #   
+  #   plot_ly(df, x = ~rt, y = ~mz, z = ~i, color = ~file, colors = c('#BF382A', '#0C4B8E'),
+  #           marker = list(size = 2), mode = "scatter3d")
+  # }
+  
+}
+
+
+
+
+
+
 #' @title removeDuplicateNamesNOTUSED
 #' @description Removes duplicate sample names to avoid problems during further analysis.
 #'

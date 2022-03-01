@@ -17,3 +17,6 @@ Get the path of the object.
 \description{
 path
 }
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
+}

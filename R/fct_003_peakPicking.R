@@ -10,140 +10,163 @@
 #' The parameters depend on the algorithm chosen.
 #' See ?\pkg{patRoon} for further information.
 #'
-#' @param obj An \linkS4class{ntsData} object.
-#' @param algorithm The algorithm to use for peak picking.
-#' @param param List of arguments for the specified algorithm.
-#' See \code{\link[patRoon]{findFeatures}} for more information.
+#' @param object An \linkS4class{ntsData} object.
+#' @param algorithm A character string with the algorithm to use for peak picking.
+#' @param settings List of parameter settings for the specified algorithm.
+#' See \link[patRoon]{findFeatures} for more information.
 #' @param save Logical, set to \code{TRUE} to save updated
 #' \linkS4class{ntsData} object in the \strong{rdata} folder.
 #' Note that \code{TRUE} overwrites the existing \linkS4class{ntsData} object.
 #' Optionally, a character string can be given instead of \code{TRUE}
 #' to be used as file name, avoiding overwriting.
 #'
-#' @return An \linkS4class{ntsData} object containing a \linkS4class{features}
-#' object in the slot \code{patdata}.
+#' @return An \linkS4class{ntsData} object with peaks per sample and an updated
+#' \linkS4class{features} object added to the slot \code{pat}.
 #'
 #' @references
 #' \insertRef{Helmus2021}{ntsIUTA}
-#' \insertRef{xcms1}{ntsIUTA}
-#' \insertRef{xcms2}{ntsIUTA}
-#' \insertRef{xcms3}{ntsIUTA}
 #'
 #' @export
 #'
-#' @importFrom checkmate assertClass testChoice
+#' @importFrom checkmate assertClass
 #' @importClassesFrom patRoon features
 #' @importFrom patRoon findFeatures featureTable
-#' @importMethodsFrom MSnbase filterFile fileNames
-#' @importMethodsFrom xcms chromPeaks
-#' @importFrom dplyr select everything rename
-#' @importFrom data.table rbindlist
 #'
-peakPicking <- function(obj = NULL,
+peakPicking <- function(object = NULL,
                         algorithm = NULL,
-                        param = NULL,
+                        settings = NULL,
                         save = TRUE) {
 
-  assertClass(obj, "ntsData")
+  assertClass(object, "ntsData")
 
-  if (length(obj@MSnExp) == 0) {
-    print("Importing data to MSnExp slot...")
-    obj <- importRawData(obj, removeEmptySpectra = TRUE, save = FALSE)
+  if (is.null(algorithm)) {
+    algorithm <- pickingParameters(object)@algorithm
   }
-
-  if (is.null(algorithm)) algorithm <- peakPickingParameters(obj)@algorithm
 
   if (is.na(algorithm)) {
     warning("Peak picking algorihtm not defined!")
-    return(obj)
+    return(object)
   }
-  
-  if (is.null(param)) param <- peakPickingParameters(obj)@param
 
-  sinfo <- data.frame(path = dirname(obj@samples$file),
-                      analysis = obj@samples$sample,
-                      group = obj@samples$group,
-                      blank = obj@samples$blank)
+  if (is.null(settings)) {
+    settings <- pickingParameters(object)@settings
+  }
+
+  sinfo <- data.frame(path = dirname(object@samples$file),
+                      analysis = object@samples$sample,
+                      group = object@samples$replicate,
+                      blank = object@samples$blank)
 
   sinfo$blank[is.na(sinfo$blank)] <- ""
-  
-  ag <- list(analysisInfo = sinfo, algorithm = algorithm)
 
-  pat <- do.call(findFeatures, c(ag, param, verbose = TRUE))
+  ag <- list(
+    analysisInfo = sinfo,
+    algorithm = algorithm
+  )
 
-  obj@patdata <- pat
+  pat <- do.call(
+    findFeatures,
+    c(ag, settings,
+    verbose = TRUE)
+  )
 
-  obj <- buildPeakList(obj)
+  object@pat <- pat
 
-  obj <- peakPickingParameters(obj, algorithm = algorithm, param = param)
-  
-  if (save) saveObject(obj = obj)
+  object <- buildPeaksTable(object)
 
-  if (is.character(save)) saveObject(obj = obj, filename = save)
+  object <- pickingParameters(
+    object,
+    algorithm = algorithm,
+    settings = settings
+  )
 
-  return(obj)
+  if (save) saveObject(object = object)
 
+  if (is.character(save)) {
+    saveObject(
+      object = object,
+      filename = save
+    )
+  }
+
+  return(object)
 }
 
 
 
 
-#' buildPeakList
+#' @title buildPeaksTable
 #'
-#' @param obj An \linkS4class{ntsData} object containing a \linkS4class{features}
-#' object in the slot \code{patdata}.
+#' @param object An \linkS4class{ntsData} object
+#' containing a \linkS4class{features}
+#' object in the slot \code{pat}.
 #'
-#' @return A data.frame containing information for peaks in each sample.
-#' 
+#' @return A \link[data.table]{data.table} containing
+#' information for peaks in each sample.
+#'
 #' @importClassesFrom patRoon features
-#' @importMethodsFrom patRoon featureTable
-#' @importFrom dplyr rename select
+#' @importFrom dplyr select
 #' @importMethodsFrom xcms chromPeaks
-#' @importFrom data.table rbindlist
+#' @importFrom data.table rbindlist as.data.table setnames
+#' @importFrom checkmate testClass
 #'
-buildPeakList <- function(obj) {
+buildPeaksTable <- function(object) {
 
-  pat <- obj@patdata
-  
-  peaks <- featureTable(pat)
-  
-  peaks <- lapply(seq_len(length(peaks)), function(x, sp, peaks) {
-    peaks[[sp[x]]]$sample <- sp[x]
-    peaks[[sp[x]]] <- rename(peaks[[sp[x]]], rt = ret, rtmin = retmin, rtmax = retmax)
-    return(peaks[[sp[x]]])
-  }, sp = names(peaks), peaks = peaks)
-  
-  names(peaks) <- samples(obj)
-  
-  if (class(pat) == "featuresXCMS3" | class(pat) == "featureGroupsXCMS3") {
-    extra <- base::as.data.frame(chromPeaks(pat@xdata, isFilledColumn = TRUE))
-    extra <- rename(extra, intensity = maxo, area = into)
-    extra$sample <- samples(obj)[extra$sample]
-    
-    peaks <- lapply(peaks, function(x, extra) {
-      
-      x <- cbind(x, extra[extra$sample == unique(x$sample), !(colnames(extra) %in% colnames(x))])
-      return(x)
-    }, extra = extra)
-    
-    names(peaks) <- samples(obj)
-    
+  cat("Building peaks table... \n")
+
+  pat <- object@pat
+
+  peaks <- pat@features
+
+  if (checkmate::testClass(peaks, "features")) peaks <- peaks@features
+
+  peaks <- rbindlist(peaks, idcol = "sample")
+
+  peaks <- setnames(
+    peaks,
+    c("ID", "ret", "retmin", "retmax"),
+    c("id", "rt", "rtmin", "rtmax"),
+  )
+
+  if (checkmate::testClass(pat, "featuresXCMS3") | checkmate::testClass(pat, "featureGroupsXCMS3")) {
+    extra <- as.data.table(chromPeaks(pat@xdata, isFilledColumn = TRUE))
+    extra <- setnames(extra, c("maxo", "into"), c("intensity", "area"))
+    extra[, sample := samples(object)[extra$sample]]
+
+    if (nrow(peaks) == nrow(extra) & all(peaks$mz == extra$mz)) {
+      newCols <- colnames(extra)[!colnames(extra) %in% colnames(peaks)]
+      peaks <- cbind(peaks, extra[, newCols, with = FALSE])
+    }
   }
-  
-  peaks <- base::as.data.frame(data.table::rbindlist(peaks, idcol = NULL))
 
-  if ("group" %in% colnames(peaks)) peaks <- rename(peaks, feature = group)
+  peaks <- setnames(peaks, "group", "feature", skip_absent = TRUE)
 
-  peaks$group <- sapply(peaks$sample, FUN = function(x) x <- obj@samples$group[which(obj@samples$sample == x)])
+  rpl <- replicates(object)
+  names(rpl) <- samples(object)
+  peaks[, replicate := rpl[peaks$sample]][]
 
-  peaks$ID <- seq_len(nrow(peaks))
+  peaks$id <- seq_len(nrow(peaks))
+  peaks$id <- paste0(
+    "P",
+    peaks$id,
+    "_M",
+    round(peaks$mz, digits = 0),
+    "_R",
+    round(peaks$rt, digits = 0)
+  )
 
-  rownames(peaks) <- peaks$ID
+  peaks <- select(peaks,
+    id,
+    sample,
+    replicate,
+    mz, rt,
+    intensity, area,
+    mzmin, mzmax,
+    rtmin, rtmax,
+    everything()
+  )
 
-  peaks <- select(peaks, ID, sample, group, everything())
+  object@peaks <- peaks
 
-  obj@peaks <- peaks
-
-  return(obj)
-
+  return(object)
 }

@@ -17,3 +17,6 @@ A vector with polarity modes for entries in the object.
 \description{
 polarity
 }
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
+}

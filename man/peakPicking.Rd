@@ -4,15 +4,15 @@
 \alias{peakPicking}
 \title{peakPicking}
 \usage{
-peakPicking(obj = NULL, algorithm = NULL, param = NULL, save = TRUE)
+peakPicking(object = NULL, algorithm = NULL, settings = NULL, save = TRUE)
 }
 \arguments{
-\item{obj}{An \linkS4class{ntsData} object.}
+\item{object}{An \linkS4class{ntsData} object.}
 
-\item{algorithm}{The algorithm to use for peak picking.}
+\item{algorithm}{A character string with the algorithm to use for peak picking.}
 
-\item{param}{List of arguments for the specified algorithm.
-See \code{\link[patRoon]{findFeatures}} for more information.}
+\item{settings}{List of parameter settings for the specified algorithm.
+See \link[patRoon]{findFeatures} for more information.}
 
 \item{save}{Logical, set to \code{TRUE} to save updated
 \linkS4class{ntsData} object in the \strong{rdata} folder.
@@ -21,8 +21,8 @@ Optionally, a character string can be given instead of \code{TRUE}
 to be used as file name, avoiding overwriting.}
 }
 \value{
-An \linkS4class{ntsData} object containing a \linkS4class{features}
-object in the slot \code{patdata}.
+An \linkS4class{ntsData} object with peaks per sample and an updated
+\linkS4class{features} object added to the slot \code{pat}.
 }
 \description{
 Finds chromatographic peaks from centroided MS data in the
@@ -35,7 +35,4 @@ See ?\pkg{patRoon} for further information.
 }
 \references{
 \insertRef{Helmus2021}{ntsIUTA}
-\insertRef{xcms1}{ntsIUTA}
-\insertRef{xcms2}{ntsIUTA}
-\insertRef{xcms3}{ntsIUTA}
 }

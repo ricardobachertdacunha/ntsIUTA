@@ -12,12 +12,15 @@ extractMSn(
   ppm = 20,
   rt = NULL,
   sec = 60,
-  clusteringMethod = "euclidean",
-  clusteringUnit = "mz",
-  clusteringWindow = 0.008,
-  minIntensityPre = 250,
-  minIntensityPost = 100,
-  mergeCEs = FALSE,
+  isolationTimeWindow = 10,
+  isolationMassWindow = 1.3,
+  clusteringMethod = "distance",
+  clusteringUnit = "ppm",
+  clusteringWindow = 25,
+  minIntensityPre = 200,
+  minIntensityPost = 200,
+  asPatRoon = TRUE,
+  mergeCEs = TRUE,
   mergeBy = "samples"
 )
 }
@@ -48,6 +51,10 @@ should be equal to the length or number of rows of \code{mz}.}
 
 \item{sec}{A numeric vector of length one with the time deviation, in seconds, to screen for isolation targets.}
 
+\item{isolationTimeWindow}{A numeric vector of length one with the time deviation of the isolation window, in seconds.}
+
+\item{isolationMassWindow}{A numeric vector of length one with the mass isolation window, in Da.}
+
 \item{clusteringMethod}{A character vector with the method for clustering.
 Possible values are \emph{euclidean} (the default) or \emph{distance}.}
 
@@ -63,7 +70,9 @@ to be applied before clustering \emph{m/z} values across spectra.}
 \item{minIntensityPost}{A length one numeric vector with the minimum intensity of peaks
 to be applied after clustering and averaging of the \emph{m/z} and intensity values.}
 
-\item{mergeCEs}{Logical, set to TRUE to cluster different collision energies.
+\item{asPatRoon}{Logical, set to \code{TRUE} for return an \linkS4class{MSPeakLists} object.}
+
+\item{mergeCEs}{Logical, set to \code{TRUE} to cluster different collision energies.
 When FALSE, the spectra from different collision energies won't be clustered.}
 
 \item{mergeBy}{A length one character vector with either "samples" (the default) or "replicates"

@@ -15,3 +15,6 @@ A vector with sample names.
 \description{
 samples
 }
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
+}

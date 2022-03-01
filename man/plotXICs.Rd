@@ -16,3 +16,6 @@ A plot with XICs from the object.
 \description{
 plotXICs
 }
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
+}

@@ -1,62 +1,99 @@
 
 
-### suspectList -----
+### ntsSettings -----
 
-#' @title suspectList
+#' @title ntsSettings
 #'
-#' @slot path The path of the csv file in disk.
-#' @slot data The data.frame listing all the suspects of interest.
-#' @slot length The number of compounds in the suspect list.
-#' @slot comment Optional comment for the suspect list.
+#' @description A set of settings for a data processing step of the basic workflow.
+#' The \linkS4class{ntsSettings} object contains the algorithm to be used and the list of respective settings.
 #'
-#' @return An \linkS4class{suspectList} object to be used within screening
-#' workflows of \pkg{ntsIUTA}.
-#'
-#' @export
-#'
-setClass("suspectList",
-  slots = c(
-    path = "character",
-    data = "data.frame",
-    length = "numeric",
-    comment = "character"
-  ),
-  prototype = list(
-    path = character(),
-    data = data.frame(),
-    length = numeric(),
-    comment = character()
-  )
-)
-
-
-
-
-### paramSet -----
-
-#' @title paramSet
-#'
-#' @description A set of parameters for a data processing step of the basic workflow.
-#' The \linkS4class{paramSet} object contains the algorithm to be used and the list of respective parameters. 
-#' 
 #' @slot algorithm A character string with the name of the algorithm to be used.
-#' @slot param A list of parameters dependent on the algorithm used.
+#' @slot settings A list of settings dependent on the algorithm used.
 #'
-#' @return A \linkS4class{paramSet} object to be used for
+#' @return A \linkS4class{ntsSettings} object to be used for
 #' the basic workflow of \pkg{ntsIUTA}.
 #'
 #' @export
 #'
-setClass("paramSet",
+setClass("ntsSettings",
   slots = c(
     algorithm = "character",
-    param = "list"
+    settings = "list"
   ),
   prototype = list(
     algorithm = NA_character_,
-    param = list()
+    settings = list()
   )
 )
+
+
+### ntsParameters -----
+
+#' @title ntsParameters
+#'
+#' @description A S4 class object to store the parameter settings for
+#' each data processing step of the basic workflow.
+#' Each parameter set is stored as \linkS4class{ntsSettings} object.
+#' See \code{?"ntsSettings-class"}.
+#'
+#' @slot picking Settings for peak picking.
+#' @slot grouping Settings for grouping and alignment within replicates.
+#' @slot filling Settings for filling peaks with recursive integration within replicates.
+#' @slot isotopes	Settings for annotation of isotopes.
+#' @slot fragments Settings for extracting MS2 data.
+#' @slot unification Settings for unifying features across replicates.
+#' @slot adducts Settings for annotation of adducts within the unified features.
+#'
+#'
+#' @return A \linkS4class{ntsParameters} object to be used for the basic workflow of \pkg{ntsIUTA}.
+#'
+#' @export
+#'
+setClass("ntsParameters",
+  slots = c(
+    picking = "ntsSettings",
+    grouping = "ntsSettings",
+    filling = "ntsSettings",
+    isotopes = "ntsSettings",
+    fragments = "ntsSettings",
+    unification = "ntsSettings",
+    adducts = "ntsSettings"
+  ),
+  prototype = list(
+    picking = new("ntsSettings"),
+    grouping = new("ntsSettings"),
+    filling = new("ntsSettings"),
+    isotopes = new("ntsSettings"),
+    fragments = new("ntsSettings"),
+    unification = new("ntsSettings"),
+    adducts = new("ntsSettings")
+  )
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -104,83 +141,34 @@ setClass("AlteredCameraParam",
 
 
 
-### paramMS2 -----
+### suspectList -----
 
-#' @title paramMS2-class
+#' @title suspectList
 #'
-#' @slot maxMSRtWindow .
-#' @slot precursorMzWindow .
-#' @slot clusterMzWindow .
-#' @slot topMost .
-#' @slot minIntensityPre .
-#' @slot minIntensityPost .
+#' @slot path The path of the csv file in disk.
+#' @slot data The data.frame listing all the suspects of interest.
+#' @slot length The number of compounds in the suspect list.
+#' @slot comment Optional comment for the suspect list.
 #'
-#' @return An \linkS4class{paramMS2} object containing parameters for
-#' extraction of MS2 spectra of given precursor ions in an \linkS4class{ntsData} object.
+#' @return An \linkS4class{suspectList} object to be used within screening
+#' workflows of \pkg{ntsIUTA}.
 #'
 #' @export
 #'
-setClass("paramMS2",
+setClass("suspectList",
   slots = c(
-    maxMSRtWindow = "numeric",
-    precursorMzWindow = "numeric",
-    clusterMzWindow = "numeric",
-    topMost = "numeric",
-    minIntensityPre = "numeric",
-    minIntensityPost = "numeric"
+    path = "character",
+    data = "data.frame",
+    length = "numeric",
+    comment = "character"
   ),
   prototype = list(
-    maxMSRtWindow = 10,
-    precursorMzWindow = 1.3,
-    clusterMzWindow = 0.003,
-    topMost = 50,
-    minIntensityPre = 10,
-    minIntensityPost = 10
+    path = character(),
+    data = data.frame(),
+    length = numeric(),
+    comment = character()
   )
 )
-
-# TODO Improve the extraction of MS2 data
-
-
-### paramList -----
-
-#' @title paramList
-#'
-#' @description A S4 class object to store the parameter sets for
-#' each data processing step of the basic workflow.
-#' Each parameter set is stored as \linkS4class{paramSet} object.
-#' For MS2 data, the parameters are stored in a \linkS4class{paramMS2} object.
-#' See \code{?"paramSet-class"} and \code{?"paramMS2-class"} for more information. 
-#'
-#' @slot peakPicking A paramSet object for performing peak picking in each ms file.
-#' @slot peakGrouping A paramSet object for grouping and alignment of peaks withn replicate samples.
-#' @slot fillMissing A paramSet object for performing recursive peak integration within replicates.
-#' @slot annotateIsotopes A paramSet object for annotation of isotopes within replicates.
-#' @slot annotateAdducts A paramSet object for annotation of adducts across unified features.
-#' @slot MS2 An \linkS4class{paramMS2} object with settings for extraction of MS2 data.
-#'
-#' @return A \linkS4class{paramList} object to be used for the basic workflow of \pkg{ntsIUTA}.
-#'
-#' @export
-#'
-setClass("paramList",
-  slots = c(
-    peakPicking = "paramSet",
-    peakGrouping = "paramSet",
-    fillMissing = "paramSet",
-    annotation = "paramSet",
-    MS2 = "paramMS2"
-  ),
-  prototype = list(
-    peakPicking = new("paramSet"),
-    peakGrouping = new("paramSet"),
-    fillMissing = new("paramSet"),
-    annotation = new("paramSet"),
-    MS2 = new("paramMS2")
-  )
-)
-
-
 
 
 ### QC -----
@@ -283,6 +271,18 @@ setClass("isData",
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 ### ntsData -----
 
 #' @title ntsData
@@ -304,26 +304,25 @@ setClass("isData",
 #' }
 #' @slot metadata A data.table with the same number of rows
 #' as the number of \code{samples}, containing metadata for each sample added as extra columns.
-#' @slot parameters A \linkS4class{paramList} object containing process parameters for the basic workflow.
-#' See \code{?"paranList-class"} for more information.
+#' @slot parameters A \linkS4class{ntsParameters} object containing process parameters for the basic workflow.
+#' See \code{?"ntsParameters-class"} for more information.
 #' @slot QC A \linkS4class{qcData} object used for quality control. More information in \code{?"qcData-class"}.
-#' @slot pat A length two list with:
-#' \enumerate{
-#'  \item A list of \linkS4class{features} or \linkS4class{featureGroups} objects
-#' for each sample replicate derived from the basic workflow
-#' (peak picking, alignment and grouping) using the \pkg{patRoon} package;
-#'  \item A \linkS4class{featureGroups} object from the \pkg{patRoon} package with unified features.
-#' }
-#' @slot peaks A list of data.tables with peaks for each sample.
-#' @slot features A list of data.tables with the features for each replicate.
-#' @slot unified A data.table with unified features across different replicates.
-#' @slot filters A list of applied filters to the unified features data.table.
-#' @slot removed A data table with the removed unified features.
+#' @slot pat An \linkS4class{workflowStep} object from the \pkg{patRoon} package;
+#' @slot peaks A \link[data.table]{data.table} with peaks for each sample.
+#' @slot features A \link[data.table]{data.table} with features (i.e., grouped peaks across samples in the project).
+#' @slot unified A \link[data.table]{data.table} with unified features
+#' (i.e., features collapsed by their isotopes and adducts
+#' as well as respective features acquired with a different ionization).
+#' @slot filters A list of applied filters to the features.
+#' @slot removed A \link[data.table]{data.table} with the removed unified features.
 #' @slot workflows A list of objects inherent of downstream data processing steps, such as
-#' suspect screening.
+#' suspect screening, track of transformations and others.
 #'
-#' @note The slot \code{pat} contains objects \linkS4class{features} or
-#' \linkS4class{featureGroups} which can be used within native functions of the \pkg{patRoon} package.
+#' @note The slot \code{pat} contains the native \linkS4class{features} or
+#' \linkS4class{featureGroups} object which can be used
+#' within native functions of the \pkg{patRoon} package.
+#'
+#' @references \insertRef{Helmus2021}{ntsIUTA}
 #'
 #' @export
 #'
@@ -337,11 +336,11 @@ setClass("ntsData",
     path = "character",
     samples = "data.table",
     metadata = "data.table",
-    parameters = "paramList",
+    parameters = "ntsParameters",
     QC = "qcData",
-    pat = "list",
-    peaks = "list",
-    features = "list",
+    pat = "workflowStep",
+    peaks = "data.table",
+    features = "data.table",
     unified = "data.table",
     filters = "list",
     removed = "data.table",
@@ -360,12 +359,15 @@ setClass("ntsData",
       polarity = character(),
       method = character()
     ),
-    metadata = data.table::data.table(replicate = character()),
-    parameters = new("paramList"),
+    metadata = data.table::data.table(
+      sample = character(),
+      replicate = character()
+    ),
+    parameters = new("ntsParameters"),
     QC = new("qcData"),
-    pat = list(replicates = list(), unified = list()),
-    peaks = list(),
-    features = list(),
+    pat = new("featuresSIRIUS"),
+    peaks = data.table::data.table(),
+    features = data.table::data.table(),
     unified = data.table::data.table(),
     filters = list(),
     removed = data.table::data.table(),

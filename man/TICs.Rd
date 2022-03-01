@@ -15,3 +15,6 @@ A \link[data.table]{data.table} with TICs from the object.
 \description{
 TICs
 }
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
+}

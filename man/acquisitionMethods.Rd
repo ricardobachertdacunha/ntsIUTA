@@ -15,3 +15,6 @@ A vector with method names.
 \description{
 acquisitionMethods
 }
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
+}

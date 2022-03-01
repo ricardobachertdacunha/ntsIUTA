@@ -1,483 +1,467 @@
 
 
-### ntsFragmentsData -----
+### ntsFragments -----
 
-#' @title ntsFragmentsData
+#' @title ntsFragments
 #'
-#' @slot targets A data frame with target values for finding fragments in MS2 data of a given feature list.
-#' @slot param The parameters used for find fragments.
+#' @slot database A \link[data.table]{data.table} with target fragments
+#' for searching in MS2 data of a given feature list.
+#' @slot settings The parameter settings used for find the fragments.
 #' @slot data Extra data produced during screening for fragments.
-#' @slot results A data.frame with summarized results per sample replicate group.
+#' @slot results A \link[data.table]{data.table}
+#' with summarized results per sample replicate group.
 #'
-#' @return An \linkS4class{ntsFragmentsData} object to be added to
+#' @return An \linkS4class{ntsFragments} object to be added to
 #' the workflows slot of an \linkS4class{ntsData} object.
 #'
 #' @export
 #'
-setClass("ntsFragmentsData",
+setClass("ntsFragments",
   slots = c(
-    targets = "data.frame",
-    param = "list",
+    database = "data.table",
+    settings = "list",
     data = "list",
-    results = "data.frame"
+    results = "data.table"
   ),
   prototype = list(
-    targets = data.frame(),
-    param = list(ppm = 10,
-                 intMin = 10,
-                 replicates = NULL,
-                 ID = NULL),
+    database = data.table::data.table(),
+    settings = list(ppm = numeric(),
+                    minFeatureIntensity = numeric(),
+                    replicates = character(),
+                    targets = NULL),
     data = list(),
-    results = data.frame()
+    results = data.table::data.table()
   )
 )
 
-#' findFragments
+
+
+
+#' @title findFragments
 #'
-#' @param obj An \linkS4class{ntsData} object with features for finding fragment in MS2 data.
-#' @param targets A data frame with target values for matching fragments.
-#' See details for more information.
+#' @param object An \linkS4class{ntsData} object with features for finding fragments in MS2 data.
+#' @param database A \link[data.table]{data.table} with target fragments for matching in the MS2 data.
 #' @param replicates A character vector with the name of the sample replicate groups to use for finding fragments.
-#' @param ID A character vector with the ID of the features of interest.
+#' @param targets A character vector with the ID of the features of interest.
 #' @param title Optional, title to use for the entry in the workflows slot of the \linkS4class{ntsData} object.
 #' @param ppm The mass deviation, in ppm, for matching fragments.
-#' @param intMin The minimum intensity of fragments.
-#' @param MS2param A list of parameters to use for extracting MS2 data.
+#' @param minFeatureIntensity The minimum intensity of the features for searching for fragments.
+#' @param inSilico A character vector with the name of the in silico software
+#' for confirmation of fragments formulae. Possible values are "sirius" and "fenform".
+#' @param MS2settings A list of parameter settings to use for extracting MS2 data.
 #'
-#' @return An \linkS4class{ntsData} object with an \linkS4class{ntsFragmentsData} object
+#' @return An \linkS4class{ntsData} object with an \linkS4class{ntsFragments} object
 #' add to the workflows slot.
-#' 
+#'
 #' @export
 #'
-findFragments <- function(obj, targets = NULL, replicates = NULL, ID = NULL,
-                          title = NULL, ppm = 10, intMin = 10,
-                          MS2param = NULL) {
-  
-  assertClass(obj, "ntsData")
-  
-  obj2 <- obj
-  
-  adduct <- ifelse(obj@polarity == "positive", "[M+H]+", ifelse(obj@polarity == "negative", "[M-H]-", NULL))
-  if (is.null(adduct)) {
-    warning("Polarity of ntsData not recognized!")
-    return(obj)
+#' @importFrom data.table merge.data.table as.data.table setnames
+#'
+findFragments <- function(object,
+                          database = NULL,
+                          replicates = NULL,
+                          targets = NULL,
+                          title = NULL,
+                          ppm = 15,
+                          ppmLoss = 40,
+                          minFeatureIntensity = 5000,
+                          topMost = 5,
+                          inSilico = "sirius",
+                          MS2settings = NULL) {
+
+  # object <- dtxcms
+  # targets <- c("M207_R932_124", "M233_R941_217", "M748_R883_1287", "M242_R884_264")
+  # database <- data.table::fread(paste0(path(object), "//tp_nitro.csv"))
+  # object <- fragmentsParameters(object, algorithm = "default")
+
+  checkmate::assertClass(object, "ntsData")
+
+  info <- samplesTable(object)[, .(replicate, blank, polarity)]
+  info <- info[!duplicated(info)]
+  info$adduct <- sapply(info$polarity, function(x) ifelse(x == "negative", "[M-H]-", "[M+H]+"))
+
+  feats <- features(object)
+  if (!is.null(targets)) feats <- feats[id %in% targets, ]
+
+  database <- as.data.table(database)
+
+  if (nrow(database) == 0 | nrow(feats) == 0) {
+    warning("Features or database data not found! Check function inputs.")
+    return(object)
   }
-  
-  
-  
-  ### Check Parameters -----
-  
-  data <- new("ntsFragmentsData")
-  if (is.null(replicates)) replicates <- data@param$replicates
-  if (is.null(ID)) ID <- data@param$ID
-  if (is.null(ppm)) ppm <- data@param$ppm
-  if (is.null(intMin)) intMin <- data@param$intMin
-  if (is.null(targets)) targets <- data@targets
-  if (is.null(MS2param)) MS2param <- obj@parameters@MS2 
-  
-  ### Collect Features -----
-  
-  #filter files for selected sampleGroups
-  if (!is.null(replicates)) obj2 <- filterFileFaster(obj2, which(sampleGroups(obj2) %in% replicates))
-  
-  #select features of interest
-  if (!is.null(ID)) obj2 <- obj2[, obj2@features$ID[obj2@features$ID %in% ID]]
-  
-  rg <- unique(sampleGroups(obj2))
-  
-  extra_data <- list()
-  
-  if (nrow(obj2@features) == 0) {
-    warning("Features not found in the ntsData with the given conditions!")
-    return(obj)
-  }
-  
-  for (r in seq_len(length(rg))) {
-  
-    ft_org <- obj2@features
-    
-    ft <- dplyr::select(ft_org, ID, mz, rt, dppm, width, npeaks)
-    ft[, c("int", "int_sd")] <- ft_org[, grep(rg[r], colnames(ft_org))]
-    ft$group <- rg[r]
-    ft <- dplyr::select(ft, group, ID, everything())
-    ft <- ft[ft$int > 0, ]
-    
-    ### Load Targets -----
-    
-    targets_frag <- dplyr::filter(targets, process == "Fragment")
-    targets_frag <- dplyr::mutate(targets_frag, MD = -MD)
-    
-    targets_cleav <- dplyr::filter(targets, process == "Cleavage")
-    
-    
-    
-    ### Load MS2 -----
-    
-    if (is.null(MS2param)) MS2param <- obj2@parameters@MS2
-    
-    MS2 <- extractMS2(obj2@patdata[which(sampleGroups(obj2) %in% rg[r]), ft$ID], param = MS2param)
-    
-    ft$hasFragments <- FALSE
-    
-    for (w in seq_len(nrow(ft))) if (!is.null(MS2[[ft$ID[w]]]$MSMS)) ft$hasFragments[w] <- TRUE
-  
-    
-    
-    ### Prepare Feature df -----
-    
-    ft <- ft[ft$hasFragments, ]
-    
-    ft <- dplyr::mutate(ft, hits = 0, ms2P = NA_character_, names = NA_character_, error_ppm = NA_character_)
-    
+
+  dbt <- database
+  dbt[type == "induced", type := "loss"]
+  setnames(dbt, c("mz", "id"), c("mz_db", "id_hits"), skip_absent = TRUE)
+
+  rpl <- info$replicate
+  rpl <- rpl[rpl %in% replicates]
+
+  extra <- list()
+  ft_final <- list()
+
+  for (r in rpl) {
+
+    cat(paste0("Screening the ", r, " replicate... \n"))
+
+    ### setup -----
+
+    logVec <- feats[[r]] > minFeatureIntensity
+    ft <- feats[logVec, ]
+    ft <- setnames(ft, c(r, paste0(r, "_sd")), c("intensity", "intensity_sd"))
+    ft$replicate <- r
+    ft <- ft[, .(replicate, id, mz, rt, d_ppm, d_sec, intensity, intensity_sd)]
+
+    obj_s <- object[which(replicates(object) %in% r), ft$id]
+
+    pat_s <- obj_s@pat
+
+    if (is.null(MS2settings)) MS2settings <- fragmentsParameters(object)
+
+    MS2 <- generateMS2(
+      obj_s,
+      algorithm = MS2settings@algorithm,
+      settings = MS2settings@settings
+    )
+
+    MS2 <- patRoon::filter(
+      MS2,
+      isolatePrec = list(
+        maxIsotopes = 6,
+        mzDefectRange = c(-0.005, 0.005),
+        intRange = c(0.0005, 2),
+        z = 1,
+        maxGap = 2
+      ),
+      retainPrecursorMSMS = TRUE
+    )
+
+    ft$hasMS2 <- sapply(ft$id, function(x)  !is.null(MS2[[x]]$MSMS))
+
+    ft <- ft[ft$hasMS2, ]
+
+    ft <- dplyr::mutate(ft,
+      hits = 0,
+      names = NA_character_,
+      id_hits = NA_character_,
+      error_ppm = NA_character_
+    )
+
     ft_info <- list()
 
-    
-    
-    ### Find MS2 matches -----
-    
+    #database table, create ionized/deprotonated fragments
+    dbt <- dbt[type != "ionized", ]
+    addSourceIons <- dbt[type == "loss", ]
+    polarity <- info[replicate == r, polarity]
+    if (polarity == "positive") addSourceIons$mz_db <- addSourceIons$mz_db + 1.0073
+    if (polarity == "negative") addSourceIons$mz_db <- addSourceIons$mz_db - 1.0073
+    addSourceIons$type <- "ionized"
+    dbt <- rbind(dbt, addSourceIons)
+
+
+    ### find MS2 -----
+
     for (i in seq_len(nrow(ft))) {
-      
-      idf <- ft$ID[i]
-      
-      t <- MS2[[idf]]$MSMS
-      
-      # filter with for intensity thres
-      t <- dplyr::filter(t, intensity > intMin)
-      
-      if (nrow(t) > 0) {
-        
-        if(nrow(t) > 1) { #when has more than one fragment
-          
-          #make full table for iteration
-          t2 <- t
-          t2 <- merge.data.frame(t,t2, by = NULL)
-          t2 <- dplyr::mutate(t2, TP = "")
-          
-          # include precurssor if not present in MS2
-          if (TRUE %in% t$precursor) {
-            tmz <- t[1,]
-            tmz$mz <- ft$mz[i]
-            tmz$intensity <- "Fragmented"
-            tmz$precursor <- TRUE
-            tmz$ID <- max(t$ID) + 1
-            tmz <- merge.data.frame(t, tmz, by = NULL)
-            tmz <- dplyr::mutate(tmz, TP = "")
-            t2 <- rbind(t2, tmz)
-            ft$ms2P[i] <- "Added"
-          } else {
-            ft$ms2P[i] <- "Present"
-          }
-          
-          # calculate differences between fragments
-          t2 <- transform(t2, TP = as.numeric(TP))
-          for (j in seq_len(nrow(t2))) t2$TP[j] <- t2$mz.y[j] - t2$mz.x[j]
-          
-          # include possible protonated induced cleavage
-          t3 <- cbind(t, t)
-          colnames(t3) <- c("ID.x", "mz.x", "intensity.x", "precursor.x", "ID.y", "mz.y", "intensity.y", "precursor.y")
-          t3 <- dplyr::mutate(t3, TP = mz.x - 1.0073, precursor.x = "Direct", precursor.y = "Direct")
-          t2 <- rbind(t2, t3)
-          t2 <- dplyr::filter(t2, TP > 0)
-          
-          # search for MS2 neutral loss between fragments and possible protonated induced cleavage
-          tTP <- fuzzyjoin::difference_inner_join(t2, targets_frag, by = c("TP" = "MD"), max_dist = 0.01, distance_col = "diff")
-          tTP$diff <- (tTP$diff/abs(tTP$MD)) * 1E6
-          tTP <- tTP[tTP$diff < ppm, ]
-          
-          # search for alpha cleavage fragments in MS2 list
-          t4 <- cbind(t, t)
-          colnames(t4) <- c("ID.x", "mz.x", "intensity.x", "precursor.x", "ID.y", "mz.y", "intensity.y", "precursor.y")
-          t4 <- dplyr::mutate(t4, TP = mz.x, precursor.x = "Alpha", precursor.y = "Alpha")
-          t4 <- dplyr::filter(t4, TP > 0)
-          
-          tTP2 <- fuzzyjoin::difference_inner_join(t4, targets_cleav, by = c("TP" = "MD"), max_dist = 0.01, distance_col = "diff")
-          tTP2$diff <- (tTP2$diff/abs(tTP2$MD)) * 1E6
-          tTP2 <- tTP2[tTP2$diff < ppm, ]
-          
-          # merge two resulting hit tables
-          tTP <- rbind(tTP, tTP2)
-          
-        } else { #when only one fragment is found
-          
-          # Include the precussor if the MS2 is different
-          if (TRUE %in% t$precursor) {
-            tmz <- t[1,]
-            tmz$mz <- ft$mz[i]
-            tmz$intensity <- "Fragmented"
-            tmz$precursor <- TRUE
-            tmz$ID <- max(t$ID) + 1
-            tmz <- merge.data.frame(t, tmz, by = NULL)
-            tmz <- dplyr::mutate(tmz, TP = NA)
-            tmz <- transform(tmz, TP = as.numeric(TP))
-            for (j in 1:nrow(tmz)) tmz$TP[j] <- tmz$mz.y[j] - tmz$mz.x[j]
-            
-            # Include possible protonated induced cleavage
-            t5 <- cbind(t, t)
-            colnames(t5) <- c("ID.x", "mz.x", "intensity.x", "precursor.x", "ID.y", "mz.y", "intensity.y", "precursor.y")
-            t5 <- dplyr::mutate(t5, TP = mz.x - 1.0073, precursor.x = "Direct", precursor.y = "Direct")
-            tmz <- rbind(tmz,t5)
-            tmz <- dplyr::filter(tmz, TP > 0)
-            
-            # Search for MS2 neutral loss between fragments and possible protonated induced cleavage
-            tTP <- fuzzyjoin::difference_inner_join(tmz, targets_frag, by = c("TP" = "MD"), max_dist = 0.01, distance_col = "diff")
-            tTP$diff <- (tTP$diff/abs(tTP$MD)) * 1E6
-            tTP <- tTP[tTP$diff < ppm, ]
-            
-            ft$ms2P[i] <- "Single"
-            
-            
-            # Search for alpha cleavage fragments in MS2 list
-            t6 <- cbind(t, t)
-            colnames(t6) <- c("ID.x", "mz.x", "intensity.x", "precursor.x", "ID.y", "mz.y", "intensity.y", "precursor.y")
-            t6 <- dplyr::mutate(t6, TP = mz.x, precursor.x = "Alpha", precursor.y = "Alpha")
-            t6 <- dplyr::filter(t6, TP > 0)
-            
-            tTP2 <- fuzzyjoin::difference_inner_join(t6, targets_cleav, by = c("TP" = "MD"), max_dist = 0.01, distance_col = "diff")
-            tTP2$diff <- (tTP2$diff/abs(tTP2$MD)) * 1E6
-            tTP2 <- tTP2[tTP2$diff < ppm, ]
-            
-            tTP <- rbind(tTP, tTP2)
-            
-          } else {
-            
-            ft$ms2P[i] <- "Only"
-            
-          }
+
+      idf <- ft$id[i]
+
+      t_x <- as.data.table(MS2[[idf]]$MSMS)
+      if ("CE" %in% colnames(t_x)) t_x[, CE := NULL]
+      if ("preMZ" %in% colnames(t_x)) t_x[, preMZ := NULL]
+      t_x[, ID := seq_len(nrow(t_x))]
+      setcolorder(t_x, c("ID", "mz", "intensity", "precursor"))
+
+      if (nrow(t_x) > 0) {
+
+        cat(paste0("Looking at MS2 from feature ", idf, " (", i, "/", nrow(ft), ")... \n"))
+
+        #make full table for iteration
+        t_y <- t_x
+        colnames(t_y) <- paste0(colnames(t_y), "_y")
+        t_y <- t_x[, as.list(t_y), by = t_x]
+        t_y <- t_y[, neutralDiff := 0]
+
+        # include precurssor if not present in MS2
+        if (!TRUE %in% t_x$precursor) {
+          t_p <- t_x[1, ]
+          t_p$mz <- ft$mz[i]
+          t_p$intensity <- "Fragmented"
+          t_p$precursor <- TRUE
+          t_p$ID <- max(t_x$ID) + 1
+          t_x_temp <- t_x
+          colnames(t_x_temp) <- paste0(colnames(t_x_temp), "_y")
+          t_p <- t_p[, as.list(t_x_temp), by = t_p]
+          t_p <- t_p[, neutralDiff := 0]
+          t_y <- rbind(t_y, t_p)
+          ft$addedPrecursorIon[i] <- TRUE
         }
-        
-        # Writing of results in ft table
-        if (exists("tTP")) {
-          
-          tTP <- dplyr::select(tTP, -process)
-          if (nrow(tTP) > 0) {
-            
-            for (k in seq_len(nrow(tTP))) {
-              if (tTP$mz.x[k] != tTP$mz.y[k]) { tTP$precursor.x[k] <- "Loss" }
-            }
-            
-            ft$hits[i] <- nrow(tTP)
-            ft$names[i] <- paste(as.vector(tTP$name), collapse = "; ")
-            ft$error_ppm[i] <- paste(round(as.vector(tTP$diff), digits = 1), collapse = "; ")
-            if (ft$hits[i] > 0) ft_info[[idf]] <- tTP
-            
-          }
+
+        # calculate differences between fragments
+        t_y$neutralDiff <- t_y$mz - t_y$mz_y
+
+        #remove negative differences as they repeat
+        t_y <- t_y[neutralDiff >= 0, ]
+
+        #convert zeros into fragment ions and remove duplicated neutralDiff
+        t_y <- t_y[neutralDiff == 0, neutralDiff := mz]
+        t_y <- t_y[!duplicated(t_y$neutralDiff), ]
+
+        #search for MS2 neutral loss between fragments and possible protonated induced cleavage
+        t_hits <- fuzzyjoin::difference_inner_join(
+          t_y, dbt,
+          by = c("neutralDiff" = "mz_db"),
+          max_dist = 0.05,
+          distance_col = "diff"
+        )
+        t_hits <- as.data.table(t_hits)
+        t_hits$diff <- (t_hits$diff / abs(t_hits$mz_db)) * 1E6
+
+        #ending when t_hits
+        if (nrow(t_hits) > 0) {
+
+          #change neutral loss to fragment, when found as a mass trace
+          logChangeLoss <- sapply(as.numeric(rownames(t_hits)), function(x, t_hits) {
+            t_hits$mz[x] == t_hits$mz_y[x] & t_hits$type[x] == "loss"
+          }, t_hits = t_hits)
+
+          t_hits[logChangeLoss, type := "fragment"]
+
+          #remove direct traces by ppm
+          t_hits <- t_hits[!(type != "loss" & diff > ppm), ]
+
+          #remove neutral losses by pppmLoss
+          t_hits <- t_hits[!(type == "loss" & diff > ppmLoss), ]
+
+          ft$hits[i] <- nrow(t_hits)
+          ft$id_hits[i] <- paste(t_hits$id_hits, collapse = "; ")
+          ft$names[i] <- paste(t_hits$name, collapse = "; ")
+          ft$error_ppm[i] <- paste(round(t_hits$diff, digits = 1), collapse = "; ")
+          if (ft$hits[i] > 0) ft_info[[idf]] <- t_hits
         }
       }
-      
-      if (exists("t")) {rm(t)}
-      if (exists("tmz")) {rm(tmz)}
-      if (exists("tTP")) {rm(tTP)}
-      if (exists("tTP2")) {rm(tTP2)}
-      if (exists("t2")) {rm(t2)}
-      if (exists("t3")) {rm(t3)}
-      if (exists("t4")) {rm(t4)}
-      if (exists("t5")) {rm(t5)}
-      if (exists("t6")) {rm(t6)}
-      if (exists("idf")) {rm(idf)}
-      if (exists("j")) {rm(j)}
-      if (exists("k")) {rm(k)}
-      
+
+      if (exists("t_x")) rm(t_x)
+      if (exists("t_y")) rm(t_y)
+      if (exists("t_p")) rm(t_p)
+      if (exists("t_x_temp")) rm(t_x_temp)
+      if (exists("t_hits")) rm(t_hits)
+      if (exists("idf")) rm(idf)
     }
-    
-    if (exists("i")) {rm(i)}
-    #end of for i loop
-    
-    
-    
-    ft_simp <- ft
-    
+    if (exists("i")) rm(i)
+
+    ### in silico -----
+
+    ft_simp <- copy(ft)
+
     ft <- ft[ft$hits > 0, ]
-    
-    ft <- dplyr::select(ft, -ms2P)
-    
-    ft <- dplyr::mutate(ft, checked = 0, confirmed = NA_character_, process = NA_character_)
-    
+
+    ft <- dplyr::mutate(ft,
+      checked = 0,
+      confirmed = NA_character_,
+      confirmed_type = NA_character_
+    )
+
     ft_formulas <- list()
-    
+
     for (i in seq_len(nrow(ft))) {
-      
-      idf <- ft$ID[i]
-      
+
+      idf <- ft$id[i]
+
+      cat(paste0("Confirming hits for feature ", idf, " (", i, "/", nrow(ft), ")... \n"))
+
       t <- ft_info[[idf]]
-      
+
       t$result <- FALSE
-      
-      tformula <- obj2@patdata[, idf]
-      
-      # tformula <- "holder"
-      # TODO As is, there is a error for one of the Aopti samples. Task to find it and fix, not using the error catcher
-      # TODO talk with Rick about the zeros, check if it can be changed in xdata
-      # tryCatch( { tformula <- obj2@patdata[, idf] }
-      #     , error = function(e) {
-      #         #test headinf zero on feat ID
-      #         test <- stringr::str_extract(idf, "(?<=[:punct:])[:digit:]+$")
-      #         test <- stringr::str_replace(idf, "(?<=[:punct:])[:digit:]+$", paste0(0,test))
-      #         tformula <<- obj2@patdata[, test]})
-      
-      tformula <- patRoon::generateFormulasSIRIUS(tformula, MS2,
-                                                  relMzDev = ppm,
-                                                  adduct = adduct,
-                                                  elements = "CHNOPSClF",
-                                                  profile = "qtof",
-                                                  database = NULL,
-                                                  noise = NULL,
-                                                  topMost = 5,
-                                                  absAlignMzDev = 0.0005,
-                                                  extraOptsGeneral = NULL,
-                                                  calculateFeatures = FALSE)
-      
+
+      pat_f <- pat_s[, idf]
+
+      if (inSilico == "genform") {
+        tformula <- patRoon::generateFormulasGenForm(
+          pat_f[1],
+          MS2,
+          relMzDev = ppm,
+          adduct = info[replicate == r, adduct],
+          elements = "CHNOPSClF", #CHNOPSClF CHBrClFINOPSSi
+          hetero = TRUE,
+          oc = TRUE,
+          extraOpts = paste0("acc=", ppm, " rej=,", ppm * 2),
+          calculateFeatures = TRUE,
+          featThreshold = 0,
+          featThresholdAnn = 0,
+          absAlignMzDev = 0.01,
+          MSMode = "both",
+          isolatePrec = TRUE,
+          timeout = 250,
+          topMost = topMost,
+          batchSize = 4
+        )
+      } else {
+        tformula <- patRoon::generateFormulasSIRIUS(
+          pat_f, MS2,
+          relMzDev = ppm,
+          adduct = info[replicate == r, adduct],
+          elements = "CHBrClFINOPSSi", #CHNOPSClF CHBrClFINOPSSi
+          profile = "qtof",
+          database = NULL,
+          noise = NULL,
+          topMost = topMost,
+          calculateFeatures = TRUE,
+          featThreshold = 0,
+          featThresholdAnn = 0,
+          absAlignMzDev = 0.01,
+          extraOptsGeneral = NULL
+        )
+      }
+
       if (length(tformula) > 0) {
-        
+
         tformula2 <- tformula[[idf]]
-        
-        
+
         # transform the table
         for (l in seq_len(nrow(tformula2))) {
-          frags <- tformula2$fragInfo[[1]]
+          frags <- tformula2$fragInfo[[l]]
           frags$neutral_formula_P <- tformula2$neutral_formula[l]
           frags$ion_formula_P <- tformula2$ion_formula[l]
           frags$mz_P <-  tformula2$ion_formula_mz[l]
-          
+
           if (l == 1) {
             fragments <- frags
           } else {
             fragments <- rbind(fragments,  frags)
           }
-          
+
         } #end of l loop
-        
+
         tformula5 <- list()
-        
+
         for (z in seq_len(nrow(t))) {
-          
+
           t2 <- t[z, ]
-          
-          if (t2$precursor.x == "Loss") {
-            
+
+          if (t2$type == "loss") {
+
             # for Loss looks for both fragments annotation
-            t4 <- dplyr::inner_join(fragments, t2, by = c("mz" = "mz.x"))
+            t4 <- dplyr::inner_join(fragments, t2, by = c("mz"))
             t4 <- dplyr::select(t4, ion_formula, mz, mz_P, ion_formula_P)
-            
-            t5 <- dplyr::inner_join(fragments, t2, by = c("mz" = "mz.y"))
+
+            t5 <- dplyr::inner_join(fragments, t2, by = c("mz" = "mz_y"))
             t5 <- dplyr::select(t5, ion_formula, mz, mz_P, ion_formula_P)
-            
+
             t6 <- dplyr::inner_join(t4, t5, by = "ion_formula_P")
-            
+
             if (nrow(t6) > 0) {
-            
-              vx <- sapply(t6$ion_formula.x, function(x) CHNOSZ::makeup(x))
-              
-              vy <- sapply(t6$ion_formula.y, function(x) CHNOSZ::makeup(x))
-              
-              test <- vy[rownames(vy) %in% rownames(vx), , drop = FALSE] - vx[rownames(vx) %in% rownames(vy), , drop = FALSE]
-              
-              expect <- CHNOSZ::makeup(t2$FD)
-              
-              t6$loss <- apply(test, MARGIN = 2, function(x, expect) {
+
+              vx <- lapply(t6$ion_formula.x, function(x) CHNOSZ::makeup(x))
+
+              vy <- lapply(t6$ion_formula.y, function(x) CHNOSZ::makeup(x))
+
+              #vy <- lapply(vy, function(x) -x)
+
+              test <- lapply(seq_len(length(vx)), function(x, vx, vy) {
+                temp <- vx[[x]]
+
+                for (el in names(vy[[x]])) {
+                  temp[names(temp) %in% el] <- temp[names(temp) %in% el] - vy[[x]][names(vy[[x]]) %in% el]
+                }
+                return(temp)
+              }, vx = vx, vy = vy)
+
+              expect <- CHNOSZ::makeup(t2$formula)
+
+              t6$loss <- lapply(test, function(x, expect) {
                 x <- x[x > 0]
                 x <- setequal(x, expect)
                 return(x)
               }, expect = expect)
-              
+
               t$result[z] <- TRUE %in% t6$loss
-              
             }
-            
+
             t6$name <- t2$name
-            t6$precursor.x <- t2$precursor.x
-            
+            t6$id_check <- t2$id_hits
+            t6$type <- t2$type
+
             tformula5[[z]] <- t6
-            
+
           } else {
-            
-            
-            t3 <- dplyr::inner_join(fragments, t2, by = c("mz" = "mz.x"))
+
+            t3 <- dplyr::inner_join(fragments, t2, by = c("mz"))
             t3 <- dplyr::mutate(t3, result = FALSE)
-            
+
             if (nrow(t3) > 0) {
-              
+
               for (j in seq_len(nrow(t3))) {
-                
+
                 insi <- CHNOSZ::makeup(t3$ion_formula[j])
-                
-                indb <- CHNOSZ::makeup(t3$FD[j])
-                
+
+                indb <- CHNOSZ::makeup(t3$formula[j])
+
                 #Adds one more H for direct match of protonated fragments
-                if (t3$precursor.x[j] == "Direct") indb[names(indb) == "H"] <-  indb[names(indb) == "H"] + 1
-                
+                if (t3$type[j] == "ionized") indb[names(indb) == "H"] <-  indb[names(indb) == "H"] + 1
+
                 if (TRUE == all.equal(insi, indb)) t3$result[j] <- TRUE
-                
+
               } #end of j loop
-              
+
               t$result[z] <- TRUE %in% t3$result
-            
             }
-            
+
             tformula5[[z]] <- t3
           }
-          
-          if (exists("t2")) {rm(t2)}
-          if (exists("t3")) {rm(t3)}
-          if (exists("t4")) {rm(t4)}
-          if (exists("t5")) {rm(t5)}
-          if (exists("t6")) {rm(t6)}
-          if (exists("insi")) {rm(insi)}
-          if (exists("indb")) {rm(indb)}
-          if (exists("test")) {rm(test)}
-          if (exists("vx")) {rm(vx)}
-          if (exists("vy")) {rm(vy)}
-          if (exists("expect")) {rm(expect)}
-          if (exists("j")) {rm(j)}
-          
+
+          if (exists("t2")) rm(t2)
+          if (exists("t3")) rm(t3)
+          if (exists("t4")) rm(t4)
+          if (exists("t5")) rm(t5)
+          if (exists("t6")) rm(t6)
+          if (exists("insi")) rm(insi)
+          if (exists("indb")) rm(indb)
+          if (exists("vx")) rm(vx)
+          if (exists("vy")) rm(vy)
+          if (exists("expect")) rm(expect)
+          if (exists("j")) rm(j)
+
         } # enf for z for loop
-        
-        
+        if (exists("z")) rm(z)
+
         ft_formulas[[idf]] <- tformula5
-        
-        checked <- t[t$result == TRUE, ]
-        
-        ft$checked[i] <-  nrow(checked)
-        ft$confirmed[i] <- paste(as.vector(checked$name), collapse = "; ")
-        ft$process[i] <-  paste(as.vector(checked$precursor.x), collapse = "; ")
-        
       }
-      if (exists("checked")) {rm(checked)}
+
+      checked <- t[t$result == TRUE, ]
+      ft$checked[i] <-  nrow(checked)
+      if (nrow(checked) > 0) {
+        ft$confirmed[i] <- paste(as.vector(checked$name), collapse = "; ")
+        ft$confirmed_type[i] <-  paste(as.vector(checked$type), collapse = "; ")
+      }
+      if (exists("checked")) rm(checked)
+
     } #end of i loop
-    if (exists("i")) {rm(i)}
-    
-    if (r == 1) {
-      ft_final <- ft
-    } else {
-      ft_final <- rbind(ft_final, ft)
-    }
-  
-    extra_data[[rg[r]]] <- list(c(ft_info, ft_formulas))
-    
+    if (exists("i")) rm(i)
+
+    ft_final[[r]] <- ft
+    extra[[r]] <- list(c(ft_info, ft_formulas))
+
   } #end of r loop
-  
+
+  ft_final <- rbindlist(ft_final)
+
   if (nrow(ft_final) == 0) {
     warning("MS2 fragments in targets not found in given features!")
-    return(obj)
+    return(object)
   }
-  
-  data@param$replicates <- replicates
-  data@param$ID <- ID
-  data@param$ppm <- ppm
-  data@param$intMin <- intMin
-  data@targets <- targets
-  
-  
-  
-  data@data <- extra_data
-  
-  data@targets <- targets
-  
+
+  data <- new("ntsFragments")
+  data@database <- database
+  data@settings$replicates <- replicates
+  data@settings$ppm <- ppm
+  data@settings$minFeatureIntensity <- minFeatureIntensity
+  data@settings$targets <- targets
+  data@data <- extra
   data@results <- ft_final
-  
+
   if (is.null(title)) title <- "MS2FragmentsScreening"
 
-  obj@workflows[[title]] <- data
-  
-  return(obj)
+  object@workflows[[title]] <- data
 
+  return(object)
 }

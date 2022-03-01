@@ -15,3 +15,6 @@ A data table with sample information.
 \description{
 samplesTable
 }
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
+}

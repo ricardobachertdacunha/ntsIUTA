@@ -15,3 +15,6 @@ A \link[data.table]{data.table} with MS2 from the object.
 \description{
 MS2s
 }
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
+}

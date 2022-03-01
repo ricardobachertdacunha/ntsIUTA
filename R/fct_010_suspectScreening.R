@@ -33,7 +33,7 @@ setClass("ntsSuspectData",
                  adduct = NULL,
                  excludeBlanks = TRUE,
                  withMS2 = TRUE,
-                 MS2param = new("paramMS2")),
+                 MS2param = NULL),
     data = list(),
     inSilico = list(),
     results = data.frame()

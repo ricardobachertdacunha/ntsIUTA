@@ -109,7 +109,7 @@ setupProject <- function(path = utils::choose.dir(getwd(), "Select or create a p
     )
   }
 
-  object@metadata <- unique(object@samples[, "replicate", drop = FALSE])
+  object@metadata <- object@samples[, .(sample, replicate)]
 
   if (makeNewProject) {
 
@@ -333,7 +333,7 @@ removeMetadata <- function(object, varname = NULL) {
   assertClass(object, "ntsData")
 
   if (is.null(varname)) {
-    object@metadata <- object@metadata[, "replicate", drop = FALSE]
+    object@metadata <- object@metadata[, .(sample, replicate)]
     return(object)
   }
 
@@ -342,8 +342,8 @@ removeMetadata <- function(object, varname = NULL) {
     return(object)
   }
 
-  varname <- varname[varname != "replicate"]
-  object@metadata <- object@metadata[, !varname, with = FALSE]
+  varname <- varname[!varname %in% c("sample", "replicate")]
+  object@metadata <- object@metadata[, -varname, with = FALSE]
   return(object)
 }
 

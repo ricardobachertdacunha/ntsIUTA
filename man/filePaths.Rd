@@ -15,3 +15,6 @@ A vector with file paths.
 \description{
 filePaths
 }
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
+}

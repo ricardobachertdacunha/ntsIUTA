@@ -106,7 +106,7 @@ setMethod("replicates<-", signature("ntsData", "ANY"), function(object, value) {
   }
 
   object@samples$replicate <- value
-  object@metadata <- data.table(replicate = unique(value))
+  object@metadata$replicate <- object@samples$replicate
   return(object)
 })
 
@@ -190,11 +190,11 @@ setMethod("acquisitionMethods<-", signature("ntsData", "ANY"), function(object, 
 #'
 #' @export
 #'
-setMethod("polarity", "ntsData", function(object, colorBy) {
+setMethod("polarity", "ntsData", function(object, groupBy) {
 
-  if (missing(colorBy)) colorBy <- "samples"
+  if (missing(groupBy)) groupBy <- "samples"
 
-  if (colorBy == "samples") {
+  if (groupBy == "samples") {
     m <- object@samples$polarity
     names(m) <- object@samples$sample
     return(m)
@@ -247,7 +247,12 @@ setMethod("metadata", "ntsData", function(x, varname) {
 
   if (!missing(varname)) {
     if (all(varname %in% colnames(x@metadata))) {
-      if (!"replicate" %in% varname) {varname <- c("replicate", varname)}
+      if (!"replicate" %in% varname) {
+        varname <- c("replicate", varname)
+      }
+      if (!"sample" %in% varname) {
+        varname <- c("sample", varname)
+      }
       m <- x@metadata[, varname, with = FALSE]
     } else {
       warning("varname not found in the metadata.")
@@ -293,7 +298,9 @@ setMethod("QC<-", "ntsData", function(object, value, remove = FALSE, nameType = 
         cat("Given replicate name/s in value not found in the QC slot of the object.")
       } else {
         object@samples <- rbind(object@samples, object@QC@samples[object@QC@samples$replicate %in% value, ])
+        object@metadata <- rbind(object@metadata, object@QC@samples[object@QC@samples$replicate %in% value, .(sample, replicate)], fill = TRUE)
         object@samples <- object@samples[order(sample)]
+        object@metadata <- object@metadata[order(sample)]
         object@QC@samples <- object@QC@samples[!object@QC@samples$replicate %in% value, ]
       }
     } else {
@@ -301,7 +308,9 @@ setMethod("QC<-", "ntsData", function(object, value, remove = FALSE, nameType = 
         cat("Given sample name/s in value not found in the QC slot of the object.")
       } else {
         object@samples <- rbind(object@samples, object@QC@samples[object@QC@samples$sample %in% value, ])
+        object@metadata <- rbind(object@metadata, object@QC@samples[object@QC@samples$sample %in% value, .(sample, replicate)], fill = TRUE)
         object@samples <- object@samples[order(sample)]
+        object@metadata <- object@metadata[order(sample)]
         object@QC@samples <- object@QC@samples[!object@QC@samples$sample %in% value, ]
       }
     }
@@ -314,6 +323,7 @@ setMethod("QC<-", "ntsData", function(object, value, remove = FALSE, nameType = 
     } else {
       object@QC@samples <- rbind(object@QC@samples, object@samples[object@samples$replicate %in% value, ])
       object@samples <- object@samples[!(object@samples$replicate %in% value), ]
+      object@metadata <- object@metadata[!(object@metadata$replicate %in% value), ]
     }
   } else {
     if (FALSE %in% unique(value %in% object@samples$sample)) {
@@ -321,6 +331,7 @@ setMethod("QC<-", "ntsData", function(object, value, remove = FALSE, nameType = 
     } else {
       object@QC@samples <- rbind(object@QC@samples, object@samples[object@samples$sample %in% value, ])
       object@samples <- object@samples[!(object@samples$sample %in% value), ]
+      object@metadata <- object@metadata[!(object@metadata$sample %in% value), ]
     }
   }
 
@@ -338,8 +349,6 @@ setMethod("QC<-", "ntsData", function(object, value, remove = FALSE, nameType = 
 #'
 #' @export
 #'
-#' @importMethodsFrom MSnbase filterFile fileNames
-#' @importMethodsFrom xcms filterFile
 #' @importMethodsFrom patRoon analyses
 #'
 setMethod("[", c("ntsData", "ANY", "missing", "missing"), function(x, i, ...) {
@@ -347,42 +356,33 @@ setMethod("[", c("ntsData", "ANY", "missing", "missing"), function(x, i, ...) {
   if (!missing(i)) {
 
     if (!is.character(i)) {
-      sn <- x@samples$sample[i]
+      sname <- x@samples$sample[i]
       sidx <- i
     } else {
       if (FALSE %in% (i %in% x@samples$sample)) {
         warning("Given sample name/s not found in the ntsData object.")
         return(x)
       }
-      sn <- i
-      sidx <- which(x@samples$sample %in% sn)
+      sname <- i
+      sidx <- which(x@samples$sample %in% sname)
     }
 
-    x@samples <- x@samples[sample %in% sn, ]
+    x@samples <- x@samples[sample %in% sname, ]
 
-    x@metadata <- x@metadata[replicate %in% replicates(x), ]
+    x@metadata <- x@metadata[sample %in% sname, ]
 
-    # if (length(analyses(x@patdata)) > 0) {
+    if (length(analyses(x@pat)) > 0) {
 
-    #   x@patdata <- x@patdata[sidx]
+      x@pat <- x@pat[sidx]
 
-    #   x@peaks <- x@peaks[x@peaks$sample %in% sn, ]
+      x@peaks <- x@peaks[sample %in% sname, ]
 
-    #   if (nrow(x@features) > 0) x <- updateFeatureList(x)
+      #if (nrow(x@features) > 0) x <- updateFeatureList(x)
 
-    # }
-
-    # #annotation, remove replicate groups without samples
-    # if (nrow(x@annotation$comp) > 0) {
-    #   rg <- unique(x@samples$group)
-    #   x@annotation$comp <- x@annotation$comp[x@annotation$comp$group %in% rg, ]
-    #   x@annotation$raw <- x@annotation$raw[names(x@annotation$raw) %in% rg]
-    #   if (nrow(x@features) > 0) x@annotation$comp <- x@annotation$comp[x@annotation$comp$ID %in% x@features$ID, ]
-    # }
+    }
   }
 
   return(x)
-
 })
 
 
@@ -877,6 +877,8 @@ setMethod("plotXICs", "data.table", function(object,
 #' @describeIn ntsData get MS2 data for specified \emph{m/z} and retention time (seconds) targets
 #' in samples of an \linkS4class{ntsData} object. The \code{clusteringUnit} defines the method used for clustering.
 #' Possible values are \emph{euclidean} (the default) or \emph{distance}.
+#' The mass (in Da) and time (in seconds) isolation windows to screen for the respective precursors
+#' are defined with the arguments \code{isolationMassWindow} and \code{isolationTimeWindow}, respectively.
 #' The \code{clusteringUnit} and \code{clusteringWindow} define
 #' the mass deviation unit and deviation to cluster mass traces from different spectra, respectively.
 #' For the \code{clusteringUnit}, possible values are \emph{mz} (the default) or \emph{ppm}.
@@ -885,12 +887,15 @@ setMethod("plotXICs", "data.table", function(object,
 #' Set \code{mergeCEs} to \code{TRUE} for merging spectra acquired with different collision energies.
 #' The \code{mergeBy} argument is used to merge spectra by "samples" or "replicates".
 #' When \code{NULL}, MS2 is given per target and per sample.
-#'
+#' 
+#' @param isolationTimeWindow A character vector of length one with the time isolation window, in seconds.
+#' @param isolationMassWindow A character vector of length one with the mass isolation window, in Da.
 #' @param clusteringMethod A character vector specifying the clustering unit.
 #' @param clusteringUnit A character vector specifying the clustering unit.
 #' @param clusteringWindow A length one numeric vector with the mass deviation for clustering.
 #' @param minIntensityPre A length one numeric vector with the minimum intensity.
 #' @param minIntensityPost A length one numeric vector with the minimum intensity.
+#' @param asPatRoon Logical, set to \code{TRUE} for return a pkg{patRoon} class object.
 #' @param mergeCEs Logical, set to TRUE to cluster different collision energies.
 #' @param mergeBy A character string applicable to the respective method.
 #'
@@ -900,11 +905,14 @@ setMethod("MS2s", "ntsData", function(object = NULL,
                                       samples = NULL,
                                       mz = NULL, ppm = 20,
                                       rt = NULL, sec = 60,
-                                      clusteringMethod = "euclidean",
+                                      isolationTimeWindow = 10,
+                                      isolationMassWindow = 1.3,
+                                      clusteringMethod = "distance",
                                       clusteringUnit = "mz",
-                                      clusteringWindow = 0.008,
-                                      minIntensityPre = 250,
-                                      minIntensityPost = 100,
+                                      clusteringWindow = 0.005,
+                                      minIntensityPre = 200,
+                                      minIntensityPost = 200,
+                                      asPatRoon = FALSE,
                                       mergeCEs = FALSE,
                                       mergeBy = "samples") {
 
@@ -916,11 +924,14 @@ setMethod("MS2s", "ntsData", function(object = NULL,
     level,
     mz, ppm,
     rt, sec,
+    isolationTimeWindow,
+    isolationMassWindow,
     clusteringMethod,
     clusteringUnit,
     clusteringWindow,
     minIntensityPre,
     minIntensityPost,
+    asPatRoon,
     mergeCEs,
     mergeBy
   )
@@ -936,6 +947,8 @@ setMethod("MS2s", "ntsData", function(object = NULL,
 #' @describeIn ntsData plots MS2 data for specified \emph{m/z} and retention time (seconds) targets
 #' in samples of an \linkS4class{ntsData} object. The \code{clusteringUnit} defines the method used for clustering.
 #' Possible values are \emph{euclidean} (the default) or \emph{distance}.
+#' The mass (in Da) and time (in seconds) isolation windows to screen for the respective precursors
+#' are defined with the arguments \code{isolationMassWindow} and \code{isolationTimeWindow}, respectively.
 #' The \code{clusteringUnit} and \code{clusteringWindow} define
 #' the mass deviation unit and deviation to cluster mass traces from different spectra, respectively.
 #' For the \code{clusteringUnit}, possible values are \emph{mz} (the default) or \emph{ppm}.
@@ -953,11 +966,13 @@ setMethod("plotMS2s", "ntsData", function(object = NULL,
                                           samples = NULL,
                                           mz = NULL, ppm = 20,
                                           rt = NULL, sec = 60,
-                                          clusteringMethod = "euclidean",
+                                          isolationTimeWindow = 10,
+                                          isolationMassWindow = 1.3,
+                                          clusteringMethod = "distance",
                                           clusteringUnit = "mz",
-                                          clusteringWindow = 0.008,
-                                          minIntensityPre = 250,
-                                          minIntensityPost = 100,
+                                          clusteringWindow = 0.005,
+                                          minIntensityPre = 200,
+                                          minIntensityPost = 200,
                                           mergeCEs = FALSE,
                                           mergeBy = "samples",
                                           legendNames = NULL,
@@ -967,17 +982,22 @@ setMethod("plotMS2s", "ntsData", function(object = NULL,
 
   level <- 2
 
+  asPatRoon <- FALSE
+
   ms2 <- extractMSn(
     object,
     samples,
     level,
     mz, ppm,
     rt, sec,
+    isolationTimeWindow,
+    isolationMassWindow,
     clusteringMethod,
     clusteringUnit,
     clusteringWindow,
     minIntensityPre,
     minIntensityPost,
+    asPatRoon,
     mergeCEs,
     mergeBy
   )
@@ -1113,35 +1133,208 @@ setMethod("plotMS2s", "data.table", function(object = NULL,
 
 
 
+### peaks ---------------------------------------------------------------------------------------------------
+
+#' @describeIn ntsData Getter for chromatographic peaks.
+#' The arguments \code{targets} and \code{mz}/\code{rt} can be used
+#' to select specific peaks. The \emph{id} of features can be given in the \code{targets}
+#' argument to select the respective peaks. Also, samples can be selected using the
+#' \code{samples} argument.
+#'
+#' @export
+#'
+#' @importFrom dplyr between
+#'
+setMethod("peaks", "ntsData", function(object,
+                                       samples = NULL,
+                                       targets = NULL,
+                                       mz = NULL, ppm = 20,
+                                       rt = NULL, sec = 60) {
+
+  pks <- object@peaks
+
+  if (!is.null(samples)) {
+    if (!class(samples) == "character") {
+      samples <- samples(object)[samples]
+    }
+    pks <- pks[sample %in% samples, ]
+  }
+
+  if (!is.null(targets) & "feature" %in% colnames(pks)) {
+    pks <- pks[id %in% targets | feature %in% targets, ]
+    return(pks)
+  } else if (!is.null(targets)) {
+    pks <- pks[id %in% targets, ]
+    return(pks)
+  }
+
+  if (!is.null(mz)) {
+    targets <- makeTargets(mz, rt, ppm, sec)
+
+    sel <- rep(FALSE, nrow(pks))
+    for (i in seq_len(nrow(targets))) {
+      sel[between(pks$mz, targets$mzmin[i], targets$mzmax[i]) &
+          between(pks$rt, targets$rtmin[i], targets$rtmax[i])] <- TRUE
+    }
+
+    return(pks[sel])
+  }
+
+  return(pks)
+})
 
 
 
 
+### plotPeaks ------------------------------------------------------------------------------------------------
+
+#' @describeIn ntsData A method for plotting chromatographic peaks
+#' in an \linkS4class{ntsData} object.
+#' The \code{colorBy} argument can be be \code{"samples"}, \code{replicates} or \code{targets}
+#' (the default), for colouring by samples, replicates or peak targets, respectively.
+#' The \code{legendNames} is a character vector with the same length as targets for plotting and
+#' can be used to lengend the plot. Note that, by setting \code{legendNames} the \code{colorBy}
+#' is set to "targets" automatically.
+#'
+#'
+#' @export
+#'
+#' @importFrom data.table rbindlist
+#'
+setMethod("plotPeaks", "ntsData", function(object,
+                                           samples = NULL,
+                                           targets = NULL,
+                                           mz = NULL, ppm = 20,
+                                           rt = NULL, sec = 30,
+                                           colorBy = "targets",
+                                           legendNames = NULL,
+                                           title = NULL,
+                                           interactive = FALSE) {
+
+  pks <- peaks(
+    object,
+    samples,
+    targets,
+    mz, ppm,
+    rt, sec
+  )
+
+  eic <- lapply(split(pks, pks$sample), function(x, object) {
+    return(
+      extractEICs(
+        object,
+        samples = unique(x$sample),
+        mz = x
+      )
+    )
+  }, object = object)
+
+  eic <- rbindlist(eic)
+
+  if (nrow(eic) < 1) return(cat("Data was not found for any of the targets!"))
+
+  if (colorBy == "samples") {
+    leg <- unique(eic$sample)
+    varkey <- eic$sample
+  } else if (colorBy == "replicates") {
+    leg <- unique(eic[, .(sample, replicate)])
+    leg <- leg$replicate
+    varkey <- eic$replicate
+  } else if (!is.null(legendNames) & length(legendNames) == length(unique(eic$id))) {
+    leg <- legendNames
+    names(leg) <- unique(eic$id)
+    varkey <- sapply(eic$id, function(x) leg[x])
+  } else {
+    leg <- paste0(pks$id, " - ", round(pks$mz, digits = 4), "/", round(pks$rt, digits = 0))
+    names(leg) <- unique(eic$id)
+    varkey <- sapply(eic$id, function(x) leg[[x]])
+  }
+
+  eic[, var := varkey][]
+
+  if (!interactive) {
+
+    win.metafile()
+    dev.control("enable")
+    plotStaticPeaks(
+      eic,
+      pks,
+      title
+    )
+    plot <- recordPlot()
+    invisible(dev.off())
+
+  } else {
+
+    plot <- plotInteractivePeaks(eic, pks, title, colorBy)
+
+  }
+
+  return(plot)
+})
 
 
 
 
+### mapPeaks ------------------------------------------------------------------------------------------------
 
+#' @describeIn ntsData A method for mapping peaks mass and time space
+#' in an \linkS4class{ntsData} object.
+#' The \code{colorBy} argument can be be \code{"samples"}, \code{replicates} or \code{targets}
+#' (the default), for colouring by samples, replicates or peak targets, respectively.
+#' The \code{legendNames} is a character vector with the same length as targets for plotting and
+#' can be used to lengend the plot. Note that, by setting \code{legendNames} the \code{colorBy}
+#' is set to "targets" automatically.
+#'
+#' @param xlim A length one or two numeric vector for setting the \emph{x} limits of a plot.
+#' @param ylim A length one or two numeric vector for setting the \emph{y} limits of a plot.
+#'
+#' @export
+#'
+setMethod("mapPeaks", "ntsData", function(object,
+                                          samples = NULL,
+                                          targets = NULL,
+                                          mz = NULL, ppm = 20,
+                                          rt = NULL, sec = 30,
+                                          colorBy = "targets",
+                                          legendNames = NULL,
+                                          xlim = 30,
+                                          ylim = 0.05,
+                                          title = NULL) {
 
+  pks <- peaks(
+    object,
+    samples,
+    targets,
+    mz, ppm,
+    rt, sec
+  )
 
+  if (nrow(pks) < 1) return(cat("Requested peaks were not found!"))
 
+  if (colorBy == "samples") {
+    leg <- unique(pks$sample)
+    varkey <- pks$sample
+  } else if (colorBy == "replicates") {
+    leg <- unique(pks[, .(sample, replicate)])
+    leg <- leg$replicate
+    varkey <- pks$replicate
+  } else if (!is.null(legendNames) & length(legendNames) == length(unique(pks$id))) {
+    leg <- legendNames
+    names(leg) <- unique(pks$id)
+    varkey <- sapply(pks$id, function(x) leg[x])
+  } else {
+    leg <- paste0(pks$id, " - ", round(pks$mz, digits = 4), "/", round(pks$rt, digits = 0))
+    names(leg) <- pks$id
+    varkey <- sapply(pks$id, function(x) leg[names(leg) == x])
+  }
 
+  pks[, var := varkey][]
 
+  plot <- mapPeaksInteractive(pks, xlim, ylim, title)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  return(plot)
+})
 
 
 
@@ -1150,11 +1343,7 @@ setMethod("plotMS2s", "data.table", function(object = NULL,
 
 #' @describeIn ntsData Subset on samples, using sample index or name.
 #'
-#' @param x An \linkS4class{ntsData} object.
-#' @param i The indice/s or name/s of the samples to keep in the \code{x} object.
-#' @param j Ignored.
-#' @param drop Ignored.
-#' @param \dots Ignored.
+#' @param j The indice/s or \emph{id}/s for subsettting on features.
 #'
 #' @export
 #'
@@ -1173,107 +1362,24 @@ setMethod("[", c("ntsData", "ANY", "ANY", "missing"), function(x, i, j, ...) {
       return(x)
     }
 
-    if (!is.character(j)) {
-      id <- x@features$ID[j]
-      idn <- j
-    } else {
-      id <- j
-      idn <- which(x@features$ID %in% j)
-    }
+    if (!is.character(j)) j <- x@features$id[j]
 
-    x@patdata <- x@patdata[, id]
+    x@pat <- x@pat[, j]
 
-    x@peaks <- x@peaks[x@peaks$feature %in% id, ]
+    x@peaks <- x@peaks[feature %in% j, ]
 
-    x@features <- x@features[idn, ]
-
-    if (nrow(x@annotation$comp) != 0) {
-      x@annotation$comp <- x@annotation$comp[x@annotation$comp$ID %in% id, ]
-    }
-
+    x@features <- x@features[id %in% j, ]
   }
 
   return(x)
-
 })
 
 
 
 
-### peaks ---------------------------------------------------------------------------------------------------
-
-#' @describeIn ntsData Getter for chromatographic peaks.
-#'
-#' @param object An \linkS4class{ntsData} object.
-#' @param samples The indices or names of samples to keep.
-#' @param ID The ID of peaks of interest.
-#' @param mz Alternatively to \code{ID}, the \emph{m/z} of interest to find peaks.
-#' Can be of length two, defining a mass range to find peaks.
-#' @param ppm The mass deviation, in ppm, of a given \code{mz}.
-#' @param rt The retention time to find peaks.
-#' @param rtWindow The time deviation. Can be of length two, defining a time range.
-#' @param rtUnit The unit of the time arguments. Possible values are "sec" and "min".
-#'
-#' @export
-#'
-#' @importFrom checkmate assertSubset
-#' @importFrom dplyr filter between
-#'
-setMethod("peaks", "ntsData", function(object,
-                                       samples = NULL, ID = NULL,
-                                       mz = NULL, ppm = 20,
-                                       rt = NULL, rtWindow = NULL,
-                                       rtUnit = "sec") {
-
-  if (nrow(object@peaks) == 0) return(object@peaks)
-
-  if (!missing(samples)) object <- filterFileFaster(object, samples)
-
-  if (missing(ID)) ID <- NULL
-
-  if (missing(mz)) mz <- NULL
-
-  rtr <- NULL
-
-  if (!is.null(ID)) {
-    pk <- object@peaks[object@peaks$ID %in% ID, ]
-  } else {
-    if (!is.null(mz)) {
-      if (missing(rt)) rt <- NULL
-      if (missing(rtWindow)) rtWindow <- NULL
-      if (missing(rtUnit)) rtUnit <- "sec"
-      if (missing(ppm)) ppm <- 20
-      assertSubset(rtUnit, c("sec", "min"))
-      mzr <- mzrBuilder(mz = mz, ppm = ppm)
-      rtr <- rtrBuilder(rt = rt, rtWindow = rtWindow, rtUnit = rtUnit)
-      pk <- dplyr::filter(object@peaks,
-                          between(mz, mzr[1], mzr[2]),
-                          between(rt, rtr[1], rtr[2]))
-    } else {
-      return(cat("One of ID or mz should be given."))
-    }
-  }
-
-  return(pk)
-
-})
-
-
-
-
-### features -----
+### features ------------------------------------------------------------------------------------------------
 
 #' @describeIn ntsData Getter for features (i.e., grouped peaks).
-#'
-#' @param object An \linkS4class{ntsData} object.
-#' @param samples The indices or names of samples to keep in the \code{object}.
-#' @param ID The ID of features of interest.
-#' @param mz Alternatively to \code{ID}, the \emph{m/z} of interest.
-#' can be of length two, defining a mass range.
-#' @param ppm The mass deviation, in ppm, of a given \code{mz}.
-#' @param rt The retention time to find features.
-#' @param rtWindow The time deviation. Can be of length two, defining a time range.
-#' @param rtUnit The unit of the time arguments. Possible values are "sec" and "min".
 #'
 #' @export
 #'
@@ -1281,161 +1387,96 @@ setMethod("peaks", "ntsData", function(object,
 #' @importFrom dplyr filter between
 #'
 setMethod("features", "ntsData", function(object,
-                                          samples = NULL, ID = NULL,
+                                          samples = NULL,
+                                          targets = NULL,
                                           mz = NULL, ppm = 20,
-                                          rt = NULL, rtWindow = NULL,
-                                          rtUnit = "sec") {
+                                          rt = NULL, sec = 60) {
 
-  if (nrow(object@features) == 0) return(object@features)
+  feats <- object@features
 
-  if (missing(ID)) ID <- NULL
+  if (!is.null(targets)) return(feats[id %in% targets, ])
 
-  if (missing(mz)) mz <- NULL
+  if (!is.null(mz)) {
+    targets <- makeTargets(mz, rt, ppm, sec)
 
-  if (!missing(samples)) object <- filterFileFaster(object, samples)
-
-  rtr <- NULL
-
-  if (!is.null(ID)) {
-    ft <- object@features[object@features$ID %in% ID, ]
-  } else {
-    if (!is.null(mz)) {
-      if (missing(rt)) rt <- NULL
-      if (missing(rtWindow)) rtWindow <- NULL
-      if (missing(rtUnit)) rtUnit <- "sec"
-      if (missing(ppm)) ppm <- 20
-      assertSubset(rtUnit, c("sec", "min"))
-      mzr <- mzrBuilder(mz = mz, ppm = ppm)
-      rtr <- rtrBuilder(rt = rt, rtWindow = rtWindow, rtUnit = rtUnit)
-      ft <- dplyr::filter(object@features,
-                          between(mz, mzr[1], mzr[2]),
-                          between(rt, rtr[1], rtr[2]))
-    } else {
-      return(cat("One of ID or mz should be given."))
+    sel <- rep(FALSE, nrow(feats))
+    for (i in seq_len(nrow(targets))) {
+      sel[between(feats$mz, targets$mzmin[i], targets$mzmax[i]) &
+          between(feats$rt, targets$rtmin[i], targets$rtmax[i])] <- TRUE
     }
+
+    return(feats[sel])
   }
 
-  return(ft)
-
+  return(feats)
 })
 
 
 
 
-### components -----
+### plotFeatures --------------------------------------------------------------------------------------------
 
-#' @describeIn ntsData Getter for components (i.e., annotated features).
+#' @describeIn ntsData A method for plotting peaks from given features
+#' in an \linkS4class{ntsData} object.
+#' The \code{colorBy} argument can be be \code{"samples"}, \code{replicates} or \code{targets}
+#' (the default), for colouring by samples, replicates or peak targets, respectively.
+#' The \code{legendNames} is a character vector with the same length as targets for plotting and
+#' can be used to lengend the plot. Note that, by setting \code{legendNames} the \code{colorBy}
+#' is set to "targets" automatically.
 #'
-#' @param object An \linkS4class{ntsData} object.
-#' @param samples The indice/s or name/s of samples to keep in the \code{object}.
-#' @param ID The ID of features of interest.
-#' @param mz Alternatively to \code{ID}, the \emph{m/z} of interest.
-#' can be of length two, defining a mass range.
-#' @param ppm The mass deviation, in ppm, of a given \code{mz}.
-#' @param rt The retention time to find features.
-#' @param rtWindow The time deviation. Can be of length two, defining a time range.
-#' @param rtUnit The unit of the time arguments. Possible values are "sec" and "min".
-#' @param compNumber Alternatively, the component number to find features.
-#' @param entireComponents Logical, set to \code{TRUE} to extract all features
-#' from the represented components.
-#' @param onlyAnnotated Logical, set to \code{TRUE} to extract only annotated features.
-#' @param onlyRelated Logical, set to \code{TRUE} to extract only features that are related
-#' to the features of interest.
 #'
 #' @export
 #'
-#' @importFrom checkmate assertSubset
-#' @importFrom dplyr filter between
-#' @importFrom stats na.omit
+#' @importFrom data.table rbindlist
 #'
-setMethod("components", "ntsData", function(object,
-                                            samples = NULL,
-                                            ID = NULL,
-                                            mz = NULL, ppm = 5,
-                                            rt = NULL, rtWindow = 1, rtUnit = "sec",
-                                            compNumber = NULL,
-                                            entireComponents = TRUE,
-                                            onlyAnnotated = FALSE,
-                                            onlyRelated = TRUE) {
+setMethod("plotFeatures", "ntsData", function(object,
+                                              samples = NULL,
+                                              targets = NULL,
+                                              mz = NULL, ppm = 20,
+                                              rt = NULL, sec = 30,
+                                              colorBy = "targets",
+                                              legendNames = NULL,
+                                              title = NULL,
+                                              interactive = FALSE) {
 
-  if (missing(samples)) samples <- NULL
+  feats <- features(
+    object,
+    samples,
+    targets,
+    mz,
+    ppm,
+    rt,
+    sec
+  )
 
-  if (missing(ID)) ID <- NULL
+  pks <- peaks(
+    object,
+    samples,
+    targets = feats$id
+  )
 
-  if (missing(mz)) mz <- NULL
-
-  if (missing(compNumber)) compNumber <- NULL
-
-  comp <- object@annotation$comp
-
-  if (nrow(comp) == 0) return(comp)
-
-  rg <- unique(object@samples$group)
-
-  if (!is.null(samples)) {
-    if (is.character(samples)) {
-      rg <- unique(object@samples$group[object@samples$sample %in% samples])
-    } else {
-      rg <- unique(object@samples$group[samples])
-    }
+  if (!is.null(legendNames) & length(legendNames) == length(unique(pks$feature))) {
+    names(legendNames) <- unique(pks$feature)
+    pks$feature <- sapply(pks$feature, function(x) legendNames[x])
   }
 
-  comp <- comp[comp$group %in% rg, ]
+  plot <- plotPeaks(
+    object,
+    samples = samples,
+    targets = pks$id,
+    legendNames = pks$feature,
+    colorBy = colorBy,
+    title = title,
+    interactive = interactive
+  )
 
-  if (nrow(comp) == 0) return(comp)
-
-  if (!is.null(ID)) {
-    comp <- comp[comp$ID %in% ID, ]
-  } else {
-    if (!is.null(mz)) {
-      if (missing(rt)) rt <- NULL
-      if (missing(rtWindow)) rtWindow <- NULL
-      if (missing(rtUnit)) rtUnit <- "sec"
-      if (missing(ppm)) ppm <- 20
-      assertSubset(rtUnit, c("sec", "min"))
-      mzr <- mzrBuilder(mz = mz, ppm = ppm)
-      rtr <- rtrBuilder(rt = rt, rtWindow = rtWindow, rtUnit = rtUnit)
-      comp <- dplyr::filter(comp,
-                            between(mz, mzr[1], mzr[2]),
-                            between(rt, rtr[1], rtr[2]))
-    } else {
-      if (!is.null(compNumber)) {
-        comp <- comp[comp$comp %in% compNumber, ]
-      }
-    }
-  }
-
-  if (nrow(comp) == 0) return(comp)
-
-  comp2 <- comp
-
-  if (!missing(entireComponents)) {
-    if (entireComponents) {
-      comp2 <- object@annotation$comp[object@annotation$comp$comp %in% comp2$comp |
-                                        object@annotation$comp$isogroup %in% comp2$isogroup, ]
-      comp2 <- comp2[comp2$group %in% rg, ]
-    }
-  }
-
-  if (!missing(onlyAnnotated)) {
-    if (onlyAnnotated) comp2 <- comp2[!is.na(comp2$isoclass) | (comp2$nAdducts > 0), ]
-  }
-
-  if (!missing(onlyRelated)) {
-    if (onlyRelated) {
-      isos <- comp2$ID[comp2$Mion %in% stats::na.omit(comp$Mion)]
-      comp2 <- comp2[comp2$ID %in% unique(isos), ]
-    }
-  }
-
-  return(comp2)
-
+  return(plot)
 })
 
 
 
 
-### show -----
+### show ----------------------------------------------------------------------------------------------------
 
 #' @describeIn ntsData Informative printing of the \linkS4class{ntsData} object.
 #'
@@ -1445,7 +1486,7 @@ setMethod("components", "ntsData", function(object,
 #' @importFrom dplyr count
 setMethod("show", "ntsData", function(object) {
 
-  st <- object@samples[, c("sample", "replicate", "blank", "polarity")]
+  st <- object@samples[, .(sample, replicate, blank, polarity)]
   if (length(object@peaks) > 0) {
     st$peaks <- count(object@peaks, sample)$n
   }
@@ -1465,7 +1506,7 @@ setMethod("show", "ntsData", function(object) {
   cat("\n")
 
   mtd <- colnames(object@metadata)
-  mtd <- mtd[mtd != "replicate"]
+  mtd <- mtd[!mtd %in% c("sample", "replicate")]
   if (length(mtd) >= 1) { cat("  Metadata Variables:  ", mtd, "\n", sep = " ") }
   if (length(mtd) < 1) { cat("  Metadata Variables:  ", "empty", "\n", sep = " ") }
 
@@ -1482,43 +1523,35 @@ setMethod("show", "ntsData", function(object) {
 
   cat(
     "  Parameters:  ", "\n",
-    "    ", "Peak Picking: ", ifelse(!is.na(object@parameters@peakPicking@algorithm),
-                                      object@parameters@peakPicking@algorithm,
+    "    ", "Peak Picking: ", ifelse(!is.na(object@parameters@picking@algorithm),
+                                      object@parameters@picking@algorithm,
                                       "n.a."), "\n",
 
-    "    ", "Grouping: ", ifelse(!is.na(object@parameters@peakGrouping@algorithm),
-                                  object@parameters@peakGrouping@algorithm,
+    "    ", "Grouping: ", ifelse(!is.na(object@parameters@grouping@algorithm),
+                                  object@parameters@grouping@algorithm,
                                   "n.a."), "\n",
 
-    "    ", "Fill Missing: ", ifelse(!is.na(object@parameters@fillMissing@algorithm),
-                                      object@parameters@fillMissing@algorithm,
+    "    ", "Fill Missing: ", ifelse(!is.na(object@parameters@filling@algorithm),
+                                      object@parameters@filling@algorithm,
                                       "n.a."), "\n",
 
-    "    ", "Annotation: ", ifelse(!is.na(object@parameters@annotation@algorithm),
-                                    object@parameters@annotation@algorithm,
+    "    ", "Annotation: ", ifelse(!is.na(object@parameters@isotopes@algorithm),
+                                    object@parameters@isotopes@algorithm,
                                     "n.a."), "\n",
 
-    "    ", "MS2: ", ifelse(length(object@parameters@MS2) > 0,
-                            class(object@parameters@MS2),
-                            "empty"), "\n",
+    "    ", "MS2: ", ifelse(!is.na(object@parameters@fragments@algorithm),
+                                   object@parameters@fragments@algorithm,
+                                   "n.a."), "\n",
     sep = ""
   )
 
   cat("\n")
 
   cat(
-    # "  MSnExp spectra:  ", length(object@MSnExp), "\n",
-    # "  MS level(s):  ", ifelse(length(object@MSnExp) > 0,
-    #                             paste(sort(unique(msLevel(object@MSnExp))), collapse = ", "),
-    #                             "-"), "\n",
     "  patRoon-class:  ", ifelse(length(object@pat) > 0,
-                                  class(object@pat), "empty"), "\n",
+                                 class(object@pat), "empty"), "\n",
     sep = ""
   )
-
-  # if (nrow(object@annotation$comp) > 0) {
-  #   cat("  Annotation:  ", "Yes", "\n", sep = "")
-  # }
 
   if (length(object@features) > 0) {
     cat("\n")

@@ -15,3 +15,6 @@ Get or change title, description and/or date of the a project.
 \description{
 projectInfo
 }
+\seealso{
+See method details in the \linkS4class{ntsData} help page.
+}
