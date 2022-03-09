@@ -68,7 +68,7 @@ setClass("ntsSuspectData",
 #' @param excludeBlanks Logical, set to \code{TRUE} to ignore replicate groups
 #' assigned as blanks in the \code{samples} slot of the \code{obj}.
 #' @param withMS2 Logical, set to \code{TRUE} for using confirmation via MS2.
-#' @param param An \linkS4class{paramMS2} object with parameters for MS2 extraction.
+#' @param param A paramMS2 object with parameters for MS2 extraction.
 #'
 #' @return An \linkS4class{ntsData} object with screening results
 #' added to the workflows slot.

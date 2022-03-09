@@ -1,0 +1,223 @@
+---
+title: "Report Large Volume Injection for Pramipexole"
+author: "Ricardo Cunha (Insitut für Energie- und Umwelttechnik e.V.)"
+output: html_document
+---
+
+```{r setup, echo = FALSE, message = FALSE}
+
+knitr::opts_chunk$set(echo = TRUE, fig.align = "center", fig.width = 9)
+
+library(data.table)
+library(plotly)
+library(TargetSearch)
+library(ntsIUTA)
+
+```
+
+# Objetive
+Improve detection of Pramipexole using large volume injection.
+
+# Methodology
+The column switiching method was used with the HRMS. Water and acetonitrile, both with 0.1% formic acid, were used as mobile phases. For further details about the method please consult us. The methodology is in preparation for publication.
+
+\newline
+
+The given standard solution (10 µg/L) was diluted to 1000, 500, 100, 10 and 1 ng/mL in LC grade water and injected (900 µL).
+
+# Resuls
+
+### DAD
+
+\newline
+
+```{r DAD, echo = FALSE, fig.cap = "DAD chromatograms for each concentration, including the blank."}
+
+path <- "F:\\NTS_IUTA_Projects\\Project_210317_Pramipexol"
+
+DAD <- data.table::fread(paste0(path, "\\210310_DAD_Pramipexol_Test.csv"))
+
+vars <- colnames(DAD)
+vars <- vars[!stringr::str_detect(vars, "01_Blank")]
+vars <- vars[!stringr::str_detect(vars, "02_Blank")]
+vars <- vars[!stringr::str_detect(vars, "Time")]
+
+plot_dad <- plot_ly()
+
+for (i in seq_len(length(vars))) {
+
+  plot_dad <- plot_dad %>% add_trace(
+    x = DAD[[paste0(stringr::str_extract(vars[i], "\\d+(?=_)"), "_Time")]],
+    y = DAD[[vars[i]]],
+    type = "scatter", mode = "lines",
+    name = vars[i],
+    showlegend = TRUE
+  )
+}
+
+xaxis <- list(
+  linecolor = toRGB("black"),
+  linewidth = 2, title = "Retention Time (sec.)",
+  titlefont = list(size = 12, color = "black"),
+  autotick = TRUE, ticks = "outside"
+)
+
+yaxis <- list(
+  linecolor = toRGB("black"),
+  linewidth = 2, title = "Intensity",
+  titlefont = list(size = 12, color = "black")
+)
+
+plot_dad <- plot_dad %>% layout(
+  xaxis = xaxis,
+  yaxis = yaxis
+)
+
+plot_dad
+```
+
+\newline
+
+> Two peaks are visible at approx. 9 minutes, which is the enrichment time, and after in the HILIC phase at approx. 39 minutes. Probably, the peak at 9 minutes is leacked after saturation of the enrichment cartridge. That is in line with the peak width. The second peak is then elution from the enrichment cartridge to the HILIC phase.
+
+\newline
+
+```{r dadPeaks, echo = FALSE}
+
+pDAD <- list()
+
+for (i in seq_len(length(vars))) {
+
+  df <- DAD[, colnames(DAD)[colnames(DAD) %in% c(paste0(stringr::str_extract(vars[i], "\\d+(?=_)"), "_Time"), vars[i])], with = F]
+  df <- df[!is.na(df[[vars[i]]]), ]
+
+  intsRised <- df[[vars[i]]] + abs(min(df[[vars[i]]]))
+
+  intsRised <- baselineCorrection(
+    as.matrix(intsRised),
+    threshold = 0,
+    alpha = 0.98,
+    bfraction = 0.05,
+    segments = 30,
+    signalWindow = 12,
+    method = "linear"
+  )
+
+  pDAD[[vars[i]]] <- data.table(
+    rt = df[[paste0(stringr::str_extract(vars[i], "\\d+(?=_)"), "_Time")]],
+    intensity = as.vector(intsRised)
+  )
+}
+
+
+chromsDAD <- list()
+chromsDAD_s <- list()
+
+for (i in seq_len(length(vars))) {
+
+  chromsDAD[[vars[i]]] <- MSnbase::Chromatogram(rtime = pDAD[[vars[i]]]$rt, intensity = pDAD[[vars[i]]]$intensity)
+
+  chromsDAD[[vars[i]]] <- xcms::findChromPeaks(
+    chromsDAD[[vars[i]]],
+    param = xcms::MatchedFilterParam(
+      binSize = 0.5,
+      impute = "none",
+      baseValue = numeric(),
+      distance = numeric(),
+      fwhm = 4,
+      sigma = 4 / 2.3548,
+      max = 10,
+      snthresh = 0,
+      steps = 2,
+      mzdiff = 0.8 - 0.5 * 2,
+      index = FALSE
+    )
+  )
+
+  chromsDAD_s[[vars[[i]]]] <- as.data.table(xcms::chromPeaks(chromsDAD[[vars[i]]]))
+}
+
+chromsDAD_s <- rbindlist(chromsDAD_s, idcol = "sample")
+keep <- rep(FALSE, nrow(chromsDAD_s))
+keep[chromsDAD_s$rt > 6 & chromsDAD_s$rt < 11] <- TRUE
+keep[chromsDAD_s$rt > 36 & chromsDAD_s$rt < 40] <- TRUE
+chromsDAD_s <- chromsDAD_s[keep, ]
+
+setnames(chromsDAD_s, c("sn", "into", "intf"), c("signal_to_noise", "intensity", "area"))
+chromsDAD_s <- chromsDAD_s[, .(sample, rt, rtmin, rtmax, intensity, area, signal_to_noise)]
+
+```
+
+```{r peaksTable, echo=FALSE, results='asis'}
+
+knitr::kable(
+  chromsDAD_s,
+  caption = "Integrated peaks corresponding to Pramipexole."
+)
+
+```
+
+\newline
+
+```{r integratedPeaks, echo = FALSE, fig.cap = "Pramipexole DAD peak at 100 ng/mL in the HILIC phase."}
+
+MSnbase::plot(MSnbase::filterRt(chromsDAD[[vars[5]]], c(36, 40)), main = "Pramipexole at 100 ng/mL",
+  xlab = "Retention time (Minutes)",
+  ylab = "Intenisty"
+)
+
+```
+
+\newline
+
+> A limit of quantification could be achieved at 100 ng/mL, although the peak at 10 ng/mL could still be observed but not automatically integrated with the algorithm 
+used. Note that further statistics and detailed calibration are needed to confirm the limit of quantification.
+
+\newline
+
+```{r peakat10, echo = FALSE, fig.cap = "Pramipexole DAD peak at 10 ng/mL in the HILIC phase."}
+
+plot(pDAD[[vars[4]]][rt > 36 & rt < 40, rt], pDAD[[vars[4]]][rt > 36 & rt < 40, intensity], type = "l",
+  main = "Pramipexole at 10 ng/mL",
+  xlab = "Retention time (Minutes)",
+  ylab = "Intenisty")
+
+```
+
+\newline
+
+### MS for confirmation
+
+\newline
+
+```{r msSpec, echo = FALSE, fig.cap = "Extracted ion chromatogram for Pramipexole with expected m/z of 212.1216. Extraction with a mass deviation of 20 ppm."}
+
+msdata <- readRDS("rData\\ntsData.rds")
+
+plotRawChrom(
+  msdata,
+  samples = NULL,
+  mz = 212.1216,
+  ppm = 20,
+  rt = NULL,
+  rtWindow = NULL,
+  rtUnit = "sec",
+  msLevel = 1,
+  type = "tic",
+  colorBy = "sampleGroups",
+  interactive = TRUE
+)
+
+```
+
+\newline
+
+> The MS results confirm the peaks observed with DAD. The isotopic pattern also matches the expected for Pramipexole. Considering the MS peak, the limit of quantification for Pramipexole could be at 10 ng/mL but further analyses are necessary for confirmation. Moreover, the impact of the suggested saturation of the enrichment cartridge should be evaluated over multiple injections to assess reproducibility.
+
+\newline
+
+For further questions, please contact Ricardo Cunha ([cunha@iuta.de](cunha@iuta.de)).
+
+Data and report are stored in folder `r msdata@path` of the mzMine workstation.
+
+The report was produced on `r Sys.time()`

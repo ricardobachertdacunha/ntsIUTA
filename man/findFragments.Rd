@@ -39,7 +39,7 @@ for confirmation of fragments formulae. Possible values are "sirius" and "fenfor
 \item{MS2settings}{A list of parameter settings to use for extracting MS2 data.}
 }
 \value{
-An \linkS4class{ntsData} object with an \linkS4class{ntsFragmentsData} object
+An \linkS4class{ntsData} object with an \linkS4class{ntsFragments} object
 add to the workflows slot.
 }
 \description{

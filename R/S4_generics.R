@@ -300,9 +300,9 @@ setGeneric("fragmentsParameters", function(object, algorithm, settings) standard
 #'
 setGeneric("fillingParameters", function(object, algorithm, settings) standardGeneric("fillingParameters"))
 
-#' isotopesParameters
+#' annotationParameters
 #'
-#' @param object An object to add or get isotopic search parameter settings.
+#' @param object An object to add or get annotation parameter settings.
 #' @param algorithm Algorithm for the parameters.
 #' @param settings List of parameter settings.
 #'
@@ -310,7 +310,7 @@ setGeneric("fillingParameters", function(object, algorithm, settings) standardGe
 #'
 #' @seealso See method details in the \linkS4class{ntsData} help page.
 #'
-setGeneric("isotopesParameters", function(object, algorithm, settings) standardGeneric("isotopesParameters"))
+setGeneric("annotationParameters", function(object, algorithm, settings) standardGeneric("annotationParameters"))
 
 #' peaks
 #'
@@ -365,6 +365,25 @@ setGeneric("features", function(object, ...) standardGeneric("features"))
 #' @seealso See method details in the \linkS4class{ntsData} help page.
 #'
 setGeneric("plotFeatures", function(object, ...) standardGeneric("plotFeatures"))
+
+#' mapFeatures
+#'
+#' @param object An object to with EICs for mapping features (i.e., grouped chromatographic peaks).
+#' @param ... Other method dependent parameters.
+#'
+#' @return A plot with mapped peaks, including time and mass peak space.
+#'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
+setGeneric("mapFeatures", function(object, ...) standardGeneric("mapFeatures"))
+
+#' hasAdjustedRetentionTime
+#'
+#' @param object A object to check for existence of adjusted retention time.
+#'
+#' @return A logical value.
+#'
+setGeneric("hasAdjustedRetentionTime", function(object) standardGeneric("hasAdjustedRetentionTime"))
 
 #' exportPlots
 #'

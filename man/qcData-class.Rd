@@ -16,6 +16,8 @@ qcData
 \describe{
 \item{\code{samples}}{A data.frame listing the QC samples.}
 
+\item{\code{scans}}{A list with MS scans \link[data.table]{data.table} objects per sample.}
+
 \item{\code{targets}}{A \linkS4class{suspectList} object with the QC target compounds.}
 
 \item{\code{rtWindow}}{The retention time window, in seconds, to look for target compounds.}

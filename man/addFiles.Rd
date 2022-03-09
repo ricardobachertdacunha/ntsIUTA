@@ -33,10 +33,8 @@ The replicate names can always be edited using the class method \link{sampleGrou
 See \code{?"sampleGroups<-"} for more information.}
 
 \item{polarity}{A vector specifying the ionization polarity of the files.
-Possible values are \emph{positive}, \emph{negative} or \emph{both} for positive, negative or both modes, respectively.
-The default is \code{positive} and will be filled automatically for all found MS files.
-When files from different polarities are present (\emph{both}), the polarity of each file must be specified using the method X
-or changing it manually in the \code{samples} slot of the \linkS4class{ntsData}.}
+Possible values are \emph{positive} (the default) or \emph{negative} for positive or negative modes, respectively.
+Note that it will overwrite the polarity of the \linkS4class{ntsData} object.}
 
 \item{method}{A character vector with the method used for acquiring the MS data.
 When different methods were used, the method should be given per file.

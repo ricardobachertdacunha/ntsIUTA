@@ -95,19 +95,18 @@ setMethod("fillingParameters", c("ntsData", "missing", "missing"), function(obje
 #' @importFrom checkmate testChoice
 #'
 setMethod("fillingParameters", c("ntsData", "character", "ANY"), function(object, algorithm, settings) {
-  
-  if (!testChoice(algorithm, c("xcms3"))) {
-    warning("Algorithm not recognized for filling features with missing peaks.
-            See ?makeFeatures for more information.")
-    return(object)
+
+  if (missing(settings) & algorithm == "xcms3") {
+    pfill <- fillingSettingsDefaultXCMS()
+    settings <- pfill@settings
   }
-  
-  if (class(param) != "list") param <- list(param)
-  
-  object@parameters@fillMissing@algorithm <- algorithm
-  
-  object@parameters@fillMissing@param <- param
-  
+
+  if (!checkmate::testClass(settings, "list")) settings <- list(settings)
+
+  object@parameters@filling@algorithm <- algorithm
+
+  object@parameters@filling@settings <- settings
+
   return(object)
   
 })
@@ -157,7 +156,7 @@ setMethod("fragmentsParameters", c("ntsData", "character", "ANY"), function(obje
 
 
 
-#### isotopesParameters -----
+#### annotationParameters -----
 
 #' @describeIn ntsData Getter for annotation parameters.
 #'
@@ -165,7 +164,7 @@ setMethod("fragmentsParameters", c("ntsData", "character", "ANY"), function(obje
 #'
 #' @export
 #'
-setMethod("isotopesParameters", c("ntsData", "missing", "missing"), function(object) object@parameters@annotation)
+setMethod("annotationParameters", c("ntsData", "missing", "missing"), function(object) object@parameters@annotation)
 
 
 #' @describeIn ntsData Setter for annotation parameters.
@@ -178,22 +177,20 @@ setMethod("isotopesParameters", c("ntsData", "missing", "missing"), function(obj
 #'
 #' @importFrom checkmate testChoice
 #'
-setMethod("isotopesParameters", c("ntsData", "character", "ANY"), function(object, algorithm, settings) {
+setMethod("annotationParameters", c("ntsData", "character", "ANY"), function(object, algorithm, settings) {
 
-  if (!testChoice(algorithm, c("alteredcamera"))) {
-    warning("Algorithm not recognized for annotation of features.
-            See ?annotateFeatures for more information.")
-    return(object)
-  }
-  
-  if (class(param) != "list") param <- list(param)
-  
+  # if (!checkmate::testChoice(algorithm, c("xcms3", "xcms", "openms"))) {
+  #   warning("Algorithm not recognized. See ?makeFeatures for more information.")
+  #   return(object)
+  # }
+
+  if (!checkmate::testClass(settings, "list")) settings <- list(settings)
+
   object@parameters@annotation@algorithm <- algorithm
-  
-  object@parameters@annotation@param <- param
-  
+
+  object@parameters@annotation@settings <- settings
+
   return(object)
-  
 })
 
 
@@ -268,45 +265,3 @@ AlteredCameraParam <- function(
   return(paramobj)
 
 }
-
-
-
-
-#' paramMS2
-#'
-#' @param maxMSRtWindow .
-#' @param precursorMzWindow .
-#' @param clusterMzWindow .
-#' @param topMost .
-#' @param minIntensityPre .
-#' @param minIntensityPost .
-#'
-#' @return An \linkS4class{paramMS2} object containing parameters for
-#' extraction of MS2 spectra of given precursor ions in an \linkS4class{ntsData} object.
-#'
-#' @export
-#'
-paramMS2 <- function(maxMSRtWindow = 10,
-                     precursorMzWindow = 1.3,
-                     clusterMzWindow = 0.003,
-                     topMost = 50,
-                     minIntensityPre = 10,
-                     minIntensityPost = 10) {
-
-  paramobj <- do.call(new, c("paramMS2", as.list(environment())))
-
-  paramobj
-
-  return(paramobj)
-
-}
-
-
-
-
-
-
-
-
-
-

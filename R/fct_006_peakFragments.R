@@ -2,7 +2,7 @@
 
 ### patFragmentSettingsDefault -----
 
-#' @title patFragmentSettingsDefault-class
+#' @title patFragmentSettingsDefault
 #'
 #' @return An \linkS4class{ntsSettings} object containing parameters for
 #' extraction of MS2 spectra of given precursor ions in an \linkS4class{ntsData} object
@@ -50,7 +50,7 @@ patFragmentSettingsDefault <- function() {
 
 ### fragmentSettingsDefault -----
 
-#' @title fragmentSettingsDefault-class
+#' @title fragmentSettingsDefault
 #'
 #' @return An \linkS4class{ntsSettings} object containing parameters for
 #' extraction of MS2 spectra of given precursor ions in an \linkS4class{ntsData} object.

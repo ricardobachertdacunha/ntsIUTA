@@ -38,11 +38,11 @@ peakGrouping <- function(object = NULL,
                          simplify = TRUE,
                          save = TRUE) {
 
-  assertClass(object, "ntsData")
+  checkmate::assertClass(object, "ntsData")
 
-  x <- object@pat
+  pat <- object@pat
 
-  if (checkmate::testClass(x, "featureGroups")) x <- x@features
+  if (checkmate::testClass(pat, "featureGroups")) pat <- pat@features
 
   if (is.null(algorithm)) algorithm <- groupingParameters(object)@algorithm
 
@@ -54,42 +54,44 @@ peakGrouping <- function(object = NULL,
   }
 
   if (algorithm == "xcms3") {
-      settings$groupParam@sampleGroups <- x@analysisInfo$group
+      settings$groupParam@sampleGroups <- pat@analysisInfo$group
     if (settings$rtalign) {
-      settings$preGroupParam@sampleGroups <- x@analysisInfo$group
+      settings$preGroupParam@sampleGroups <- pat@analysisInfo$group
     }
   }
 
-  ag <- list(obj = x, algorithm = algorithm)
+  ag <- list(obj = pat, algorithm = algorithm)
 
-  x <- do.call(groupFeatures, c(ag, settings, verbose = TRUE))
+  pat <- do.call(groupFeatures, c(ag, settings, verbose = TRUE))
 
   object <- groupingParameters(object, algorithm = algorithm, settings = settings)
 
-  object@pat <- x
+  object@pat <- pat
 
   object <- buildPeaksTable(object)
 
   object <- buildFeatureTable(object)
 
+  object <- addAdjustedRetentionTime(object)
+
   if (simplify) {
-    xFeats <- new("featuresSIRIUS",
-      analysisInfo = x@features@analysisInfo,
-      features = x@features@features
+    newFeats <- new("featuresSIRIUS",
+      analysisInfo = pat@features@analysisInfo,
+      features = pat@features@features
     )
 
-    xFeatGroups <- new("featureGroupsSIRIUS",
-      groups = x@groups,
-      groupInfo = x@groupInfo,
-      analysisInfo = x@analysisInfo,
-      features = xFeats,
-      ftindex = x@ftindex
+    newFeatGroups <- new("featureGroupsSIRIUS",
+      groups = pat@groups,
+      groupInfo = pat@groupInfo,
+      analysisInfo = pat@analysisInfo,
+      features = newFeats,
+      ftindex = pat@ftindex
     )
 
-    object@pat <- xFeatGroups
+    object@pat <- newFeatGroups
   }
 
-  if (save) saveObject(object = object)
+  if (is.logical(save)) if (save) saveObject(object = object)
 
   if (is.character(save)) saveObject(object = object, filename = save)
 
@@ -111,7 +113,7 @@ peakGrouping <- function(object = NULL,
 #'
 buildFeatureTable <- function(object) {
 
-  cat("Building features table... \n")
+  cat("Building features table... ")
 
   pat <- object@pat
 
@@ -168,6 +170,81 @@ buildFeatureTable <- function(object) {
   feat <- select(feat, id, mz, rt, d_ppm, d_sec, everything())
 
   object@features <- feat
+
+  cat("Done! \n")
+  return(object)
+}
+
+
+
+
+#' @title addAdjustedRetentionTime
+#'
+#' @description Function to add adjusted retention time information
+#' to the scans slot of the \linkS4class{ntsData} object.
+#'
+#' @param object An \linkS4class{ntsData} object.
+#'
+#' @importFrom checkmate testClass assertClass
+#' @importMethodsFrom xcms adjustedRtime processHistory peakGroupsMatrix hasAdjustedRtime
+#' @importClassesFrom xcms XCMSnExp PeakGroupsParam
+#' @importClassesFrom patRoon featureGroupsXCMS3
+#'
+addAdjustedRetentionTime <- function(object) {
+
+  checkmate::assertClass(object, "ntsData")
+
+  pat <- object@pat
+
+  if (checkmate::testClass(pat, "featureGroupsXCMS3") & xcms::hasAdjustedRtime(pat@xdata)) {
+
+    cat("Adding adjusted retention time values... ")
+
+    rtAdj <- xcms::adjustedRtime(pat@xdata)
+
+    pkAdj <- xcms::processHistory(
+      pat@xdata,
+      type = "Retention time correction"
+    )[[1]]
+    pkAdj <- pkAdj@param
+
+    addAdjPoints <- FALSE
+    if (checkmate::testClass(pkAdj, "PeakGroupsParam")) {
+      addAdjPoints <- TRUE
+      pkAdj <- xcms::peakGroupsMatrix(pkAdj)
+    }
+
+    scans <- object@scans
+    scans <- lapply(seq_len(length(scans)), function(x, scans, rtAdj, addAdjPoints, pkAdj) {
+
+      rts <- names(rtAdj)
+      rts <- stringr::str_detect(rts, paste0("F", x))
+      rts <- rtAdj[rts]
+
+      temp <- scans[[x]]
+      temp[, adjustedRetentionTime := rts]
+      temp[, adjustment := adjustedRetentionTime - retentionTime]
+
+      if (addAdjPoints) {
+        pk_rts <- unique(pkAdj[, x])
+        pk_rts <- pk_rts[pk_rts %in% temp$retentionTime]
+        temp[retentionTime %in% pk_rts, adjPoints := pk_rts]
+      }
+
+      return(temp)
+    },
+    scans = scans,
+    rtAdj = rtAdj,
+    addAdjPoints = addAdjPoints,
+    pkAdj = pkAdj)
+
+    names(scans) <- samples(object)
+
+    object@scans <- scans
+
+    cat("Done! \n")
+    return(object)
+  }
 
   return(object)
 }

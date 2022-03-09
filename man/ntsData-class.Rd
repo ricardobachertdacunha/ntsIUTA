@@ -21,6 +21,7 @@
 \alias{QC,ntsData-method}
 \alias{QC<-,ntsData-method}
 \alias{[,ntsData,ANY,missing,missing-method}
+\alias{hasAdjustedRetentionTime,ntsData-method}
 \alias{EICs,ntsData-method}
 \alias{plotEICs,ntsData-method}
 \alias{plotEICs,data.table-method}
@@ -48,8 +49,8 @@
 \alias{fillingParameters,ntsData,character,ANY-method}
 \alias{fragmentsParameters,ntsData,missing,missing-method}
 \alias{fragmentsParameters,ntsData,character,ANY-method}
-\alias{isotopesParameters,ntsData,missing,missing-method}
-\alias{isotopesParameters,ntsData,character,ANY-method}
+\alias{annotationParameters,ntsData,missing,missing-method}
+\alias{annotationParameters,ntsData,character,ANY-method}
 \title{ntsData}
 \usage{
 \S4method{projectInfo}{ntsData}(object, title = NULL, description = NULL, date = NULL)
@@ -74,7 +75,7 @@
 
 \S4method{acquisitionMethods}{ntsData}(object) <- value
 
-\S4method{polarity}{ntsData}(object, groupBy)
+\S4method{polarity}{ntsData}(object)
 
 \S4method{polarity}{ntsData}(object) <- value
 
@@ -85,6 +86,8 @@
 \S4method{QC}{ntsData}(object, remove = FALSE, nameType = "replicates") <- value
 
 \S4method{[}{ntsData,ANY,missing,missing}(x, i, j, ..., drop = TRUE)
+
+\S4method{hasAdjustedRetentionTime}{ntsData}(object)
 
 \S4method{EICs}{ntsData}(object, samples = NULL, mz = NULL, ppm = 20, rt = NULL, sec = 60)
 
@@ -293,9 +296,9 @@
 
 \S4method{fragmentsParameters}{ntsData,character,ANY}(object, algorithm, settings)
 
-\S4method{isotopesParameters}{ntsData,missing,missing}(object)
+\S4method{annotationParameters}{ntsData,missing,missing}(object)
 
-\S4method{isotopesParameters}{ntsData,character,ANY}(object, algorithm, settings)
+\S4method{annotationParameters}{ntsData,character,ANY}(object, algorithm, settings)
 }
 \arguments{
 \item{object}{An \linkS4class{ntsData} object.}
@@ -307,8 +310,6 @@
 \item{date}{\link{Date} object.}
 
 \item{value}{A character vector applicable to the respective method.}
-
-\item{groupBy}{A length one character string.}
 
 \item{x}{An \linkS4class{ntsData} object.}
 
@@ -430,15 +431,10 @@ The \code{value} is a character vector with the same length as the number of sam
 in the \code{object}, containing the name of the aquisition method used for each sample.
 When the length is one, the name is applied to all samples.
 
-\item \code{polarity}: Getter for the polarity of each sample/replicate.
-The \code{groupBy} argument is either \code{samples} (the default) or \code{replicates}
-as character string to return the polarites either for each sample or each replicate.
+\item \code{polarity}: Getter for the polarity of the \linkS4class{ntsData} object.
 
 \item \code{polarity<-}: Setter for the polarity mode of the samples (i.e., files).
-The \code{value} is a character vector with either \emph{positive} or \emph{negative} strings
-with the same length as the number of samples in the set. If only one polarity mode is used for all the samples,
-the \code{value} can be of length one and either \emph{positive} or \emph{negative}.
-The polarity mode is used for all the samples.
+The \code{value} is a character vector with length one with either \emph{positive} or \emph{negative} strings.
 
 \item \code{metadata}: Getter for metadata as \link[data.table]{data.table}.
 The \code{varname} argument is a character string to specify
@@ -454,6 +450,9 @@ the specified sample or replicate names are moved from
 the QC to the samples of the \linkS4class{ntsData} object.
 
 \item \code{[}: Subset on samples, using sample index or name.
+
+\item \code{hasAdjustedRetentionTime}: checks if the \linkS4class{ntsData} has adjusted
+retention time derived from alighment of peaks across samples.
 
 \item \code{EICs}: get extracted ion chromatograms (EICs)
 for specified \emph{m/z} and retention time (seconds) targets
@@ -559,7 +558,7 @@ each target, sample, replicate or collision energy, respectively.
 
 \item \code{peaks}: Getter for chromatographic peaks.
 The arguments \code{targets} and \code{mz}/\code{rt} can be used
-to select specific peaks. The \emph{id} of features can be given in the \code{targets}
+to select specific peaks. The \emph{id} of peaks and/or features can be given in the \code{targets}
 argument to select the respective peaks. Also, samples can be selected using the
 \code{samples} argument.
 
@@ -609,9 +608,9 @@ is set to "targets" automatically.
 
 \item \code{fragmentsParameters}: Setter for fragments extraction parameters.
 
-\item \code{isotopesParameters}: Getter for annotation parameters.
+\item \code{annotationParameters}: Getter for annotation parameters.
 
-\item \code{isotopesParameters}: Setter for annotation parameters.
+\item \code{annotationParameters}: Setter for annotation parameters.
 }}
 
 \section{Slots}{
@@ -632,8 +631,18 @@ is set to "targets" automatically.
  \item replicate: character string with the assigned sample replicate group;
  \item blank: character string with associated blank replicate;
  \item polarity: the polarity mode of the respective file; possible values are "positive" or "negative");
- \item method: a character string with the method used to acquire the data file.
+ \item method: a character string with the method used to acquire the data file;
+ \item scans: a numeric value with the number of scans in the data file;
+ \item centroided: a logical value with the centroiding evaluation of the data;
+ \item msLevels: a character string with the MS levels in the data file;
+ \item rtStart: a numeric value with the retention time start, in seconds;
+ \item rtEnd: a numeric value with the retention time end, in seconds;
+ \item mzLow: a numeric value of the lowest mass in the data file, in \emph{m/z};
+ \item mzHigh: a numeric value of the highest mass in the data file, in \emph{m/z};
+ \item CE: a character string with the collision energies used in the data file.
 }}
+
+\item{\code{scans}}{A list with MS scans \link[data.table]{data.table} objects per sample.}
 
 \item{\code{metadata}}{A data.table with the same number of rows
 as the number of \code{samples}, containing metadata for each sample added as extra columns.}
@@ -643,7 +652,7 @@ See \code{?"ntsParameters-class"} for more information.}
 
 \item{\code{QC}}{A \linkS4class{qcData} object used for quality control. More information in \code{?"qcData-class"}.}
 
-\item{\code{pat}}{An \linkS4class{workflowStep} object from the \pkg{patRoon} package;}
+\item{\code{pat}}{An \linkS4class{workflowStep} object from the \pkg{patRoon} package.}
 
 \item{\code{peaks}}{A \link[data.table]{data.table} with peaks for each sample.}
 

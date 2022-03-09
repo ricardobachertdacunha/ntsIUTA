@@ -2,7 +2,7 @@
 % Please edit documentation in R/fct_006_peakFragments.R
 \name{fragmentSettingsDefault}
 \alias{fragmentSettingsDefault}
-\title{fragmentSettingsDefault-class}
+\title{fragmentSettingsDefault}
 \usage{
 fragmentSettingsDefault()
 }
@@ -11,5 +11,5 @@ An \linkS4class{ntsSettings} object containing parameters for
 extraction of MS2 spectra of given precursor ions in an \linkS4class{ntsData} object.
 }
 \description{
-fragmentSettingsDefault-class
+fragmentSettingsDefault
 }

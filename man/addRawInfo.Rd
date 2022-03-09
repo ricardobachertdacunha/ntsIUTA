@@ -7,13 +7,15 @@
 addRawInfo(object)
 }
 \arguments{
-\item{ojbect}{An \linkS4class{ntsData} object.}
+\item{object}{An \linkS4class{ntsData} object.}
 }
 \value{
 An \linkS4class{ntsData} object with raw information added
-per sample in the samples slot.
+per sample in the samples and scans slot.
 }
 \description{
 Adds raw info for each sample (i.e., file)
-in the samples slot of an \linkS4class{ntsData} object.
+in the samples slot of an \linkS4class{ntsData} object and
+a \link[data.table]{data.table} with MS scans for each sample
+in the slot scans as list.
 }

@@ -45,8 +45,6 @@ dt <- addMetadata(dt, var)
 metadata(dt)
 
 
-
-
 ### check TICs ----------------------------------------------------------------------------------------------
 
 tic <- TICs(dt, samples = NULL)
@@ -67,7 +65,7 @@ dtxcms <- pickingParameters(
   algorithm = "xcms3",
   settings = xcms::CentWaveParam(
     ppm = 15, peakwidth = c(5, 60),
-    snthresh = 10, prefilter = c(6, 5000),
+    snthresh = 10, prefilter = c(6, 1000),
     mzCenterFun = "mean", integrate = 2,
     mzdiff = -0.0001, fitgauss = TRUE,
     noise = 250, verboseColumns = TRUE,
@@ -79,8 +77,6 @@ dtxcms <- pickingParameters(
 pickingParameters(dtxcms)
 
 dtxcms <- peakPicking(dtxcms, save = FALSE)
-
-
 
 
 #### openms --------------------------------------------------------------
@@ -119,6 +115,75 @@ dtopenms <- pickingParameters(
 pickingParameters(dtopenms)
 
 dtopenms <- peakPicking(dtopenms, save = FALSE)
+
+
+#### kpic2 --------------------------------------------------------------
+
+dtkpic2 <- dt
+
+dtkpic2 <- pickingParameters(
+  dtkpic2,
+  algorithm = "kpic2",
+  settings = list(
+    kmeans = FALSE,
+    level = 1000,
+    mztol = 0.01,
+    gap = 3,
+    width = c(5),
+    #alpha = 0.3,
+    min_snr = 4,
+    parallel = TRUE
+  )
+)
+
+pickingParameters(dtkpic2)
+
+dtkpic2 <- peakPicking(dtkpic2, save = FALSE)
+
+
+##### safd ----------------------------------------------------------------------
+# Only mzXML data in profile mode are possible
+
+dtsafd <- dt
+
+dtsafd <- pickingParameters(
+  dtsafd,
+  algorithm = "safd",
+  settings = list(
+    profPath = dirname(dtsafd@samples$file),
+    mzRange = c(0, 1200),
+    maxNumbIter = 1000,
+    maxTPeakW = 300,
+    resolution = 12000,
+    minMSW = 0.02,
+    RThreshold = 0.75,
+    minInt = 500,
+    sigIncThreshold = 5,
+    S2N = 3,
+    minPeakWS = 3
+  )
+)
+
+pickingParameters(dtsafd)
+
+dtsafd <- peakPicking(dtsafd, save = FALSE)
+
+
+##### sirius --------------------------------------------------------------------
+#Note, note working with trimed mzML files
+
+dtsirius <- dt
+
+dtsirius <- pickingParameters(
+  dtsirius,
+  algorithm = "sirius",
+  settings = list()
+)
+
+pickingParameters(dtsirius)
+
+dtsirius <- peakPicking(dtsirius, save = FALSE)
+
 
 
 #### inspecting peaks ----------------------------------------------------
@@ -206,16 +271,173 @@ features(dtxcms, samples = 2, mz = mz_01, ppm = 5, rt = rt_01, sec = 10)
 
 features(dtopenms, samples = 2, mz = mz_01, ppm = 5, rt = rt_01, sec = 10)
 
-plotPeaks(dtxcms, samples = c(1, 4), targets = c("M239_R936_135", "M247_R840_150"), colorBy = "targets")
+plotPeaks(dtxcms, samples = c(1, 4), targets = c("M239_R936_251", "M247_R840_281"), colorBy = "targets")
+
+plotFeatures(dtxcms, samples = c(2, 5), mz = mz_01, ppm = 5, rt = rt_01, sec = 10, colorBy = "replicates", interactive = TRUE)
 
 plotFeatures(dtopenms, samples = c(2, 5), mz = mz_01, ppm = 5, rt = rt_01, sec = 10, colorBy = "replicates", interactive = TRUE)
 
 #patRoon option
 patRoon::plotChroms(dtxcms@pat[c(2, 4), "M239_R936_135"])
 
+#### inspecting alignment ------------------------------------------------
+
+plotAlignment(dtxcms)
 
 
+### peak filling --------------------------------------------------------------------------------------------
 
+#### xcms ----------------------------------------------------------------
+
+dtxcms <- fillingParameters(
+  dtxcms,
+  algorithm = "xcms",
+  settings = xcms::ChromPeakAreaParam(
+    mzmin = function(z) quantile(z, probs = 0.25),
+    mzmax = function(z) quantile(z, probs = 0.75),
+    rtmin = function(z) quantile(z, probs = 0.25),
+    rtmax = function(z) quantile(z, probs = 0.75)
+  )
+)
+
+fillingParameters(dtxcms)
+
+dtxcms <- peakFilling(dtxcms, save = FALSE)
+
+#### openms --------------------------------------------------------------
+
+dtopenms <- fillingParameters(
+  dtopenms,
+  algorithm = "xcms",
+  settings = xcms::FillChromPeaksParam(
+    expandMz = 0,
+    expandRt = 0,
+    ppm = 0,
+    fixedMz = 0,
+    fixedRt = 0
+  )
+)
+
+fillingParameters(dtopenms)
+
+dtopenms <- peakFilling(dtopenms, save = FALSE)
+
+
+#### inspecting filling --------------------------------------------------
+
+showfill <- features(dtxcms)[hasFilled == TRUE, ]
+setorder(showfill, -IN)
+showfill <- showfill[1:5, ]
+
+plotFeaturePeaks(
+  object <- dtxcms,
+  samples = c(1:6),
+  targets = showfill$id,
+  mz = NULL, ppm = 20,
+  rt = NULL, sec = 30,
+  legendNames = NULL
+)
+
+peaks(dtxcms, targets = showfill$id)
+
+
+### annotation ----------------------------------------------------------------------------------------------
+
+dt_cliquems <- annotationParameters(
+  dtxcms,
+  algorithm = "cliquems",
+  settings = list(
+    ionization = "positive",
+    maxCharge = 3,
+    maxGrade = 5,
+    ppm = 20,
+    adductInfo = NULL,
+    absMzDev = 0.01,
+    minSize = 2,
+    relMinAdductAbundance = 0.5,
+    adductConflictsUsePref = TRUE,
+    NMConflicts = c("preferential"),
+    prefAdducts = c("[M+H]+"),
+    extraOptsCli = NULL,
+    extraOptsIso = NULL,
+    extraOptsAnn = NULL,
+    parallel = TRUE
+  )
+)
+
+dt_ramclustr <- annotationParameters(
+  dtxcms,
+  algorithm = "ramclustr",
+  settings = list(
+    ionization = "positive",
+    st = NULL,
+    sr = NULL,
+    maxt = 12,
+    hmax = 0.3,
+    normalize = "TIC",
+    absMzDev = 0.01,
+    relMzDev = 20,
+    minSize = 2,
+    relMinReplicates = 0.5,
+    RCExperimentVals = list(design = list(platform = "LC-MS"), instrument =
+      list(ionization = "positive", MSlevs = 1)),
+    extraOptsRC = NULL,
+    extraOptsFM = NULL
+  )
+)
+
+dt_xcms <- annotationParameters(
+  dtxcms,
+  algorithm = "camera",
+  settings = list(
+    ionization = polarity(dtxcms),
+    onlyIsotopes = FALSE,
+    minSize = 2,
+    relMinReplicates = 0.5,
+    extraOpts = list(
+      sigma = 6,
+      perfwhm = 0.35,
+      cor_eic_th = 0.3,
+      graphMethod = "hcs",
+      pval = 0.05,
+      calcCiS = TRUE,
+      calcIso = TRUE,
+      calcCaS = TRUE,
+      maxcharge = 3,
+      maxiso = 5,
+      ppm = 20,
+      mzabs = 0.01,
+      rules =  data.table::fread(system.file("rules/primary_adducts_pos.csv", package = "CAMERA"), header = TRUE),
+      multiplier = 3,
+      max_peaks = 500,
+      intval = "maxo"
+    )
+  )
+)
+
+dt_cliquems <- peakAnnotation(dt_cliquems, save = FALSE)
+dt_ramclustr <- peakAnnotation(dt_ramclustr, save = FALSE)
+dt_xcms <- peakAnnotation(dtxcms, save = FALSE)
+
+#### inspect annotation --------------------------------------------------
+
+tg <- features(dt_xcms, targets = "M239_R936_638")
+
+#cliqueMS
+eval_cliquems <- features(dt_cliquems)
+eval_cliquems <- eval_cliquems[neutralMass %in% tg$neutralMass, ]
+
+#ramclustr
+eval_ramclustr <- features(dtramclustr)
+eval_ramclustr <- eval_ramclustr[neutralMass %in% tg$neutralMass, ]
+
+#xcms
+eval_xcms <- features(dt_xcms)
+eval_xcms <- eval_xcms[neutralMass %in% tg$neutralMass, ]
+eval_xcms_p <- peaks(dt_xcms)
+eval_xcms_p <- eval_xcms_p[feature %in% annoInsp$id, ]
+
+mapPeaks(object, targets = eval_xcms_p$id)
 
 
 
@@ -360,4 +582,57 @@ test_genform <- findFragments(
 test_sirius@workflows[[1]]@results
 
 test_genform@workflows[[1]]@results
+
+
+xcms::plotAdjustedRtime(object@pat@xdata) # col = group_colors[object@pat@xdata$sample_group]
+
+
+rtAdj <- xcms::adjustedRtime(object@pat@xdata)
+head(rtAdj)
+
+
+pkAdj <- xcms::processHistory(object@pat@xdata)[[3]]
+pkAdj <- pkAdj@param
+pkAdj <- xcms::peakGroupsMatrix(pkAdj)
+
+
+
+rtAdj_dt <- object@scans
+rtAdj_dt <- lapply(rtAdj_dt, function(x) x[, .(seqNum, acquisitionNum, retentionTime)])
+names(rtAdj_dt) <- samples(object)
+rtAdj_dt <- lapply(seq_len(length(rtAdj_dt)), function(x, rtAdj, rtAdj_dt) {
+
+  rts <- names(rtAdj)
+  rts <- stringr::str_detect(rts, paste0("F", x))
+  rts <- rtAdj[rts]
+
+  rtAdj_dt[[x]][, adjustedRetentionTime := rts]
+  rtAdj_dt[[x]][, adjustment := adjustedRetentionTime - retentionTime]
+
+  return(rtAdj_dt[[x]])
+
+}, rtAdj = rtAdj, rtAdj_dt = rtAdj_dt)
+
+
+plot(rtAdj_dt[[4]]$retentionTime, rtAdj_dt[[4]]$adjustment, type = "l")
+
+points(
+  unique(pkAdj[, 4][pkAdj[, 4] %in% rtAdj_dt[[4]]$retentionTime]),
+  unique(rtAdj_dt[[4]]$adjustment[rtAdj_dt[[4]]$retentionTime %in% pkAdj[, 4]])
+)
+
+
+length(pkAdj[, 4])
+length(rtAdj_dt[[4]]$adjustment[rtAdj_dt[[4]]$adjustedRetentionTime %in% pkAdj[, 4]])
+
+rtAdj_dt[[1]]
+
+View(xcms::adjustedRtime(object@pat@xdata))
+
+View(test)
+test1 <- test@phenoData
+
+test <- xdata@msFeatureData
+
+names(xdata@msFeatureData$adjustedRtime)
 

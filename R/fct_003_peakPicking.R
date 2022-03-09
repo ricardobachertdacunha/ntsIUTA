@@ -80,14 +80,9 @@ peakPicking <- function(object = NULL,
     settings = settings
   )
 
-  if (save) saveObject(object = object)
+  if (is.logical(save)) if (save) saveObject(object = object)
 
-  if (is.character(save)) {
-    saveObject(
-      object = object,
-      filename = save
-    )
-  }
+  if (is.character(save)) saveObject(object = object, filename = save)
 
   return(object)
 }
@@ -112,7 +107,7 @@ peakPicking <- function(object = NULL,
 #'
 buildPeaksTable <- function(object) {
 
-  cat("Building peaks table... \n")
+  cat("Building peaks table... ")
 
   pat <- object@pat
 
@@ -132,6 +127,8 @@ buildPeaksTable <- function(object) {
     extra <- as.data.table(chromPeaks(pat@xdata, isFilledColumn = TRUE))
     extra <- setnames(extra, c("maxo", "into"), c("intensity", "area"))
     extra[, sample := samples(object)[extra$sample]]
+    extra[, sample := factor(sample, levels = samples(object))]
+    setorder(extra, sample)
 
     if (nrow(peaks) == nrow(extra) & all(peaks$mz == extra$mz)) {
       newCols <- colnames(extra)[!colnames(extra) %in% colnames(peaks)]
@@ -168,5 +165,6 @@ buildPeaksTable <- function(object) {
 
   object@peaks <- peaks
 
+  cat("Done! \n")
   return(object)
 }

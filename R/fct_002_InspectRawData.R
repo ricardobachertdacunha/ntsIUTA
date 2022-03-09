@@ -10,7 +10,7 @@
 #' samples to collect raw inforamtion, respectively. The default is \code{NULL}
 #' which considers all samples in the \code{object}.
 #'
-#' @return A data table with raw information for each specified file.
+#' @return A \link[data.table]{data.table} with raw information for each specified file.
 #'
 #' @export
 #'
@@ -24,54 +24,28 @@ getRawInfo <- function(object, samples = NULL) {
 
   if (is.character(samples)) {
     if (FALSE %in% (samples %in% object@samples$sample)) {
-      warning("Given sample name/s not found in the ntsData object.")
-      return(rawinfo)
+      warning("Given sample names not found in the ntsData object!")
+      return(data.table())
     }
-    samples <- which(x@samples$sample %in% sn)
+    samples <- which(object@samples$sample %in% samples)
   }
 
   spt <- samplesTable(object)
   if (!is.null(samples)) spt <- spt[samples]
 
-  fl <- spt$file
+  spt <- spt[, .(
+    sample,
+    scans,
+    centroided,
+    msLevels,
+    rtStart,
+    rtEnd,
+    mzLow,
+    mzHigh,
+    CE
+  )]
 
-  rawinfo <- data.table(
-    sample = spt$sample,
-    scans = 0,
-    centroided = FALSE,
-    msLevels = list(rep(0, 2)),
-    rtStart = 0,
-    rtEnd = 0,
-    mzLow = 0,
-    mzHigh = 0,
-    numberPrecursos = 0,
-    collisionEnergy = 0
-  )
-
-  for (f in fl) {
-    msf <- mzR::openMSfile(f, backend = "pwiz")
-    hd <- as.data.table(mzR::header(msf))
-    rInfo <- mzR::runInfo(msf)
-    spn <- which(spt$file == f)
-    rawinfo[spn, scans := rInfo$scanCount]
-    rawinfo[spn, msLevels := rInfo$msLevels]
-    rawinfo[spn, rtStart := rInfo$dStartTime]
-    rawinfo[spn, rtEnd := rInfo$dEndTime]
-    rawinfo[spn, mzLow := rInfo$lowMz]
-    rawinfo[spn, mzHigh := rInfo$highMz]
-    rawinfo[spn, centroided := TRUE %in% unique(hd$centroided)]
-    rawinfo[spn, numberPrecursos := length(unique(hd$precursorMZ))]
-    ce <- unique(hd$collisionEnergy)
-    ce <- ce[!ce %in% NA]
-    if (length(ce) > 1) {
-      if (which(f == fl) == 1) {
-        rawinfo[, collisionEnergy := as.list(collisionEnergy)]
-        rawinfo[, collisionEnergy := list(rep(0, length(ce)))]
-      }
-    }
-    rawinfo[spn, collisionEnergy := ce]
-  }
-  return(copy(rawinfo))
+  return(spt)
 }
 
 
@@ -80,25 +54,72 @@ getRawInfo <- function(object, samples = NULL) {
 #' @title addRawInfo
 #'
 #' @description Adds raw info for each sample (i.e., file)
-#' in the samples slot of an \linkS4class{ntsData} object.
+#' in the samples slot of an \linkS4class{ntsData} object and
+#' a \link[data.table]{data.table} with MS scans for each sample
+#' in the slot scans as list.
 #'
-#' @param ojbect An \linkS4class{ntsData} object.
+#' @param object An \linkS4class{ntsData} object.
 #'
 #' @return An \linkS4class{ntsData} object with raw information added
-#' per sample in the samples slot.
+#' per sample in the samples and scans slot.
 #'
 #' @export
 #'
 #' @importFrom checkmate assertClass
+#' @importFrom data.table data.table as.data.table copy
+#' @importFrom mzR openMSfile header runInfo
 #'
 addRawInfo <- function(object) {
+
   assertClass(object, "ntsData")
-  rinfo <- getRawInfo(object)
-  if (TRUE %in% colnames(rinfo)[-1] %in% colnames(object@samples)) {
-    object@samples <- object@samples[, colnames(rinfo) := rinfo][]
-  } else {
-  object@samples <- object@samples[rinfo, on = .(sample = sample)]
+
+  spt <- samplesTable(object)
+
+  fls <- spt$file
+
+  scans <- list()
+
+  l_fls <- length(fls)
+
+  cat("Loading scans info from MS files... \n")
+  pb <- txtProgressBar(
+    min = 0,
+    max = l_fls,
+    style = 3,
+    width = 50,
+    char = "="
+  )
+
+  for (i in seq_len(l_fls)) {
+    f <- fls[i]
+    msf <- mzR::openMSfile(f, backend = "pwiz")
+    hd <- as.data.table(mzR::header(msf))
+    rInfo <- mzR::runInfo(msf)
+    scans[[samples(object)[i]]] <- hd
+    ce <- unique(hd$collisionEnergy)
+    ce <- sort(ce[!ce %in% NA])
+    ce <- paste(ce, collapse = "/")
+    mslvs <- paste(sort(rInfo$msLevels), collapse = "/")
+
+    spt[i, ":=" (
+      scans = rInfo$scanCount,
+      msLevels = mslvs,
+      rtStart = rInfo$dStartTime,
+      rtEnd = rInfo$dEndTime,
+      mzLow = rInfo$lowMz,
+      mzHigh = rInfo$highMz,
+      centroided = TRUE %in% unique(hd$centroided),
+      CE = ce
+    )]
+
+    setTxtProgressBar(pb, i)
   }
+
+  close(pb)
+
+  object@samples <- spt
+
+  object@scans <- scans
 
   return(object)
 }
@@ -361,7 +382,7 @@ makeTargets <- function(mz, rt, ppm = 20, sec = 60) {
 #' @export
 #'
 #' @importFrom checkmate assertClass
-#' @importFrom data.table rbindlist setnames setcolorder
+#' @importFrom data.table rbindlist setnames setcolorder copy
 #'
 extractEICs <- function(object = NULL,
                         samples = NULL,
@@ -383,8 +404,6 @@ extractEICs <- function(object = NULL,
   if (!is.null(samples)) fls <- fls[samples]
 
   targets <- makeTargets(mz, rt, ppm, sec)
-
-  eicList <- list()
 
   eicList <- lapply(fls, function(x, targets, spt) {
 
@@ -426,7 +445,7 @@ extractEICs <- function(object = NULL,
   eics <- rbindlist(eicList)
   setcolorder(eics, c("sample", "replicate", "id", "rt", "intensity"))
 
-  return(eics)
+  return(copy(eics))
 }
 
 
@@ -465,7 +484,7 @@ extractEICs <- function(object = NULL,
 #' @export
 #'
 #' @importFrom checkmate assertClass
-#' @importFrom data.table rbindlist setnames setcolorder
+#' @importFrom data.table rbindlist setnames setcolorder copy
 #'
 extractXICs <- function(object = NULL,
                         samples = NULL,
@@ -545,7 +564,19 @@ extractXICs <- function(object = NULL,
   xics <- rbindlist(xicList)
   setcolorder(xics, c("sample", "replicate", "id", "mz_id", "rt_id", "mz", "rt", "intensity"))
 
-  return(xics)
+  if (hasAdjustedRetentionTime(object)) {
+
+    spls <- unique(xics$sample)
+
+    for (i in spls) {
+      xics[sample == i, rt := sapply(rt, function(x, object, i) {
+        object@scans[[i]][retentionTime == x, adjustedRetentionTime]
+      }, object = object, i = i)]
+    }
+
+  }
+
+  return(copy(xics))
 }
 
 

@@ -7,19 +7,22 @@
 peakFilling(object, algorithm = NULL, settings = NULL, save = TRUE)
 }
 \arguments{
-\item{XCMSfeatures}{An \linkS4class{XCMSnExp} object containing features.}
+\item{object}{An \linkS4class{ntsData} object containing features.}
 
-\item{paramFill}{An object of class \code{FillChromPeaksParam} or \code{ChromPeakAreaParam}
-containing the parameters to apply the recursive integration.
+\item{algorithm}{A character vector defining the algorithm to be used for filling peaks.}
+
+\item{settings}{A list with parameters according to the defined algorithm.
+When the algorithm is set to \emph{xcms3}, the settings are the S4 class objects
+\linkS4class{FillChromPeaksParam} or \linkS4class{ChromPeakAreaParam}.
 See \code{?\link[xcms]{fillChromPeaks}} for more information.}
 }
 \value{
 An \linkS4class{XCMSnExp} object including filled missing peaks.
 }
 \description{
-Recursive integration for samples with missing peaks
-using the function \code{\link[xcms]{fillChromPeaks}}
-from the \pkg{xcms} package.
+Recursive integration for filling missing peaks within each feature.
+The function \code{\link[xcms]{fillChromPeaks}} from \pkg{xcms} package can be used,
+giving the respectives parameters with the argument \code{settings}.
 }
 \references{
 \insertRef{xcms1}{ntsIUTA}

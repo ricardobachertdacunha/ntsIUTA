@@ -136,14 +136,12 @@ blanks(object)
 
 #### polarity ------------------------------------------------------------
 
-## setter for the polarity mode of each sample/file
+## setter for the polarity mode
 polarity(object) <- "positive"
 
 
-## getter for the polarity mode of each sample or replicate
+## getter for the polarity mode
 polarity(object)
-#or
-polarity(object, groupBy = "replicates")
 
 
 #### acquisitionMethods --------------------------------------------------
@@ -217,9 +215,7 @@ example01 <- object[16:18]
 ## getter for the data table with raw information for all or specified files
 getRawInfo(example01, samples = 1)
 
-## adds the raw information directly into the ntsData object
-example01 <- addRawInfo(example01)
-samplesTable(example01)
+
 
 
 #### TICs -----------------------------------------------------------------

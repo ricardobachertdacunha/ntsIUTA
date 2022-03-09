@@ -14,7 +14,7 @@ which considers all samples in the \code{object}.}
 \item{ojbect}{An \linkS4class{ntsData} object.}
 }
 \value{
-A data table with raw information for each specified file.
+A \link[data.table]{data.table} with raw information for each specified file.
 }
 \description{
 Get raw information for each sample (i.e., file) in an

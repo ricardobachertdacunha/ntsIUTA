@@ -49,7 +49,7 @@ catStep <- function(PL, IN, OUT, constantLevel = 5000) {
 #' @slot categories A list of results from the categorization of each step in each sequence.
 #' @slot efficiency A list of data.frames with summarized categories results per sequence.
 #'
-#' @return An \linkS4class{ntsFragmentsData} object to be added to
+#' @return A \linkS4class{ntsFragments} object to be added to
 #' the workflows slot of an \linkS4class{ntsData} object.
 #'
 #' @export

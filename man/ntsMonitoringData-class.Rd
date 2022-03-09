@@ -39,7 +39,7 @@ Possible values are "mz" and "rt".}
 \item{ncol}{The number of columns to arrange the clusters grid.}
 }
 \value{
-An \linkS4class{ntsFragmentsData} object to be added to
+A \linkS4class{ntsFragments} object to be added to
 the workflows slot of an \linkS4class{ntsData} object.
 }
 \description{

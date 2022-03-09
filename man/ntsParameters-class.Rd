@@ -22,12 +22,10 @@ See \code{?"ntsSettings-class"}.
 
 \item{\code{filling}}{Settings for filling peaks with recursive integration within replicates.}
 
-\item{\code{isotopes}}{Settings for annotation of isotopes.}
+\item{\code{annotation}}{Settings for annotation of isotopes and adducts.}
 
 \item{\code{fragments}}{Settings for extracting MS2 data.}
 
 \item{\code{unification}}{Settings for unifying features across replicates.}
-
-\item{\code{adducts}}{Settings for annotation of adducts within the unified features.}
 }}
 

@@ -182,50 +182,26 @@ setMethod("acquisitionMethods<-", signature("ntsData", "ANY"), function(object, 
 
 ### polarity ------------------------------------------------------------------------------------------------
 
-#' @describeIn ntsData Getter for the polarity of each sample/replicate.
-#' The \code{groupBy} argument is either \code{samples} (the default) or \code{replicates}
-#' as character string to return the polarites either for each sample or each replicate.
-#'
-#' @param groupBy A length one character string.
+#' @describeIn ntsData Getter for the polarity of the \linkS4class{ntsData} object.
 #'
 #' @export
 #'
-setMethod("polarity", "ntsData", function(object, groupBy) {
+setMethod("polarity", "ntsData", function(object) {
 
-  if (missing(groupBy)) groupBy <- "samples"
-
-  if (groupBy == "samples") {
-    m <- object@samples$polarity
-    names(m) <- object@samples$sample
-    return(m)
-  } else {
-    m <- object@samples$polarity
-    names(m) <- object@samples$replicate
-    return(m[!duplicated(names(m))])
-  }
+  return(object@polarity)
 })
 
 #' @describeIn ntsData Setter for the polarity mode of the samples (i.e., files).
-#' The \code{value} is a character vector with either \emph{positive} or \emph{negative} strings
-#' with the same length as the number of samples in the set. If only one polarity mode is used for all the samples,
-#' the \code{value} can be of length one and either \emph{positive} or \emph{negative}.
-#' The polarity mode is used for all the samples.
+#' The \code{value} is a character vector with length one with either \emph{positive} or \emph{negative} strings.
 #'
 #' @export
+#' 
+#' @importFrom checkmate testChoice
 #'
 setMethod("polarity<-", "ntsData", function(object, value) {
 
-  if (length(value) != 1 & length(value) != length(samples(object))) {
-    warning("The length of the value argument is not equal to the number of samples in the object!")
-    return(object)
-  }
+  if (testChoice(value, c("positive", "negative"))) object@polarity <- value
 
-  if (FALSE %in% (value %in% c("positive", "negative"))) {
-    warning("Only positive and negative polarity modes are possible!")
-    return(object)
-  }
-
-  object@samples$polarity <- value
   return(object)
 })
 
@@ -301,7 +277,13 @@ setMethod("QC<-", "ntsData", function(object, value, remove = FALSE, nameType = 
         object@metadata <- rbind(object@metadata, object@QC@samples[object@QC@samples$replicate %in% value, .(sample, replicate)], fill = TRUE)
         object@samples <- object@samples[order(sample)]
         object@metadata <- object@metadata[order(sample)]
+
+        logVec <- object@QC@samples$replicate %in% value
+        object@scans <- c(object@scans, object@QC@scans[logVec])
+        object@scans <- object@scans[order(names(object@scans))]
+
         object@QC@samples <- object@QC@samples[!object@QC@samples$replicate %in% value, ]
+        object@QC@scans <- object@QC@scans[!logVec]
       }
     } else {
       if (FALSE %in% unique(value %in% object@QC@samples$sample)) {
@@ -311,7 +293,13 @@ setMethod("QC<-", "ntsData", function(object, value, remove = FALSE, nameType = 
         object@metadata <- rbind(object@metadata, object@QC@samples[object@QC@samples$sample %in% value, .(sample, replicate)], fill = TRUE)
         object@samples <- object@samples[order(sample)]
         object@metadata <- object@metadata[order(sample)]
+
+        logVec <- object@QC@samples$sample %in% value
+        object@scans <- c(object@scans, object@QC@scans[logVec])
+        object@scans <- object@scans[order(names(object@scans))]
+
         object@QC@samples <- object@QC@samples[!object@QC@samples$sample %in% value, ]
+        object@QC@scans <- object@QC@scans[!logVec]
       }
     }
     return(object)
@@ -322,16 +310,26 @@ setMethod("QC<-", "ntsData", function(object, value, remove = FALSE, nameType = 
       cat("Given replicate name/s in value not found in the object.")
     } else {
       object@QC@samples <- rbind(object@QC@samples, object@samples[object@samples$replicate %in% value, ])
+
+      logVec <- object@samples$replicate %in% value
+      object@QC@scans <- c(object@QC@scans, object@scans[logVec])
+
       object@samples <- object@samples[!(object@samples$replicate %in% value), ]
       object@metadata <- object@metadata[!(object@metadata$replicate %in% value), ]
+      object@scans <- object@scans[!logVec]
     }
   } else {
     if (FALSE %in% unique(value %in% object@samples$sample)) {
       cat("Given sample name/s in value not found in the object.")
     } else {
       object@QC@samples <- rbind(object@QC@samples, object@samples[object@samples$sample %in% value, ])
+
+      logVec <- object@samples$sample %in% value
+      object@QC@scans <- c(object@QC@scans, object@scans[logVec])
+
       object@samples <- object@samples[!(object@samples$sample %in% value), ]
       object@metadata <- object@metadata[!(object@metadata$sample %in% value), ]
+      object@scans <- object@scans[!logVec]
     }
   }
 
@@ -371,18 +369,39 @@ setMethod("[", c("ntsData", "ANY", "missing", "missing"), function(x, i, ...) {
 
     x@metadata <- x@metadata[sample %in% sname, ]
 
+    x@scans <- x@scans[sname]
+
     if (length(analyses(x@pat)) > 0) {
 
       x@pat <- x@pat[sidx]
 
-      x@peaks <- x@peaks[sample %in% sname, ]
+      if (nrow(x@peaks) > 0) x@peaks <- x@peaks[sample %in% sname, ]
 
-      #if (nrow(x@features) > 0) x <- updateFeatureList(x)
+      if (nrow(x@features) > 0) x <- buildFeatureTable(x)
+      # TODO update features ranges based on remaining peaks, not creating a new feature table to avoid losing info
 
     }
   }
 
   return(x)
+})
+
+
+
+### hasAdjustedRetentionTime -----------------------------------------------------------------------------------------------------
+
+#' @describeIn ntsData checks if the \linkS4class{ntsData} has adjusted
+#' retention time derived from alighment of peaks across samples.
+#'
+#' @export
+#'
+setMethod("hasAdjustedRetentionTime", "ntsData", function(object) {
+
+  hasAdj <- object@scans
+  hasAdj <- lapply(hasAdj, function(x) "adjustedRetentionTime" %in% colnames(x))
+  hasAdj <- unlist(hasAdj)
+
+  return(all(hasAdj))
 })
 
 
@@ -486,22 +505,28 @@ setMethod("plotEICs", "ntsData", function(object,
 
   if (!interactive) {
 
-    win.metafile()
-    dev.control("enable")
-    plotStaticEICs(
-      eic,
-      title
+    # win.metafile()
+    # dev.control("enable")
+    # plotStaticEICs(
+    #   eic,
+    #   title
+    # )
+    # plot <- recordPlot()
+    # dev.off()
+
+    return(
+      plotStaticEICs(
+        eic,
+        title
+      )
     )
-    plot <- recordPlot()
-    dev.off()
 
   } else {
 
     plot <- plotInteractiveEICs(eic, title, colorBy)
 
+    return(plot)
   }
-
-  return(plot)
 })
 
 
@@ -560,22 +585,28 @@ setMethod("plotEICs", "data.table", function(object,
 
   if (!interactive) {
 
-    win.metafile()
-    dev.control("enable")
-    plotStaticEICs(
-      eic,
-      title
+    # win.metafile()
+    # dev.control("enable")
+    # plotStaticEICs(
+    #   eic,
+    #   title
+    # )
+    # plot <- recordPlot()
+    # dev.off()
+
+    return(
+      plotStaticEICs(
+        eic,
+        title
+      )
     )
-    plot <- recordPlot()
-    dev.off()
 
   } else {
 
     plot <- plotInteractiveEICs(eic, title, colorBy)
 
+    return(plot)
   }
-
-  return(plot)
 })
 
 
@@ -619,17 +650,17 @@ setMethod("plotTICs", "ntsData", function(object,
                                           title = NULL,
                                           interactive = FALSE) {
 
-  ticplot <- plotEICs(
-    object,
-    samples = samples,
-    mz = NULL,
-    rt = NULL,
-    colorBy = colorBy,
-    title = title,
-    interactive = interactive
+  return(
+    plotEICs(
+      object,
+      samples = samples,
+      mz = NULL,
+      rt = NULL,
+      colorBy = colorBy,
+      title = title,
+      interactive = interactive
+    )
   )
-
-  return(ticplot)
 })
 
 
@@ -649,15 +680,15 @@ setMethod("plotTICs", "data.table", function(object,
                                              title = NULL,
                                              interactive = FALSE) {
 
-  ticplot <- plotEICs(
-    object,
-    samples = samples,
-    colorBy = colorBy,
-    title = title,
-    interactive = interactive
+  return(
+    plotEICs(
+      object,
+      samples = samples,
+      colorBy = colorBy,
+      title = title,
+      interactive = interactive
+    )
   )
-
-  return(ticplot)
 })
 
 
@@ -1137,7 +1168,7 @@ setMethod("plotMS2s", "data.table", function(object = NULL,
 
 #' @describeIn ntsData Getter for chromatographic peaks.
 #' The arguments \code{targets} and \code{mz}/\code{rt} can be used
-#' to select specific peaks. The \emph{id} of features can be given in the \code{targets}
+#' to select specific peaks. The \emph{id} of peaks and/or features can be given in the \code{targets}
 #' argument to select the respective peaks. Also, samples can be selected using the
 #' \code{samples} argument.
 #'
@@ -1254,23 +1285,20 @@ setMethod("plotPeaks", "ntsData", function(object,
 
   if (!interactive) {
 
-    win.metafile()
-    dev.control("enable")
-    plotStaticPeaks(
-      eic,
-      pks,
-      title
+    return(
+      plotPeaksStatic(
+        eic,
+        pks,
+        title
+      )
     )
-    plot <- recordPlot()
-    invisible(dev.off())
 
   } else {
 
-    plot <- plotInteractivePeaks(eic, pks, title, colorBy)
+    plot <- plotPeaksInteractive(eic, pks, title, colorBy)
 
+    return(plot)
   }
-
-  return(plot)
 })
 
 
@@ -1458,19 +1486,78 @@ setMethod("plotFeatures", "ntsData", function(object,
   if (!is.null(legendNames) & length(legendNames) == length(unique(pks$feature))) {
     names(legendNames) <- unique(pks$feature)
     pks$feature <- sapply(pks$feature, function(x) legendNames[x])
+  } else {
+    legendNames <- pks$feature
   }
 
-  plot <- plotPeaks(
-    object,
-    samples = samples,
-    targets = pks$id,
-    legendNames = pks$feature,
-    colorBy = colorBy,
-    title = title,
-    interactive = interactive
-  )
+  eic <- lapply(split(pks, pks$sample), function(x, object) {
+    return(
+      extractEICs(
+        object,
+        samples = unique(x$sample),
+        mz = x
+      )
+    )
+  }, object = object)
 
-  return(plot)
+  eic <- rbindlist(eic)
+
+  if (hasAdjustedRetentionTime(object)) {
+    spls <- unique(eic$sample)
+    for (i in spls) {
+      eic[sample == i, rt := sapply(rt, function(x, object, i) {
+        object@scans[[i]][retentionTime == x, adjustedRetentionTime]
+      }, object = object, i = i)]
+    }
+  }
+
+  if (nrow(eic) < 1) return(cat("Data was not found for any of the targets!"))
+
+  if (colorBy == "samples") {
+    leg <- unique(eic$sample)
+    varkey <- eic$sample
+  } else if (colorBy == "replicates") {
+    leg <- unique(eic[, .(sample, replicate)])
+    leg <- leg$replicate
+    varkey <- eic$replicate
+  } else if (!is.null(legendNames) & length(legendNames) == length(unique(eic$id))) {
+    leg <- legendNames
+    names(leg) <- unique(eic$id)
+    varkey <- sapply(eic$id, function(x) leg[x])
+  } else {
+    leg <- paste0(pks$id, " - ", round(pks$mz, digits = 4), "/", round(pks$rt, digits = 0))
+    names(leg) <- unique(eic$id)
+    varkey <- sapply(eic$id, function(x) leg[[x]])
+  }
+
+  eic[, var := varkey][]
+
+  for (f_tar in unique(pks$feature)) {
+    pks[feature %in% f_tar, rt := feats[id %in% f_tar, rt]]
+  }
+
+  if (!interactive) {
+
+    return(
+      plotPeaksStatic(
+        eic,
+        pks,
+        title
+      )
+    )
+
+  } else {
+
+    return(
+      plotPeaksInteractive(
+        eic,
+        pks,
+        title,
+        colorBy
+      )
+    )
+  }
+
 })
 
 
@@ -1486,7 +1573,7 @@ setMethod("plotFeatures", "ntsData", function(object,
 #' @importFrom dplyr count
 setMethod("show", "ntsData", function(object) {
 
-  st <- object@samples[, .(sample, replicate, blank, polarity)]
+  st <- object@samples[, .(sample, replicate, blank)]
   if (length(object@peaks) > 0) {
     st$peaks <- count(object@peaks, sample)$n
   }
@@ -1495,6 +1582,7 @@ setMethod("show", "ntsData", function(object) {
     is(object)[[1]], "\n",
     "  Project: ", object@title, "\n",
     "  Date:  ", as.character(object@date), "\n",
+    "  Polarity:  ", object@polarity, "\n",
     "  Path:  ", object@path, "\n",
     #"  Samples:  ", "\n", "\n", sep = ""
     "\n", sep = ""
@@ -1523,23 +1611,23 @@ setMethod("show", "ntsData", function(object) {
 
   cat(
     "  Parameters:  ", "\n",
-    "    ", "Peak Picking: ", ifelse(!is.na(object@parameters@picking@algorithm),
+    "    ", "Picking:    ", ifelse(!is.na(object@parameters@picking@algorithm),
                                       object@parameters@picking@algorithm,
                                       "n.a."), "\n",
 
-    "    ", "Grouping: ", ifelse(!is.na(object@parameters@grouping@algorithm),
+    "    ", "Grouping:   ", ifelse(!is.na(object@parameters@grouping@algorithm),
                                   object@parameters@grouping@algorithm,
                                   "n.a."), "\n",
 
-    "    ", "Fill Missing: ", ifelse(!is.na(object@parameters@filling@algorithm),
+    "    ", "Filling:    ", ifelse(!is.na(object@parameters@filling@algorithm),
                                       object@parameters@filling@algorithm,
                                       "n.a."), "\n",
 
-    "    ", "Annotation: ", ifelse(!is.na(object@parameters@isotopes@algorithm),
-                                    object@parameters@isotopes@algorithm,
+    "    ", "Annotation: ", ifelse(!is.na(object@parameters@annotation@algorithm),
+                                    object@parameters@annotation@algorithm,
                                     "n.a."), "\n",
 
-    "    ", "MS2: ", ifelse(!is.na(object@parameters@fragments@algorithm),
+    "    ", "Fragments:  ", ifelse(!is.na(object@parameters@fragments@algorithm),
                                    object@parameters@fragments@algorithm,
                                    "n.a."), "\n",
     sep = ""

@@ -2,7 +2,7 @@
 % Please edit documentation in R/fct_006_peakFragments.R
 \name{patFragmentSettingsDefault}
 \alias{patFragmentSettingsDefault}
-\title{patFragmentSettingsDefault-class}
+\title{patFragmentSettingsDefault}
 \usage{
 patFragmentSettingsDefault()
 }
@@ -12,5 +12,5 @@ extraction of MS2 spectra of given precursor ions in an \linkS4class{ntsData} ob
 based on the functionality from \pkg{patRoon} through \pkg{mzR}.
 }
 \description{
-patFragmentSettingsDefault-class
+patFragmentSettingsDefault
 }

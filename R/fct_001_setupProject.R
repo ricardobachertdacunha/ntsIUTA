@@ -27,10 +27,7 @@
 #' the class method \link{sampleGroups<-}.
 #' See \code{?"sampleGroups<-"} for more information.
 #' @param polarity A vector specifying the ionization polarity of the files.
-#' Possible values are \emph{positive}, \emph{negative} or \emph{both} for positive, negative or both modes, respectively.
-#' The default is \code{positive} and will be filled automatically for all found MS files.
-#' When files from different polarities are present, the polarity of each file must be specified using the method X
-#' or changing it manually in the \code{samples} slot of the \linkS4class{ntsData}.
+#' Possible values are \emph{positive} (the default) or \emph{negative} for positive or negative modes, respectively.
 #' @param method A character vector with the method used for acquiring the MS data.
 #' When different methods were used, the method should be given per file.
 #' Note that the character vector must have the same length as the number of mzML/mzXML files in the project folder.
@@ -167,10 +164,8 @@ setup <- readRDS('rData/ntsData.rds')",
 #' The replicate names can always be edited using the class method \link{sampleGroups<-}.
 #' See \code{?"sampleGroups<-"} for more information.
 #' @param polarity A vector specifying the ionization polarity of the files.
-#' Possible values are \emph{positive}, \emph{negative} or \emph{both} for positive, negative or both modes, respectively.
-#' The default is \code{positive} and will be filled automatically for all found MS files.
-#' When files from different polarities are present (\emph{both}), the polarity of each file must be specified using the method X
-#' or changing it manually in the \code{samples} slot of the \linkS4class{ntsData}.
+#' Possible values are \emph{positive} (the default) or \emph{negative} for positive or negative modes, respectively.
+#' Note that it will overwrite the polarity of the \linkS4class{ntsData} object.
 #' @param method A character vector with the method used for acquiring the MS data.
 #' When different methods were used, the method should be given per file.
 #' So the character vector must have the same length as the number of MS files to add.
@@ -208,8 +203,15 @@ addFiles <- function(files = utils::choose.files(),
     sample = character(),
     replicate = character(),
     blank = character(),
-    polarity = character(),
-    method = character()
+    method = character(),
+    scans = numeric(),
+    centroided = logical(),
+    msLevels = character(),
+    rtStart = numeric(),
+    rtEnd = numeric(),
+    mzLow = numeric(),
+    mzHigh = numeric(),
+    CE = character()
   )
 
   samples2 <- samples2[seq_len(length(files)), ]
@@ -224,7 +226,7 @@ addFiles <- function(files = utils::choose.files(),
     if (nrow(samples2) == length(replicates)) samples2$replicates <- replicates
   }
 
-  if (testChoice(polarity, c("positive", "negative"))) samples2$polarity <- polarity
+  if (testChoice(polarity, c("positive", "negative"))) object@polarity <- polarity
 
   if (length(method) == 1 | length(method) == nrow(samples2)) {
     samples2$method <- method
@@ -256,6 +258,8 @@ addFiles <- function(files = utils::choose.files(),
   }
 
   object@samples <- samples2
+
+  object <- addRawInfo(object)
 
   return(object)
 }

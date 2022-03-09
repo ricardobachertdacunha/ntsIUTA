@@ -1,0 +1,367 @@
+---
+title: "Background Evaluation After TV (Nina)"
+author: "Ricardo Cunha"
+date: "11/02/2022"
+output:
+  bookdown::html_document2
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = 'center', fig.width = 9)
+```
+
+
+```{r, echo=FALSE}
+
+#htmltools::img(src = knitr::image_uri("logo.png"), 
+#               alt = 'logo', 
+#               style = 'position:absolute; top:0; right:0; padding:10px;')
+
+```
+
+```{r load, echo=FALSE, message=FALSE}
+
+library(ggplot2)
+library(ggpattern)
+library(RColorBrewer)
+library(ntsIUTA)
+
+dt <- readRDS('rData/ntsData.rds')
+
+```
+
+
+# Setup
+
+The list of samples and respective grouping and blank association are described in the Table \@ref(tab:samples).
+
+\newline
+
+```{r samples, echo=FALSE, results='asis'}
+
+knitr::kable(dt@samples,
+             caption = "List of samples and assignment of respective blank samples.")
+
+```
+
+\newline
+\newline
+\newline
+
+# TICs
+
+***
+
+Plot of total ions chromatogram (TIC) for each sample presented in Figure \@ref(fig:tic).
+
+\newline
+
+```{r tic, each = FALSE, cache=TRUE, echo=FALSE, fig.cap="Total ion chromatogram (TIC) for each sample."}
+
+ntsIUTA::plotRawChrom(dt, interactive = TRUE)
+
+```
+
+\newline
+\newline
+\newline
+
+# Parameters
+
+***
+
+In following code box, the parameters and algorithms used for peak picking, grouping and filling with recursive integration are shown.
+
+\newline
+
+```{r parameters, eval = FALSE}
+
+peakPickingParameters(
+  setup,
+  algorithm = "xcms3",
+  param = xcms::CentWaveParam(
+    ppm = 15, peakwidth = c(5, 60),
+    snthresh = 3, prefilter = c(6, 1000),
+    mzCenterFun = "wMean", integrate = 2,
+    mzdiff = -0.0003, fitgauss = TRUE,
+    noise = 0, verboseColumns = TRUE,
+    firstBaselineCheck = FALSE,
+    extendLengthMSW = TRUE
+  )
+)
+
+peakGroupingParameters(
+  setup,
+  algorithm = "xcms3",
+  param = list(
+    rtalign = TRUE,
+    loadRawData = TRUE,
+    groupParam = xcms::PeakDensityParam(
+      sampleGroups = "holder",
+      bw = 5,
+      minFraction = 0.5,
+      minSamples = 1,
+      binSize = 0.008,
+      maxFeatures = 100),
+    preGroupParam = xcms::PeakDensityParam(
+      sampleGroups = "holder",
+      bw = 8,
+      minFraction = 0.5,
+      minSamples = 1,
+      binSize = 0.008,
+      maxFeatures = 100),
+    retAlignParam = xcms::PeakGroupsParam(
+      minFraction = 1,
+      extraPeaks = 0,
+      smooth = "loess",
+      span = 0.3,
+      family = "gaussian")
+  )
+)
+
+fillMissingParameters(
+  setup,
+  algorithm = "xcms3",
+  param = xcms::ChromPeakAreaParam(
+    mzmin = function(z) quantile(z, probs = 0.25),
+    mzmax = function(z) quantile(z, probs = 0.75),
+    rtmin = function(z) quantile(z, probs = 0.25),
+    rtmax = function(z) quantile(z, probs = 0.75)
+  )
+)
+
+```
+
+\newline
+\newline
+\newline
+
+# Features Overview
+
+***
+
+The number of peaks and the number of peaks that were filled with recursive integration are shown in Table \@ref(tab:overviewTable).
+
+\newline
+Code used:
+```{r features}
+
+overview <- data.table::data.table(
+  sample = samples(dt),
+  peaks = 0,
+  filled = 0,
+  notFilled = 0
+)
+
+for (i in seq_len(nrow(overview))) {
+  
+  overview$peaks[i] <- nrow(
+    dt@peaks[dt@peaks$sample %in% overview$sample[i] &
+    dt@peaks$intensity > 0, ]
+  )
+  
+  overview$filled[i] <- nrow(
+    dt@peaks[dt@peaks$sample %in% overview$sample[i] &
+    dt@peaks$intensity > 0 &
+    dt@peaks$is_filled > 0, ]
+  )
+  
+  overview$notFilled[i] <- nrow(
+    dt@peaks[dt@peaks$sample %in% overview$sample[i] &
+    dt@peaks$intensity > 0 &
+    dt@peaks$is_filled == 0, ]
+  )
+  
+}
+
+```
+
+\newline
+
+```{r overviewTable, echo=FALSE, results='asis'}
+
+knitr::kable(overview,
+             caption = "Overview of peaks before and after the recursive integration.")
+
+```
+
+\newline
+\newline
+
+> The high number of filled peaks is related to the high variance between samples.
+
+\newline
+\newline
+\newline
+
+# Backgroud Evaluation
+
+***
+
+The backgroud evaluation was performed by subtracting each sample (`r samples(dt)[!samples(dt) %in% blanks(dt)]`) by the respective blank sample as presented in the Table \@ref(tab:samples).
+
+For subtracting, the following ratios were applied: 1.5, 3, 5 and 10. This means that a feature is only kept if the intensity in the sample is *x* times higher than the respective intensity of the blank sample.
+Note that a minimum of 5000 counts was set, meaning that features a maximum below this intensity threshold are removed.
+
+\newline
+
+Code used:
+```{r background}
+
+dtsFiltered <- list()
+ratios <- c(1.5, 3, 5, 10)
+
+dtsFiltered <- lapply(ratios, function(x, dt) {
+  
+  temp <- filterFeatures(
+    obj = dt,
+    filterMinInt = 5000,
+    filterBlank = x
+  )
+  
+  temp <- removeFilteredFeatures(temp)
+  
+  return(temp)
+  
+}, dt = dt)
+
+names(dtsFiltered) <- as.character(ratios)
+
+#make summary
+bgEval <- data.table::data.table(
+  sample = samples(dt)[!samples(dt) %in% blanks(dt)],
+  ratio = NA_character_,
+  features = 0,
+  removed = 0,
+  kept = 0,
+  intTop20 = 0,
+  unique = 0,
+  uniqueIDs = list()
+)
+
+bgRes <- lapply(as.character(ratios), function(x, dt, dtsFiltered, bgEval) {
+  temp <- dtsFiltered[[x]]
+  temp2 <- bgEval
+  temp2$ratio <- x 
+  
+  for (i in seq_len(nrow(temp2))) {
+    temp2$features[i] <- sum(dt@features[,  temp2$sample[i]] > 5000, na.rm = TRUE)
+    
+    kept <- temp@features[temp@features[,  temp2$sample[i]] > 5000, ]
+    
+    temp2$kept[i] <- nrow(kept)
+    
+    temp2$removed[i] <- temp2$features[i] - temp2$kept[i]
+    
+    temp2$intTop20[i] <- mean(head(
+      sort(kept[,  temp2$sample[i], drop = TRUE],
+           decreasing = TRUE),
+      20
+    ))
+    
+    #calculate uniques
+    ints <- kept[,  c("ID", temp2$sample)]
+    ints$max <- apply(ints[, !colnames(ints) %in% c("ID", temp2$sample[i])], 1, max)
+    ints$max <- ints$max * as.numeric(x)
+    ints <- ints[ints$max < ints[, temp2$sample[i], drop = TRUE], ]
+    
+    temp2$unique[i] <- nrow(ints)
+    temp2$uniqueIDs <- I(list(ints$ID))
+    
+  }
+  
+  return(temp2)
+  
+}, dt = dt, dtsFiltered = dtsFiltered, bgEval = bgEval)
+
+bgRes <- data.table::rbindlist(bgRes)
+
+```
+
+\newline
+
+```{r tableBgRes, echo=FALSE, results='asis'}
+
+knitr::kable(dplyr::select(bgRes, !(uniqueIDs)),
+             caption = "Overview of results for the subtraction of backgroud features at different ratios.")
+
+```
+
+\newline
+\newline
+
+```{r plotBgBars, echo=FALSE, fig.cap="Number of features after subtraction of backgroud at different rations."}
+
+colors <- getColors(length(unique(bgRes$sample)))
+colors <- RColorBrewer::brewer.pal(length(unique(bgRes$sample)), "Set2")
+names(colors) <- unique(bgRes$sample)
+
+data <- bgRes
+data$ratio <- as.factor(as.numeric(data$ratio))
+
+ggplot(data, aes(x = ratio, y = kept)) +
+  theme_bw() +
+  geom_col_pattern(
+    aes(pattern = sample, pattern_angle = sample, fill = sample),
+    position = position_dodge2(width = 0.9, preserve = "single"),
+    pattern_fill = "black",
+    pattern_density = 0.1,
+    pattern_spacing = 0.02,
+    pattern_key_scale_factor = 0.5
+  ) +
+  scale_fill_manual(name = "Sample", values = colors) +
+  guides(
+    pattern = guide_legend(title = "Sample"),
+    pattern_angle = guide_legend(title = "Sample")
+  ) +
+  ylab("Number of Features") +
+  xlab("Ratios for blank subtraction")
+
+```
+
+\newline
+\newline
+
+```{r plotUniques, echo=FALSE, fig.cap="Number of unique features for each sample at different ratios."}
+
+colors <- getColors(length(unique(bgRes$sample)))
+colors <- RColorBrewer::brewer.pal(length(unique(bgRes$sample)), "Set2")
+names(colors) <- unique(bgRes$sample)
+
+data <- bgRes
+data$ratio <- as.factor(as.numeric(data$ratio))
+
+ggplot(data, aes(x = ratio, y = unique)) +
+  theme_bw() +
+  geom_col_pattern(
+    aes(pattern = sample, pattern_angle = sample, fill = sample),
+    position = position_dodge2(width = 0.9, preserve = "single"),
+    pattern_fill = "black",
+    pattern_density = 0.1,
+    pattern_spacing = 0.02,
+    pattern_key_scale_factor = 0.5
+  ) +
+  scale_fill_manual(name = "Sample", values = colors) +
+  guides(
+    pattern = guide_legend(title = "Sample"),
+    pattern_angle = guide_legend(title = "Sample")
+  ) +
+  ylab("Number of Features") +
+  xlab("Ratios for blank subtraction")
+
+```
+
+\newline
+\newline
+
+> Sample TF_V, appears to have significantly more featues and unique features when compared to the others.
+
+\newline
+\newline
+
+When further data assessment is needed, let know (cunha@iuta.de).
+
+\newline
+\newline
+
+

@@ -1,6 +1,6 @@
 
 
-#' @title plotStaticPeaks
+#' @title plotPeaksStatic
 #'
 #' @description Static plot of chromatographic peaks using the \pkg{base} package.
 #'
@@ -12,7 +12,7 @@
 #'
 #' @return A plot of chromatographic peaks.
 #'
-plotStaticPeaks <- function(eic, pks, title = NULL) {
+plotPeaksStatic <- function(eic, pks, title = NULL) {
 
   cl <- getColors(unique(eic$var))
   ids <- unique(eic$id)
@@ -75,7 +75,7 @@ plotStaticPeaks <- function(eic, pks, title = NULL) {
 
 
 
-#' @title plotInteractivePeaks
+#' @title plotPeaksInteractive
 #'
 #' @description Plots chromatographic peaks from a \linkS4class{ntsData} object
 #' with the package \pkg{platly} for an interactive user experience.
@@ -91,11 +91,9 @@ plotStaticPeaks <- function(eic, pks, title = NULL) {
 #'
 #' @return A chromatographic peak plot through \pkg{plotly}.
 #'
-#' @export
-#'
 #' @importFrom plotly toRGB plot_ly add_trace layout add_segments
 #'
-plotInteractivePeaks <- function(eic, pks, title, colorBy) {
+plotPeaksInteractive <- function(eic, pks, title, colorBy) {
 
   leg <- unique(eic$var)
   cl <- getColors(leg)

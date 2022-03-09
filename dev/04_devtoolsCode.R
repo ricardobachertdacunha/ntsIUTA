@@ -25,3 +25,6 @@ showMethods("a method")
 
 #update the wd to for the package
 setwd("C:/Users/Ricardo/Documents/CodeProjects/ntsIUTA")
+
+#ntsIUTA system path
+system.file(package = "ntsIUTA", dir = "extdata")
