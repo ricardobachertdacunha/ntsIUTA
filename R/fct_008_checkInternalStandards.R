@@ -75,9 +75,10 @@ checkIS <- function(obj = NULL,
 
   screen <- screenSuspects(obj@patdata, select(targets@data, -mz),
                            rtWindow = rtWindow, mzWindow = 0.02,
-                           adduct = adduct, onlyHits = TRUE)
+                           adduct = adduct, onlyHits = FALSE)
 
-  df <- arrange(patRoon::as.data.frame(screen, average = FALSE), group)
+  df <- arrange(patRoon::as.data.table(screen, average = FALSE, onlyHits = TRUE), group)
+  df <- base::as.data.frame(df)
   df <- rename(df, name = susp_name)
   df <- left_join(df, select(targets@data, -mz, -rt), by = "name")
   df <- left_join(df, select(arrange(screenInfo(screen), group), group, d_mz, d_rt), by = "group")
@@ -182,8 +183,8 @@ checkIS <- function(obj = NULL,
           temp$fragments_mz_Exp[i] <- paste(xMS2$mz, collapse = ";")
           temp$fragments_int_Exp <- paste(xMS2$intensity, collapse = ";")
           temp$fragments_pre_Exp <- paste(xMS2$precursor, collapse = ";")
-
-          if (temp$hasFragments[i]) {
+#TODO 220308 change back to temp$hasFragments ???
+          if (temp$hasFragments_Exp[i]) {
 
             dbMS2 <- data.frame(mz = as.numeric(unlist(strsplit(temp$fragments_mz[i], split = ";"))),
                                 intensity = as.numeric(unlist(strsplit(temp$fragments_int[i], split = ";"))),

@@ -141,13 +141,14 @@ suspectScreening <- function(obj,
 
   if (!is.null(samples)) obj2 <- filterFileFaster(obj2, samples)
 
-  if (excludeBlanks) {
-    if (TRUE %in% (sampleGroups(obj2) %in% blanks(obj2))) {
-      obj2 <- filterFileFaster(obj2, samples(obj2)[!(sampleGroups(obj2) %in% blanks(obj2))])
-    }
-  }
-
   rg <- unique(sampleGroups(obj2))
+  
+  if (excludeBlanks) { # just take the blanks from the replicates for MS2 check
+    #if (TRUE %in% (sampleGroups(obj2) %in% blanks(obj2))) {
+    #  obj2 <- filterFileFaster(obj2, samples(obj2)[!(sampleGroups(obj2) %in% blanks(obj2))])
+    #}
+    rg <- rg[!rg %in% blanks(obj2)]
+  }
   
   susdf$rt <- as.numeric(susdf$rt)
   
@@ -157,10 +158,10 @@ suspectScreening <- function(obj,
     rtWindow = rtWindow, 
     mzWindow = 0.03,
     adduct = adduct, 
-    onlyHits = TRUE
+    onlyHits = FALSE
   )
   
-  df <- patRoon::as.data.frame(x = screen, average = FALSE)
+  df <- patRoon::as.data.frame(x = screen, average = FALSE, onlyHits = TRUE)
   df <- arrange(df, group)
   df <- rename(df, name = susp_name)
   df <- left_join(df, susdf[, colnames(susdf) %in% c("name", "formula", "adduct", "hasFragments", "intControl")], by = "name")
@@ -177,20 +178,22 @@ suspectScreening <- function(obj,
   
   #TODO Check why Formulas occasionally become NA, breaking Genform with NACHO elements
   #SOLVED The problem is that names appear in duplicate in df. I attempt to fix by spliting when formula is NA
-  dup <- df[is.na(df$formula),]
-  if (nrow(dup) > 0) {
-    df <- df[!(is.na(df$formula)), ]
-    for (i in seq_len(nrow(dup))) {
-      nDups <- unlist(stringr::str_split(dup[i, 1, drop = TRUE], pattern = ","))
-      for (nDup in nDups) {
-        newrow <- dup[i, ]
-        newrow[1, 1] <- nDup
-        newrow[1, 2:3] <- susdf[susdf$name %in% nDup, c("formula", "adduct"), drop = TRUE]
-        df <- rbind(df, newrow)
-      }
-    }
-    df <- dplyr::arrange(df, mz)
-  }
+  #TODO reimplement Code !!!!
+  df <- df[!(is.na(df$formula)), ]
+  # dup <- df[is.na(df$formula),]
+  # if (nrow(dup) > 0) {
+  #   df <- df[!(is.na(df$formula)), ]
+  #   for (i in seq_len(nrow(dup))) {
+  #     nDups <- unlist(stringr::str_split(dup[i, 1, drop = TRUE], pattern = ","))
+  #     for (nDup in nDups) {
+  #       newrow <- dup[i, ]
+  #       newrow[1, 1] <- nDup
+  #       newrow[1, 2:3] <- susdf[susdf$name %in% nDup, c("formula", "adduct"), drop = TRUE]
+  #       df <- rbind(df, newrow)
+  #     }
+  #   }
+  #   df <- dplyr::arrange(df, mz)
+  # }
   
   df <- dplyr::distinct(df)
   
@@ -219,6 +222,7 @@ suspectScreening <- function(obj,
       formulas <- patRoon::generateFormulasGenForm(temp, MS2,
                                                    relMzDev = ppm,
                                                    isolatePrec = TRUE,
+                                                   absAlignMzDev = 0.005,
                                                    adduct = "[M+H]+", # TODO make NULL
                                                    elements = elements,
                                                    topMost = 50, extraOpts = NULL,
@@ -282,8 +286,10 @@ suspectScreening <- function(obj,
 
       tempScreen <- select(tempScreen, name, formula, adduct, ID, mz, rt, IdLevel, d_rt, d_ppm, isoScore, FragMatch, hasExpFrag, hasFrag, everything())
 
-      tempScreen <- cbind(tempScreen, df[, colnames(df) %in% obj2@samples$sample])
+      tempScreen <- dplyr::left_join(tempScreen, df[, colnames(df) %in% c("ID", obj2@samples$sample)], by = "ID")
 
+      tempScreen <- dplyr::distinct(tempScreen)
+      
       data[[rg[g]]] <- temp
 
       inSilico[[rg[g]]] <- Form

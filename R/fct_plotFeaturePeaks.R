@@ -167,6 +167,7 @@ plotFeaturePeaks <- function(obj, samples = NULL,
 
       df2 <- pk[[f]]
 
+      #TODO Names in plot2 appear to have all the same name in the hover info i.e. Clarythromicin
       plot2 <- plot2 %>% add_trace(df2,
                                    x = df2$rt,
                                    y = df2$sample, type = "scatter", mode = "markers",
@@ -211,9 +212,9 @@ plotFeaturePeaks <- function(obj, samples = NULL,
                   title = "Sample",
                   titlefont = list(size = 12, color = "black"),
                   tick0 = 0, dtick = 1)
-
+#TODO make heights adjustable or autoadjust to optimize space use in plot, heights parameter??
     plotf <- subplot(plotList, nrows = 2, margin = 0.04,
-                     shareX = TRUE, which_layout = "merge")
+                     shareX = TRUE, which_layout = "merge" )
 
     plotf <- plotf %>% layout(xaxis = xaxis, yaxis = yaxis1, yaxis2 = yaxis2)
 
