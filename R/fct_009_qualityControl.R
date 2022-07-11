@@ -93,14 +93,14 @@ checkQC <- function(
     adduct <- NULL
   }
 
-  screen <- screenSuspects(data@patdata, select(targets@data, -mz),
+  screen <- patRoon::screenSuspects(data@patdata, select(targets@data, -mz),
                            rtWindow = rtWindow, mzWindow = 0.02,
                            adduct = adduct, onlyHits = TRUE)
 
-  df <- arrange(patRoon::as.data.frame(screen, average = FALSE), group)
-  df <- rename(df, name = susp_name)
+  df <- dplyr::select(screenInfo(screen), name, group, d_mz, d_rt)
+  df <- left_join(df, select(patRoon::as.data.frame(screen, average = FALSE), -susp_name), by = "group")
   df <- left_join(df, targets@data[, colnames(targets@data) %in% c("name", "formula", "hasFragments", "intControl")], by = "name")
-  df <- left_join(df, select(arrange(screenInfo(screen), group), group, d_mz, d_rt), by = "group")
+  df <- arrange(df, group)
   df$av_into <- rowMeans(select(df, data@samples$sample))
   df <- df %>% mutate(sd_into = apply(select(., data@samples$sample), 1, sd))
   df$sd_into <- round(df$sd_into, digits = 1)
@@ -111,11 +111,31 @@ checkQC <- function(
   df <- select(df, name, formula, d_ppm, d_rt, ID, mz, rt,
                av_into, sd_into, sd_intop, isoN, everything(), -d_mz)
 
+  # dup <- is.na(df$formula)
+  # dup <- df[dup,]
+  # if (nrow(dup) > 0) {
+  #   scrInfo <- screenInfo(screen)
+  #   df <- df[!(is.na(df$formula)), ]
+  #   for (i in seq_len(nrow(dup))) {
+  #     nDups <- unlist(stringr::str_split(dup[i, 1, drop = TRUE], pattern = ","))
+  #     for (nDup in nDups) {
+  #       newrow <- dup[i, ]
+  #       newrow[1, 1] <- nDup
+  #       newrow[1, 2] <- targets@data[targets@data$name %in% nDup, c("formula"), drop = TRUE]
+  #       newrow[1, "hasFragments"] <- targets@data[targets@data$name %in% nDup, c("hasFragments"), drop = TRUE]
+  #       newrow[1, "d_ppm"] <- (abs(scrInfo[scrInfo$name %in% nDup, c("d_mz"), drop = TRUE]) / newrow[1, "mz"]) * 1E6
+  #       newrow[1, "d_rt"] <- scrInfo[scrInfo$name %in% nDup, c("d_rt"), drop = TRUE]
+  #       df <- rbind(df, newrow)
+  #     }
+  #   }
+  #   df <- dplyr::arrange(df, mz)
+  # }
+  
   df <- dplyr::filter(df, d_ppm <= ppm)
   df$d_ppm <- round(df$d_ppm, digits = 1)
   df$d_rt <- round(df$d_rt, digits = 1)
-
-  screen <- screen[, df$ID]
+  
+  screen <- screen[, unique(df$ID)]
   
   annot <- data@annotation$comp[data@annotation$comp$ID %in% df$ID, ]
   
@@ -133,9 +153,9 @@ checkQC <- function(
 
     ms2df <- mutate(ms2df,
                     hasFragments_Exp = FALSE,
-                    fragments_mz_Exp = NA,
-                    fragments_int_Exp = NA,
-                    fragments_pre_Exp = NA)
+                    fragments_mz_Exp = "",
+                    fragments_int_Exp = "",
+                    fragments_pre_Exp = "")
 
     MS2 <- extractMS2(screen, param = data@parameters@MS2)
 
@@ -159,8 +179,8 @@ checkQC <- function(
 
           ms2df$hasFragments_Exp[i] <- TRUE
           ms2df$fragments_mz_Exp[i] <- paste(xMS2$mz, collapse = ";")
-          ms2df$fragments_int_Exp <- paste(xMS2$intensity, collapse = ";")
-          ms2df$fragments_pre_Exp <- paste(xMS2$precursor, collapse = ";")
+          ms2df$fragments_int_Exp[i] <- paste(xMS2$intensity, collapse = ";")
+          ms2df$fragments_pre_Exp[i] <- paste(xMS2$precursor, collapse = ";")
 
           if (ms2df$hasFragments[i]) {
 
