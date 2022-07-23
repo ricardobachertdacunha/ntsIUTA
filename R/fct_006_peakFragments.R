@@ -68,11 +68,11 @@ fragmentSettingsDefault <- function() {
         isolationMassWindow = 1.3,
         clusteringMethod = "distance",
         clusteringUnit = "ppm",
-        clusteringWindow = 25,
-        minIntensityPre = 100,
-        minIntensityPost = 100,
+        clusteringWindow = 5,
+        minIntensityPre = 10,
+        minIntensityPost = 10,
         asPatRoon = TRUE,
-        mergeCEs = TRUE,
+        mergeVoltages = TRUE,
         mergeBy = NULL
       )
     )
@@ -100,13 +100,13 @@ fragmentSettingsDefault <- function() {
 #'
 #'
 generateMS2 <- function(object,
-                        algorithm = NULL,
+                        algorithm = NA_character_,
                         settings = NULL) {
 
   pat <- object
   if (checkmate::testClass(object, "ntsData")) {
     pat <- pat@pat
-    if (is.null(algorithm)) algorithm <- fragmentsParameters(object)@algorithm
+    if (is.na(algorithm)) algorithm <- fragmentsParameters(object)@algorithm
     if (is.null(settings)) settings <- fragmentsParameters(object)@settings
   }
 
@@ -125,7 +125,65 @@ generateMS2 <- function(object,
       )
     )
   }
-  #TODO add option to add MS2 to the ntsData object
 
   return(MS2)
+}
+
+
+
+
+#' @title loadMS2
+#'
+#' @description Function to load MS2 data from features in the feature table
+#' of a \linkS4class{ntsData} object. The MS2 data is added to the \code{ms2}
+#' slot of the \linkS4class{ntsData} object. If the \code{algorithm} and
+#' \code{settings} arguments are not given, the fucntion uses the parameters in the
+#' \linkS4class{ntsData} object.
+#'
+#' @param object An \linkS4class{ntsData} object.
+#' @param algorithm A character vector with the algorithm to generate MS2 data.
+#' @param settings A list of settings to use for extraction of MS2 data.
+#' @param save Logical, set to \code{TRUE} to save updated
+#' \linkS4class{ntsData} object in the \strong{rdata} folder.
+#' Note that \code{TRUE} overwrites the existing \linkS4class{ntsData} object.
+#' Optionally, a character string can be given instead of \code{TRUE}
+#' to be used as file name, avoiding overwriting.
+#'
+#' @return An \linkS4class{ntsData} with MS2 data added to the \code{ms2} slot.
+#'
+#' @export
+#'
+loadMS2 <- function(object,
+                    algorithm = NA_character_,
+                    settings = NULL,
+                    save = FALSE) {
+
+  assertClass(object, "ntsData")
+
+  if (is.na(algorithm)) {
+    algorithm <- fragmentsParameters(object)@algorithm
+  }
+
+  if (is.na(algorithm)) {
+    warning("Fragments algorihtm not defined!")
+    return(object)
+  }
+
+  if (is.null(settings)) {
+    settings <- fragmentsParameters(object)@settings
+  }
+
+  MS2 <- generateMS2(
+    object,
+    algorithm = algorithm,
+    settings = settings
+  )
+
+  object@ms2 <- MS2
+
+  if (is.logical(save)) if (save) saveObject(object = object)
+
+  if (is.character(save)) saveObject(object = object, filename = save)
+
+  return(object)
 }

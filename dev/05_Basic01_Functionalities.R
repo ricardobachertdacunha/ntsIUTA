@@ -11,7 +11,7 @@ devtools::load_all()
 
 ### Project Setup -------------------------------------------------------------------------------------------
 
-path <- "C:\\Users\\Ricardo\\Documents\\R_Demo Project"
+path <- "C:\\Users\\Ricardo\\Documents\\R_DemoProject"
 
 object <- setupProject(
   path = path,
@@ -110,14 +110,16 @@ samples(object)
 
 ## setter for sample replicate names
 replicates(object) <- c(
+  rep("QC", 3),
   rep("Blank", 3),
   rep("IN", 3),
   rep("OZ", 3),
   rep("UV", 3),
   rep("AC", 3),
-  rep("QC", 3),
   rep("Centroid", 3),
   rep("Profile", 3),
+  rep("mrm_chrom", 1),
+  rep("mrm_spec", 1),
   "Centroid_mzMLconverter"
 )
 
@@ -160,7 +162,7 @@ acquisitionMethods(object)
 ## function to add metadata in an ntsData object
 object <- addMetadata(
   object,
-  var = c(rep("WW", 15), rep("QC", 3), rep("Dev", 6), "raw"),
+  var = c(rep("QC", 3), rep("WW", 15), rep("Dev", 6), rep("mrm", 2), "raw"),
   varname = "datatype"
 )
 
@@ -177,16 +179,16 @@ object <- removeMetadata(
 #### QC ------------------------------------------------------------------
 
 ## setter of QC sample replicate/s
-QC(object) <- "QC"
+controlSamples(object) <- "QC"
 
 #NOTE: Sample name/s can be given instead of replicates
 #by adding argument nametype = "samples".
 
 ## getter for the QC samples date table
-QC(object)
+controlSamples(object)
 
 ## method for restauring QC samples/replicates back to the samples slot
-QC(object, remove = TRUE) <- "QC"
+controlSamples(object, remove = TRUE) <- "QC"
 
 #NOTE: The same argumment nametype = "samples" can be applied
 #for moving samples from the QC slot to the samples slot.
@@ -207,25 +209,26 @@ object[1:3]
 ### Inspect Raw Data ----------------------------------------------------------------------------------------
 
 ## sub-setting by samples
-example01 <- object[16:18]
+example01 <- object[19:21]
 
 
 #### Raw Info ------------------------------------------------------------
 
-## getter for the data table with raw information for all or specified files
-getRawInfo(example01, samples = 1)
-
+# TODO Make method for getting ms1, ms2 and chroms from mzML files
 
 
 
 #### TICs -----------------------------------------------------------------
 
 ## samples can be defined by index or name
-tic_ex <- TICs(example01, samples = NULL)
+tic_ex <- TICs(object[27], samples = NULL)
+
 
 ##### visualization ---------
 
 plotTICs(example01, interactive = TRUE)
+
+plotTICs(object[27], interactive = FALSE)
 
 plotTICs(tic_ex)
 
@@ -371,6 +374,24 @@ plotXICs(
 
 #### MS2 -----------------------------------------------------------------
 
+#add parameters required to extract and cluster MS2 traces
+object <- fragmentsParameters(
+  object,
+  algorithm = "ntsiuta",
+  settings = list(
+    isolationTimeWindow = 0,
+    isolationMassWindow = 1.3,
+    clusteringMethod = "distance",
+    clusteringUnit = "ppm",
+    clusteringWindow = 10,
+    minIntensityPre = 100,
+    minIntensityPost = 100,
+    asPatRoon = FALSE, #when TRUE, is only used by running generateMS2
+    mergeVoltages = TRUE,
+    mergeBy = NULL
+  )
+)
+
 # same functionality as EICs for setting mz/rt pairs
 # below the example for a combined table of rt and mz predefined deviations for two targets
 ms2_ex01 <- MS2s(
@@ -378,16 +399,8 @@ ms2_ex01 <- MS2s(
   samples = 3:4,
   mz = mz_04, ppm = 20,
   rt = NULL, sec = 60,
-  isolationTimeWindow = 10,
-  isolationMassWindow = 1.3,
-  clusteringMethod = "distance",
-  clusteringUnit = "ppm",
-  clusteringWindow = 15,
-  minIntensityPre = 250,
-  minIntensityPost = 250,
-  asPatRoon = FALSE, #It is advisable to use this option TRUE only via generateMS2 function.
-  mergeCEs = TRUE,
-  mergeBy = NULL
+  algorithm = NA_character_,
+  settings = NULL
 )
 
 ##### visualization ---------
@@ -398,15 +411,8 @@ plotMS2s(
   samples = 3:4,
   mz = mz_04, ppm = 20,
   rt = NULL, sec = 60,
-  isolationTimeWindow = 10,
-  isolationMassWindow = 1.3,
-  clusteringMethod = "distance",
-  clusteringUnit = "ppm",
-  clusteringWindow = 15,
-  minIntensityPre = 250,
-  minIntensityPost = 250,
-  mergeCEs = TRUE,
-  mergeBy = NULL,
+  algorithm = NA_character_,
+  settings = NULL,
   colorBy = "targets"
 )
 
@@ -417,24 +423,22 @@ plotMS2s(
   interactive = TRUE
 )
 
-# when merging by replicates and ploting the same target for two replicates
+# when merging by replicates and plotting the same target for two replicates
 plotMS2s(
   object = object,
   samples = 3:4,
   mz = mz_04[1, ], ppm = 20,
   rt = NULL, sec = 60,
-  isolationTimeWindow = 10,
-  isolationMassWindow = 1.3,
-  clusteringMethod = "distance",
-  clusteringUnit = "ppm",
-  clusteringWindow = 15,
-  minIntensityPre = 100,
-  minIntensityPost = 150,
-  mergeCEs = TRUE,
-  mergeBy = "replicates",
+  algorithm = NA_character_,
+  settings = NULL,
   colorBy = "replicates",
   interactive = TRUE
 )
+
+
+
+
+
 
 
 

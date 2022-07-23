@@ -104,7 +104,7 @@ theme_bw()
 
 ```{r exPlotly, fig.cap="Plot caption example"}
 
-plot_ly(pressure, x = ~temperature, y = ~pressure, type = "scatter" , mode = "markers+lines")
+plot_ly(pressure, x = ~temperature, y = ~pressure, type = "scatter", mode = "markers+lines")
 
 ```
 

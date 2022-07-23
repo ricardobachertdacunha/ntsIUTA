@@ -33,13 +33,13 @@
 #' @importFrom patRoon findFeatures featureTable
 #'
 peakPicking <- function(object = NULL,
-                        algorithm = NULL,
+                        algorithm = NA_character_,
                         settings = NULL,
-                        save = TRUE) {
+                        save = FALSE) {
 
   assertClass(object, "ntsData")
 
-  if (is.null(algorithm)) {
+  if (is.na(algorithm)) {
     algorithm <- pickingParameters(object)@algorithm
   }
 
@@ -52,10 +52,12 @@ peakPicking <- function(object = NULL,
     settings <- pickingParameters(object)@settings
   }
 
-  sinfo <- data.frame(path = dirname(object@samples$file),
-                      analysis = object@samples$sample,
-                      group = object@samples$replicate,
-                      blank = object@samples$blank)
+  sinfo <- data.frame(
+    path = dirname(object@samples$file),
+    analysis = object@samples$sample,
+    group = object@samples$replicate,
+    blank = object@samples$blank
+  )
 
   sinfo$blank[is.na(sinfo$blank)] <- ""
 
@@ -107,7 +109,7 @@ peakPicking <- function(object = NULL,
 #'
 buildPeaksTable <- function(object) {
 
-  cat("Building peaks table... ")
+  cat("Building table with peaks... ")
 
   pat <- object@pat
 

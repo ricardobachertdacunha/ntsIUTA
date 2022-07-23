@@ -9,7 +9,8 @@
 #' When \code{convertFiles} is \code{TRUE} the function uses the function \code{\link{mzMLconverter}} to automatically convert
 #' specified MS files in the path to mzML and add them to the project.
 #'
-#' @param path The directory for project setup. The default is the \code{utils::choose.dir()} to select or create a folder.
+#' @param path The directory for project setup.
+#' The default is the \code{utils::choose.dir()} to select or create a folder.
 #' Note that the function will look into the folder or subfolders for mzML and/or mzXML files
 #' or specified raw files when \code{convertFiles} is set to \code{TRUE}.
 #' @param title A character string with the project title.
@@ -19,7 +20,8 @@
 #' The default is \code{FALSE} for no conversion even if vendor MS files are present.
 #' @param convertFrom The name of the vendor format to be found and converted.
 #' Possible values are: \emph{thermo}, \emph{bruker}, \emph{agilent}, \emph{ab} (from AB Sciex) and \emph{waters}.
-#' @param convertToCentroid Logical, set to \code{TRUE} to centroid profile data when converting to mzML. The default is \code{TRUE}.
+#' @param convertToCentroid Logical, set to \code{TRUE} to centroid profile data when converting to mzML.
+#' The default is \code{TRUE}.
 #' @param replicates Optional character vector with the same length as the number of MS files in the project folder
 #' with the identifier/name of the sample replicate group for each file.
 #' The default is \code{NULL} which attempts  to group the samples using
@@ -65,10 +67,12 @@ setupProject <- function(path = utils::choose.dir(getwd(), "Select or create a p
                          makeNewProject = FALSE) {
 
   object <- new("ntsData")
-  object@title <- as.character(title)
-  object@description <- as.character(description)
-  object@path <- as.character(path)
-  object@date <- date
+
+  object@project$title <- as.character(title)
+  object@project$date <- date
+  object@project$polarity <- as.character(polarity)
+  object@project$path <- as.character(path)
+  object@project$description <- as.character(description)
 
   if (convertFiles) {
     if (testChoice(convertFrom, c("thermo", "bruker", "agilent", "ab", "waters"))) {
@@ -78,13 +82,13 @@ setupProject <- function(path = utils::choose.dir(getwd(), "Select or create a p
         centroidMethod = ifelse(convertToCentroid == TRUE, "vendor", NULL)
       )
     } else {
-      stop("Vendors should be specified for file recognition.
-            Possible entries are: thermo, bruker, agilent, ab (from AB Sciex) and waters.")
+      warning("Vendors should be specified for file recognition. 
+              Possible entries are: thermo, bruker, agilent, ab (from AB Sciex) and waters.")
     }
   }
 
   files <- list.files(
-    path = object@path,
+    path = path(object),
     pattern = ".mzML|.mzXML",
     recursive = TRUE,
     full.names = TRUE,
@@ -113,7 +117,7 @@ setupProject <- function(path = utils::choose.dir(getwd(), "Select or create a p
     if (save) saveObject(object = object)
 
     #TODO add template for main script file
-    sp <- file.path(object@path, "script.R")
+    sp <- file.path(path(object), "script.R")
     cat(
 "
 \n
@@ -125,10 +129,10 @@ setup <- readRDS('rData/ntsData.rds')",
     file = sp, sep = "")
 
     if (!(is.na(Sys.getenv()["RSTUDIO"]))) {
-      rstudioapi::initializeProject(object@path)
-      rstudioapi::openProject(object@path, newSession = TRUE)
+      rstudioapi::initializeProject(path(object))
+      rstudioapi::openProject(path(object), newSession = TRUE)
     } else {
-      setwd(object@path)
+      setwd(path(object))
       print("When not using RStudio, it is recommended
           to open the project folder through the IDE
           so that the files and workspace can be loaded. \n
@@ -193,47 +197,33 @@ addFiles <- function(files = utils::choose.files(),
                      method = NULL) {
 
   assertClass(object, "ntsData")
-  samples <- object@samples
+  samples <- samplesTable(object)
   files <- sort(files)
 
   if (length(files) < 1) return(object)
 
-  samples2 <- data.table(
-    file = character(),
-    sample = character(),
-    replicate = character(),
-    blank = character(),
-    method = character(),
-    scans = numeric(),
-    centroided = logical(),
-    msLevels = character(),
-    rtStart = numeric(),
-    rtEnd = numeric(),
-    mzLow = numeric(),
-    mzHigh = numeric(),
-    CE = character()
-  )
+  samples2 <- samples[file %in% "NO FILES", ]
 
   samples2 <- samples2[seq_len(length(files)), ]
   samples2$file <- files
   samples2$sample <- gsub(".mzML|.mzXML", "", basename(files))
 
-  if (is.null(replicates)) {
+  if (!is.null(replicates) & nrow(samples2) == length(replicates)) {
+    samples2$replicates <- replicates
+  } else {
     samples2$replicate <- samples2$sample
     samples2$replicate <- str_replace(samples2$replicate, "-", "_")
     samples2$replicate <- sub("_[^_]+$", "", samples2$replicate)
-  } else {
-    if (nrow(samples2) == length(replicates)) samples2$replicates <- replicates
   }
 
-  if (testChoice(polarity, c("positive", "negative"))) object@polarity <- polarity
+  if (testChoice(polarity, c("positive", "negative"))) object@project$polarity <- polarity
 
   if (length(method) == 1 | length(method) == nrow(samples2)) {
     samples2$method <- method
   }
 
-  samples2 <- rbind(samples, samples2)
-  duplicates <- duplicated(samples2$sample)
+  new_samples <- rbind(samples, samples2)
+  duplicates <- duplicated(new_samples$sample)
 
   if (TRUE %in% duplicates) {
     warning("Files not added because duplicate file names found! Rename files with the same name.")
@@ -241,26 +231,143 @@ addFiles <- function(files = utils::choose.files(),
   }
 
   if (copy) {
-    msdir <- paste0(object@path, "/msfiles")
+    msdir <- paste0(path(object), "/msfiles")
     if (!dir.exists(msdir)) dir.create(msdir)
 
     for (i in seq_len(length(files))) {
-      i2 <- which(samples2$file == files[i])
+      i2 <- which(new_samples$file == files[i])
       ext <- file_ext(files[i])
 
-      newfilepath <- paste(msdir, "/", samples2$sample[i2], ".", ext, sep = "")
+      newfilepath <- paste(msdir, "/", new_samples$sample[i2], ".", ext, sep = "")
 
       if (!file.exists(newfilepath)) {
         file.copy(files[i], newfilepath, overwrite = FALSE)
-        samples2$file[i2] <- newfilepath
+        new_samples$file[i2] <- newfilepath
       }
     }
   }
+  
+  object@samples <- new_samples
 
-  object@samples <- samples2
+  object <- addRawInfo(object, samples = which(is.na(new_samples$datatype)))
 
-  object <- addRawInfo(object)
+  return(object)
+}
 
+
+
+
+#' @title addRawInfo
+#'
+#' @description Adds raw info for each sample/file
+#' to an \linkS4class{ntsData} object.
+#'
+#' @param object An \linkS4class{ntsData} object.
+#' @param samples A character/numeric vector with the name/index of the
+#' samples to get raw data information.
+#'
+#' @return An \linkS4class{ntsData} object with raw information added
+#' per sample/file.
+#' 
+#' @export
+#'
+#' @importFrom checkmate assertClass
+#' @importFrom data.table data.table as.data.table
+#' @importFrom mzR openMSfile header runInfo chromatogramHeader
+#'
+addRawInfo <- function(object, samples = NULL) {
+  
+  assertClass(object, "ntsData")
+  
+  spt <- samplesTable(object)
+  
+  if (is.character(samples)) {
+    if (FALSE %in% (samples %in% object@samples$sample)) {
+      warning("Given sample names not found in the ntsData object!")
+      return(object)
+    }
+    samples <- which(object@samples$sample %in% samples)
+  }
+  
+  fls <- spt$file[samples]
+  
+  scans <- list()
+  chromsInfo <- list() 
+  
+  l_fls <- length(fls)
+  
+  cat("Loading scans info from MS files... \n")
+  pb <- txtProgressBar(
+    min = 0,
+    max = l_fls,
+    style = 3,
+    width = 50,
+    char = "+"
+  )
+  
+  for (i in seq_len(l_fls)) {
+    
+    f <- fls[i]
+    
+    msf <- mzR::openMSfile(f, backend = "pwiz")
+    hd <- as.data.table(mzR::header(msf))
+    chroms <- suppressWarnings(mzR::chromatogramHeader(msf))
+    
+    if (nrow(chroms) > 0) {
+      chromsInfo[[samples(object)[i]]] <- chroms
+      rInfo <- suppressWarnings(mzR::runInfo(msf))
+      type <- "chromatograms"
+      sz <- nrow(chroms)
+      mslvs <- NA_character_
+      tstamp <- rInfo$startTimeStamp
+    }
+    
+    if (nrow(hd) > 0) {
+      scans[[samples(object)[i]]] <- hd
+      rInfo <- mzR::runInfo(msf)
+      if (TRUE %in% unique(hd$centroided)) {
+        type <- "centroided"
+      } else {
+        type <- "profile"
+      }
+      sz <- rInfo$scanCount
+      mslvs <- paste(sort(rInfo$msLevels), collapse = ";")
+      tstamp <- rInfo$startTimeStamp
+    }
+    
+    spt[file %in% f, ":="(
+      datatype = type,
+      size = sz,
+      msLevels = mslvs,
+      timeStamp = tstamp
+    )]
+    
+    suppressWarnings(mzR::close(msf))
+      
+    
+    setTxtProgressBar(pb, i)
+  }
+  
+  close(pb)
+  
+  object@samples <- spt
+  
+  if (length(scans) > 1) {
+    scans <- rbindlist(scans, idcol = "sample")
+    if (nrow(object@scans) > 0) {
+      scans <- rbind(object@scans, scans)
+    }
+    object@scans <- scans
+  }
+  
+  if (length(chromsInfo) > 1) {
+    chromsInfo <- rbindlist(chromsInfo, idcol = "sample")
+    if (nrow(object@chromsInfo) > 0) {
+      chromsInfo <- rbind(object@chromsInfo, chromsInfo)
+    }
+    object@chromsInfo <- chromsInfo
+  }
+  
   return(object)
 }
 
@@ -269,7 +376,7 @@ addFiles <- function(files = utils::choose.files(),
 
 #' @title addMetadata
 #'
-#' @description Adds metadata for each sample replicate in an \linkS4class{ntsData} object.
+#' @description Adds metadata for each sample in an \linkS4class{ntsData} object.
 #' If metadata already exists in the \linkS4class{ntsData} object,
 #' the new variable/s are added as new column/s.
 #'

@@ -33,7 +33,7 @@
 #' @importClassesFrom patRoon featureGroupsScreening
 #' @importMethodsFrom patRoon screenSuspects screenInfo generateMSPeakLists as.data.table
 #' @importFrom patRoon getDefAvgPListParams
-#' @importFrom dplyr select arrange left_join everything mutate filter top_n rename all_of
+#' @importFrom dplyr select arrange left_join everything mutate top_n rename all_of
 #' @importFrom fuzzyjoin difference_inner_join
 #' @importFrom stats cor
 #' @importFrom htmlwidgets saveWidget

@@ -50,7 +50,9 @@ Imports:
     checkmate,
     pheatmap,
     rlang,
-    fastcluster
+    fastcluster,
+    pbapply,
+    purrr
 Encoding: UTF-8
 LazyData: true
 RdMacros: Rdpack

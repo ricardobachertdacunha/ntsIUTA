@@ -1,5 +1,50 @@
 
 
+#' @title AlteredCameraParam
+#'
+#' @param sigma The multiplier of the standard deviation for grouping features
+#' by retention time.
+#' @param perfwhm Percentage of the overlapping FWHM to group features.
+#' @param cor_eic_th Threshold for feature EIC correlation in each sample.
+#' @param cor_exp_th Threshold for intensity correlation across samples.
+#' @param pval p-value threshold for testing correlation of significance.
+#' @param validateIsotopePatterns Logical, set to \code{TRUE} for validating
+#' the annotated isotopes with the \emph{kegg} database.
+#' @param ppmIsotopes The expected mass deviation (in ppm) to find isotopes.
+#' @param noise numeric.
+#' @param searchAdducts Logical, set to \code{TRUE} to screen for adducts after finding isotopes.
+#' @param ppmAdducts The expected mass deviation (in ppm) to find adducts.
+#' @param extendedList Logical, set to \code{TRUE} to use the extended list of
+#' adducts. The default is \code{FALSE}.
+#'
+#' @return An \linkS4class{AlteredCameraParam} class object for annotation.
+#'
+#' @export
+#'
+AlteredCameraParam <- function(
+  sigma = 6,
+  perfwhm = 0.4,
+  cor_eic_th = 0.75,
+  cor_exp_th = 0.75,
+  pval = 0.1,
+  validateIsotopePatterns = TRUE,
+  ppmIsotopes = 40,
+  noise = 300,
+  searchAdducts = TRUE,
+  ppmAdducts = 5,
+  extendedList = TRUE) {
+
+  paramobj <- do.call(new, c("AlteredCameraParam", as.list(environment())))
+
+  paramobj
+
+  return(paramobj)
+
+}
+
+
+
+
 #' @title FindIsotopesWithValidationAltered
 #' 
 #' @description Altered version of the \code{findIsotopesWithValidation} function from \code{CAMERA} package.
@@ -26,7 +71,7 @@
 #' @importFrom stats median quantile
 #' @importFrom BiocParallel registered SnowParam register bpparam bplapply
 #' @importFrom parallel detectCores
-#' @importFrom dplyr filter between
+#' @importFrom dplyr between
 #' 
 FindIsotopesWithValidationAltered <- function(xA = xA,
                                               obj = obj,

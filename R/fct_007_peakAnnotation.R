@@ -24,7 +24,7 @@
 #' @importClassesFrom patRoon components
 #'
 peakAnnotation <- function(object = NULL,
-                           algorithm = NULL,
+                           algorithm = NA_character_,
                            settings = NULL,
                            save = FALSE) {
 
@@ -32,14 +32,14 @@ peakAnnotation <- function(object = NULL,
 
   pat <- object@pat
 
-  if (is.null(algorithm)) algorithm <- annotationParameters(object)@algorithm
-
-  if (is.null(settings)) settings <- annotationParameters(object)@settings
+  if (is.na(algorithm)) algorithm <- annotationParameters(object)@algorithm
 
   if (is.na(algorithm)) {
-    warning("Annotation algorihtm not defined!")
+    cat("Peak annotation was not performed because algorihtm is not defined. \n")
     return(object)
   }
+
+  if (is.null(settings)) settings <- annotationParameters(object)@settings
 
   ag <- list(fGroups = pat, algorithm = algorithm)
 
@@ -54,6 +54,8 @@ peakAnnotation <- function(object = NULL,
   }
 
   object <- annotateFeaturesTable(object, prefAdduct)
+
+  object <- annotationParameters(object, algorithm = algorithm, settings = settings)
 
   if (is.logical(save)) if (save) saveObject(object = object)
 
@@ -86,7 +88,7 @@ annotateFeaturesTable <- function(object, prefAdduct = "[M+H]+") {
 
   pb <- txtProgressBar(
     min = 0,
-    max = nrow(aft),
+    max = nrow(feats),
     style = 3,
     width = 50,
     char = "="
@@ -203,7 +205,8 @@ annotateFeaturesTable <- function(object, prefAdduct = "[M+H]+") {
         mono_id <- mono_id[, group]
 
         if (length(mono_id) > 0) {
-          ntm <- aft[id %in% mono_id, neutralMass]
+          # TODO adds the neutralMass from components but may not work for other algorithms
+          ntm <- comp_df[group %in% mono_id, M_adduct]
           aft[id %in% x, isonr := temp$isonr]
           aft[id %in% x, monoiso := mono_id]
           aft[id %in% x, rel_intensity := as.numeric(temp$intensity) / comp_df[group %in% mono_id, intensity]]
@@ -236,7 +239,9 @@ annotateFeaturesTable <- function(object, prefAdduct = "[M+H]+") {
 
       if (!is.na(ntm)) {
         aft[id %in% x, neutralMass := ntm]
-        aft[id %in% x, adduct_ion := temp$adduct_ion]
+
+        #condition to not change the adduct ion if there was no annotation added
+        if (!is.na(temp$adduct_ion)) aft[id %in% x, adduct_ion := temp$adduct_ion]
       }
       ntm <- NA
 

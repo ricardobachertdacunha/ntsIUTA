@@ -6,10 +6,10 @@
 \usage{
 peakGrouping(
   object = NULL,
-  algorithm = NULL,
+  algorithm = NA_character_,
   settings = NULL,
   simplify = TRUE,
-  save = TRUE
+  save = FALSE
 )
 }
 \arguments{

@@ -3,7 +3,7 @@
 
 pathLowLevel <- system.file(package = "ntsIUTA", dir = "extdata")
 
-msFilesLowLevel <- list.files(path = path,
+msFilesLowLevel <- list.files(path = pathLowLevel,
   pattern = ".mzML|.mzXML",
   recursive = TRUE,
   full.names = TRUE,
@@ -29,6 +29,9 @@ mzr <- c(mz - ((ppm / 1E6) * mz), mz + ((ppm / 1E6) * mz))
 rtr <- c(rt - rtw, rt + rtw)
 
 ### with mzR -------------------------------------------------------------------
+
+
+#BiocManager::install("sneumann/mzR", ref = "feature/updatePwiz_3_0_21263")
 
 
 library(mzR)
@@ -220,8 +223,34 @@ ms <- patRoon:::loadEICs(ms, mzMins = c(233.023, 242.142), mzMaxs = c(233.025, 2
 ms <- patRoon:::loadEICs(ms, mzMins = c(200), mzMaxs = c(300), rtMins = c(800), rtMaxs = c(900))
 
 
+### raMS -------
+
+library(RaMS)
+
+msdata <- grabMSdata(msFilesLowLevel[19])
+
+saveRDS(msdata, file = paste0(choose.dir(), "/msdata.rds"))
+
+library(DBI)
+library(magrittr)
+
+con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+DBI::dbWriteTable(con, "MS1data", msdata$MS1)
 
 
+library(xml2)
+require(XML)
+
+install.packages("xml2")
+
+test <- read_xml(msFilesLowLevel[19]) %>% as.list()
+
+driver_tb = tibble::as_tibble(test) %>% tidyr::unnest_longer('mzML')
+
+test2 <- xml2::xml_find_all(test, xpath = "//mzML")
 
 
+test2 <-  xmlParse(msFilesLowLevel[19])
+test2 <- xmlToList(test2)
+test3 <- test2[["mzML"]][["run"]][[1]][[1]][["binaryDataArrayList"]]
 

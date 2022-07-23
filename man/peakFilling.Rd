@@ -4,7 +4,7 @@
 \alias{peakFilling}
 \title{peakFilling}
 \usage{
-peakFilling(object, algorithm = NULL, settings = NULL, save = TRUE)
+peakFilling(object, algorithm = NA_character_, settings = NULL, save = FALSE)
 }
 \arguments{
 \item{object}{An \linkS4class{ntsData} object containing features.}

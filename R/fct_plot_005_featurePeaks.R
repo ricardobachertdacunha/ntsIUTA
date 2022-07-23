@@ -1,7 +1,7 @@
 
 
 #' @title plotFeaturePeaks
-#' 
+#'
 #' @description Plots peaks for each feature in an \linkS4class{ntsData} object.
 #'
 #' @param object An \linkS4class{ntsData} object.
@@ -35,17 +35,16 @@
 #'
 #' @export
 #'
-#' @importFrom checkmate assertClass assertSubset
+#' @importFrom checkmate assertClass
 #' @importFrom plotly plot_ly add_trace layout hide_colorbar subplot toRGB
-#' @importFrom dplyr filter between
-#' @importFrom stats setNames
 #'
 plotFeaturePeaks <- function(object,
                              samples = NULL,
                              targets = NULL,
                              mz = NULL, ppm = 20,
                              rt = NULL, sec = 30,
-                             legendNames = NULL) {
+                             legendNames = NULL,
+                             heights = c(0.6, 0.4)) {
 
   checkmate::assertClass(object, "ntsData")
 
@@ -118,6 +117,7 @@ plotFeaturePeaks <- function(object,
       )
 
       df <- df[rt >= pk_temp[id == z, rtmin] & rt <= pk_temp[id == z, rtmax], ]
+      df$mz <- as.numeric(df$mz)
 
       plot <- plot %>%  add_trace(
         df,
@@ -132,12 +132,13 @@ plotFeaturePeaks <- function(object,
         legendgroup = leg[i],
         showlegend = showleg[i],
         hoverinfo = "text",
+        hoverlabel = list(bgcolor = colors[i]),
         text = paste(
           "</br> name: ", leg[i],
           "</br> feature: ", i,
           "</br> peak: ", z,
           "</br> sample: ", pk_temp[id == z, sample],
-          #"</br> <i>m/z</i>: ", round(df$mz, digits = 4),
+          "</br> <i>m/z</i>: ", round(df$mz, digits = 4),
           "</br> rt: ", round(df$rt, digits = 0),
           "</br> Int: ", round(df$intensity, digits = 0)
         )
@@ -176,6 +177,7 @@ plotFeaturePeaks <- function(object,
       legendgroup = leg[i],
       showlegend = FALSE,
       hoverinfo = "text",
+      hoverlabel = list(bgcolor = colors[i]),
       text = paste(
         "</br> name: ", leg[i],
         "</br> feature: ", i,
@@ -213,6 +215,7 @@ plotFeaturePeaks <- function(object,
         legendgroup = leg[i],
         showlegend = FALSE,
         hoverinfo = "text",
+        hoverlabel = list(bgcolor = colors[i]),
         text = paste(
           "</br> name: ", leg[i],
           "</br> feature: ", i,
@@ -236,23 +239,32 @@ plotFeaturePeaks <- function(object,
   plotList[["plot2"]] <- plot2
 
   xaxis <- list(linecolor = toRGB("black"), linewidth = 2,
-                title = "Retention Time (sec.)",
+                title = "Retention time (seconds)",
                 titlefont = list(size = 12, color = "black"),
                 range = c(min(eic$rt), max(eic$rt)), autotick = TRUE, ticks = "outside")
 
   yaxis1 <- list(linecolor = toRGB("black"), linewidth = 2,
-                title = "Intensity",
+                title = "Intensity (counts)",
                 titlefont = list(size = 12, color = "black"))
 
   yaxis2 <- list(linecolor = toRGB("black"), linewidth = 2,
-                title = "Sample",
+                title = "",
                 titlefont = list(size = 12, color = "black"),
                 tick0 = 0, dtick = 1)
 
-  plotf <- subplot(plotList, nrows = 2, margin = 0.04,
-                    shareX = TRUE, which_layout = "merge")
+  plotf <- subplot(
+    plotList,
+    nrows = 2,
+    heights = heights,
+    margin = 0.01,
+    shareX = TRUE,
+    which_layout = "merge"
+  )
 
-  plotf <- plotf %>% layout(xaxis = xaxis, yaxis = yaxis1, yaxis2 = yaxis2)
+  plotf <- plotf %>% layout(
+    legend = list(title = list(text = paste("<b>", "targets", "</b>"))),
+    xaxis = xaxis, yaxis = yaxis1, yaxis2 = yaxis2
+  )
 
   return(plotf)
 }

@@ -52,11 +52,16 @@ fillingSettingsDefaultXCMS <- function() {
 #' @importClassesFrom patRoon featuresSIRIUS featureGroupsSIRIUS featureGroups
 #' @importFrom checkmate assertClass testClass
 #'
-peakFilling <- function(object, algorithm = NULL, settings = NULL, save = TRUE) {
+peakFilling <- function(object, algorithm = NA_character_, settings = NULL, save = FALSE) {
 
   checkmate::assertClass(object, "ntsData")
 
-  if (is.null(algorithm)) algorithm <- fillingParameters(object)@algorithm
+  if (is.na(algorithm)) algorithm <- fillingParameters(object)@algorithm
+
+  if (is.na(algorithm)) {
+    cat("Peak filling was not performed because algorihtm is not defined. \n")
+    return(object)
+  }
 
   if (is.null(settings)) settings <- fillingParameters(object)@settings
 

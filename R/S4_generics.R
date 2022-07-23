@@ -147,28 +147,28 @@ setGeneric("polarity<-", function(object, value) standardGeneric("polarity<-"))
 #'
 setGeneric("metadata", function(x, ...) standardGeneric("metadata"))
 
-#' QC
+#' controlSamples
 #'
-#' @param object Object to collect the samples used for QC.
+#' @param object Object to collect the samples used for quality control.
 #'
-#' @return A vector with sample names used for QC.
+#' @return A vector with sample names used for quality control.
 #'
 #' @seealso See method details in the \linkS4class{ntsData} help page.
 #'
-setGeneric("QC", function(object) standardGeneric("QC"))
+setGeneric("controlSamples", function(object) standardGeneric("controlSamples"))
 
-#' QC<-
+#' controlSamples<-
 #'
-#' @param object Object to collect the samples to be used as QC.
+#' @param object Object to collect the samples to be used as quality control.
 #' @param value A character vector the names of the sample replicate group/s
-#' to be used as QC.
+#' to be used as quality control.
 #' @param ... Other argumments.
 #'
-#' @return Ac object with experimental samples assigned to QC.
+#' @return An object with experimental samples assigned for quality control.
 #'
 #' @seealso See method details in the \linkS4class{ntsData} help page.
 #'
-setGeneric("QC<-", function(object, value, ...) standardGeneric("QC<-"))
+setGeneric("controlSamples<-", function(object, value, ...) standardGeneric("controlSamples<-"))
 
 #' EICs
 #'
@@ -312,6 +312,28 @@ setGeneric("fillingParameters", function(object, algorithm, settings) standardGe
 #'
 setGeneric("annotationParameters", function(object, algorithm, settings) standardGeneric("annotationParameters"))
 
+#' saveParameters
+#'
+#' @param object An object with parameter settings to save.
+#' @param ... Other arguments.
+#'
+#' @return The parameters are saved in a location to define.
+#'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
+setGeneric("saveParameters", function(object, ...) standardGeneric("saveParameters"))
+
+#' loadParameters
+#'
+#' @param object An object to add parameter settings.
+#' @param ... Other arguments.
+#'
+#' @return The object with added parameters.
+#'
+#' @seealso See method details in the \linkS4class{ntsData} help page.
+#'
+setGeneric("loadParameters", function(object, ...) standardGeneric("loadParameters"))
+
 #' peaks
 #'
 #' @param object An object to extract chromatographic peaks.
@@ -384,6 +406,24 @@ setGeneric("mapFeatures", function(object, ...) standardGeneric("mapFeatures"))
 #' @return A logical value.
 #'
 setGeneric("hasAdjustedRetentionTime", function(object) standardGeneric("hasAdjustedRetentionTime"))
+
+#' components
+#'
+#' @param object An object to extract components.
+#' @param ... Other method dependent parameters.
+#'
+#' @return A data.frame with components.
+#'
+setGeneric("components", function(object, ...) standardGeneric("components"))
+
+#' plotComponents
+#'
+#' @param object An object to extract components.
+#' @param ... Other method dependent parameters.
+#'
+#' @return A plot of components.
+#'
+setGeneric("plotComponents", function(object, ...) standardGeneric("plotComponents"))
 
 #' exportPlots
 #'

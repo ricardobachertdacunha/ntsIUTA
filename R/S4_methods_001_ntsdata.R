@@ -1,6 +1,6 @@
 
 
-### projectInfo ---------------------------------------------------------------------------------------------
+### project info ---------------------------------------------------------------------------------------------
 
 #' @describeIn ntsData setter for project basic information.
 #' When the \code{title}, \code{description} and \code{date} arguments
@@ -13,23 +13,17 @@
 #' @param description A character string with a description for the project.
 #' @param date \link{Date} object.
 #'
-#'
 #' @export
 #'
 setMethod("projectInfo", "ntsData", function(object, title = NULL, description = NULL, date = NULL) {
 
   if (missing(title) & missing(description) & missing(date)) {
-    info <- list(
-      title = object@title,
-      description = object@description,
-      date = object@date
-    )
-    return(info)
+    return(object@project)
   }
 
-  if (!missing(title) & !is.null(title)) object@title <- title
-  if (!missing(description) & !is.null(description)) object@description <- description
-  if (!missing(date) & !is.null(date)) object@date <- as.Date(date)
+  if (!missing(title) & !is.null(title)) object@project$title <- title
+  if (!missing(description) & !is.null(description)) object@project$description <- description
+  if (!missing(date) & !is.null(date)) object@project$date <- as.Date(date)
   return(object)
 })
 
@@ -42,7 +36,7 @@ setMethod("projectInfo", "ntsData", function(object, title = NULL, description =
 #'
 #' @export
 #'
-setMethod("path", "ntsData", function(object) object@path)
+setMethod("path", "ntsData", function(object) object@project$path)
 
 
 
@@ -188,7 +182,7 @@ setMethod("acquisitionMethods<-", signature("ntsData", "ANY"), function(object, 
 #'
 setMethod("polarity", "ntsData", function(object) {
 
-  return(object@polarity)
+  return(object@project$polarity)
 })
 
 #' @describeIn ntsData Setter for the polarity mode of the samples (i.e., files).
@@ -200,7 +194,7 @@ setMethod("polarity", "ntsData", function(object) {
 #'
 setMethod("polarity<-", "ntsData", function(object, value) {
 
-  if (testChoice(value, c("positive", "negative"))) object@polarity <- value
+  if (testChoice(value, c("positive", "negative"))) object@project$polarity <- value
 
   return(object)
 })
@@ -244,62 +238,53 @@ setMethod("metadata", "ntsData", function(x, varname) {
 
 
 
-### QC ------------------------------------------------------------------------------------------------------
+### controlSamples ------------------------------------------------------------------------------------------
 
-#' @describeIn ntsData Getter for the QC samples \link[data.table]{data.table}.
+#' @describeIn ntsData Getter for the control samples \link[data.table]{data.table}.
 #'
 #' @export
 #'
-setMethod("QC", "ntsData", function(object) object@QC@samples)
+setMethod("controlSamples", "ntsData", function(object) object@controlSamples)
 
-#' @describeIn ntsData Setter for QC samples or sample replicates.
+#' @describeIn ntsData Setter for control samples or sample replicates.
 #' The \code{value} is a character vector with the names of the samples or sample replicate name/s
-#' to be used for QC as predefined by the \code{nameType} argument when using
-#' "samples" or "replicates", respectively. If the \code{remove} argument is \code{TRUE}
+#' to be used for quality control as predefined by the \code{nameType} argument when using
+#' "samples" or "replicates", respectively. 
+#' If the \code{remove} argument is \code{TRUE}
 #' the specified sample or replicate names are moved from
-#' the QC to the samples of the \linkS4class{ntsData} object.
+#' the \code{controlSamples} slot to the samples of the \linkS4class{ntsData} object.
 #'
 #' @param nameType A character string of length one applicable to the respective method.
 #' @param remove A logical value applicable to the respective method.
 #'
 #' @export
 #'
-setMethod("QC<-", "ntsData", function(object, value, remove = FALSE, nameType = "replicates") {
+setMethod("controlSamples<-", "ntsData", function(object, value, remove = FALSE, nameType = "replicates") {
 
   if (missing(nameType)) nameType <- "replicates"
 
   if (!missing(remove) & remove) {
     if (nameType == "replicates") {
-      if (FALSE %in% unique(value %in% object@QC@samples$replicate)) {
+      if (FALSE %in% unique(value %in% object@controlSamples$replicate)) {
         cat("Given replicate name/s in value not found in the QC slot of the object.")
       } else {
-        object@samples <- rbind(object@samples, object@QC@samples[object@QC@samples$replicate %in% value, ])
-        object@metadata <- rbind(object@metadata, object@QC@samples[object@QC@samples$replicate %in% value, .(sample, replicate)], fill = TRUE)
+        object@samples <- rbind(object@samples, object@controlSamples[replicate %in% value, ], fill = TRUE)
+        object@metadata <- rbind(object@metadata, object@controlSamples[replicate %in% value, .(sample, replicate)], fill = TRUE)
         object@samples <- object@samples[order(sample)]
         object@metadata <- object@metadata[order(sample)]
-
-        logVec <- object@QC@samples$replicate %in% value
-        object@scans <- c(object@scans, object@QC@scans[logVec])
-        object@scans <- object@scans[order(names(object@scans))]
-
-        object@QC@samples <- object@QC@samples[!object@QC@samples$replicate %in% value, ]
-        object@QC@scans <- object@QC@scans[!logVec]
+        
+        object@controlSamples <- object@controlSamples[!(replicate %in% value), ]
       }
     } else {
-      if (FALSE %in% unique(value %in% object@QC@samples$sample)) {
+      if (FALSE %in% unique(value %in% object@controlSamples$sample)) {
         cat("Given sample name/s in value not found in the QC slot of the object.")
       } else {
-        object@samples <- rbind(object@samples, object@QC@samples[object@QC@samples$sample %in% value, ])
-        object@metadata <- rbind(object@metadata, object@QC@samples[object@QC@samples$sample %in% value, .(sample, replicate)], fill = TRUE)
+        object@samples <- rbind(object@samples, object@controlSamples[sample %in% value, ], fill = TRUE)
+        object@metadata <- rbind(object@metadata, object@controlSamples[sample %in% value, .(sample, replicate)], fill = TRUE)
         object@samples <- object@samples[order(sample)]
         object@metadata <- object@metadata[order(sample)]
 
-        logVec <- object@QC@samples$sample %in% value
-        object@scans <- c(object@scans, object@QC@scans[logVec])
-        object@scans <- object@scans[order(names(object@scans))]
-
-        object@QC@samples <- object@QC@samples[!object@QC@samples$sample %in% value, ]
-        object@QC@scans <- object@QC@scans[!logVec]
+        object@controlSamples <- object@controlSamples[!(sample %in% value), ]
       }
     }
     return(object)
@@ -309,27 +294,17 @@ setMethod("QC<-", "ntsData", function(object, value, remove = FALSE, nameType = 
     if (FALSE %in% unique(value %in% object@samples$replicate)) {
       cat("Given replicate name/s in value not found in the object.")
     } else {
-      object@QC@samples <- rbind(object@QC@samples, object@samples[object@samples$replicate %in% value, ])
-
-      logVec <- object@samples$replicate %in% value
-      object@QC@scans <- c(object@QC@scans, object@scans[logVec])
-
-      object@samples <- object@samples[!(object@samples$replicate %in% value), ]
-      object@metadata <- object@metadata[!(object@metadata$replicate %in% value), ]
-      object@scans <- object@scans[!logVec]
+      object@controlSamples <- rbind(object@controlSamples, object@samples[replicate %in% value, ])
+      object@samples <- object@samples[!(replicate %in% value), ]
+      object@metadata <- object@metadata[!(replicate %in% value), ]
     }
   } else {
     if (FALSE %in% unique(value %in% object@samples$sample)) {
       cat("Given sample name/s in value not found in the object.")
     } else {
-      object@QC@samples <- rbind(object@QC@samples, object@samples[object@samples$sample %in% value, ])
-
-      logVec <- object@samples$sample %in% value
-      object@QC@scans <- c(object@QC@scans, object@scans[logVec])
-
-      object@samples <- object@samples[!(object@samples$sample %in% value), ]
-      object@metadata <- object@metadata[!(object@metadata$sample %in% value), ]
-      object@scans <- object@scans[!logVec]
+      object@controlSamples <- rbind(object@controlSamples, object@samples[sample %in% value, ])
+      object@samples <- object@samples[!(sample %in% value), ]
+      object@metadata <- object@metadata[!(sample %in% value), ]
     }
   }
 
@@ -342,12 +317,16 @@ setMethod("QC<-", "ntsData", function(object, value, remove = FALSE, nameType = 
 ### [ sub-setting samples -----------------------------------------------------------------------------------
 
 #' @describeIn ntsData Subset on samples, using sample index or name.
+#' Note that filtering of features is lazy to make it fast.
+#' Only average \emph{m/z}, retention time and intensity are updated.
+#' Run updateFeatureTable() with \code{FAST} set to \code{FALSE} for a complete update of
+#' features. Note that the update might invalitate present quality parameters and annotation.
 #'
 #' @param i The indice/s or name/s of the samples to keep in the \code{x} object.
 #'
 #' @export
 #'
-#' @importMethodsFrom patRoon analyses
+#' @importMethodsFrom patRoon analyses groupNames
 #'
 setMethod("[", c("ntsData", "ANY", "missing", "missing"), function(x, i, ...) {
 
@@ -368,18 +347,34 @@ setMethod("[", c("ntsData", "ANY", "missing", "missing"), function(x, i, ...) {
     x@samples <- x@samples[sample %in% sname, ]
 
     x@metadata <- x@metadata[sample %in% sname, ]
-
-    x@scans <- x@scans[sname]
-
+    
+    if (nrow(x@scans) > 0) {
+      x@scans <- x@scans[sample %in% sname, ]
+    }
+    
+    if (nrow(x@chromsInfo) > 0) {
+      x@chromsInfo <- x@chromsInfo[sample %in% sname, ]
+    }
+    
+    x@ms1 <- x@ms1[sample %in% sname, ]
+    x@ms2 <- x@ms2[sample %in% sname, ]
+    
+    if (nrow(x@chroms) > 0) {
+      x@chroms <- x@chroms[sample %in% sname, ]
+    }
+    
     if (length(analyses(x@pat)) > 0) {
 
       x@pat <- x@pat[sidx]
 
-      if (nrow(x@peaks) > 0) x@peaks <- x@peaks[sample %in% sname, ]
+      if (nrow(x@peaks) > 0) {
+        x@peaks <- x@peaks[sample %in% sname, ]
+        x@peaks <- x@peaks[feature %in% groupNames(x@pat), ]
+      }
 
-      if (nrow(x@features) > 0) x <- buildFeatureTable(x)
-      # TODO update features ranges based on remaining peaks, not creating a new feature table to avoid losing info
+      if (nrow(x@features) > 0) x <- updateFeatureTable(x, fast = TRUE)
 
+      if (nrow(x@unified) > 0) x@unified <- x@unified[id %in% unique(x@peaks$feature), ]
     }
   }
 
@@ -492,7 +487,7 @@ setMethod("plotEICs", "ntsData", function(object,
     leg <- unique(eic[, .(sample, replicate)])
     leg <- leg$replicate
     varkey <- eic$replicate
-  } else if (!is.null(legendNames) & length(legendNames) == length(sp)) {
+  } else if (!is.null(legendNames) & length(legendNames) == length(unique(eic$id))) {
     leg <- legendNames
     names(leg) <- unique(eic$id)
     varkey <- sapply(eic$id, function(x) leg[[x]])
@@ -555,7 +550,7 @@ setMethod("plotEICs", "data.table", function(object,
                                              title = NULL,
                                              interactive = FALSE) {
 
-  eic <- object
+  eic <- copy(object)
 
   if (!is.null(samples)) {
     if (class(samples) == "numeric") samples <- unique(eic$sample)[samples]
@@ -618,17 +613,56 @@ setMethod("plotEICs", "data.table", function(object,
 #' for samples in an \linkS4class{ntsData} object.
 #'
 #' @export
+#' 
+#' @importFrom data.table data.table as.data.table setnames setcolorder
+#' @importFrom mzR openMSfile chromatogram close
 #'
 setMethod("TICs", "ntsData", function(object, samples = NULL) {
+  
+  if (is.character(samples)) {
+    if (FALSE %in% (samples %in% object@samples$sample)) {
+      warning("Given sample names not found in the ntsData object!")
+      return(data.table())
+    }
+    samples <- which(object@samples$sample %in% samples)
+  }
+  
+  spt <- samplesTable(object)
+  if (!is.null(samples)) spt <- spt[samples, ]
 
-  tic <- extractEICs(
-    object,
-    samples = samples,
-    mz = NULL,
-    rt = NULL
-  )
+  tics <- list()
+  
+  for (i in spt$sample) {
 
-  return(tic)
+    if ("TIC" %in% object@chromsInfo[sample %in% i, chromatogramId]) {
+      msf <- mzR::openMSfile(spt[sample %in% i, file])
+      tic <- mzR::chromatogram(msf, object@chromsInfo[sample %in% i & chromatogramId %in% "TIC", chromatogramIndex])
+      tic <- as.data.table(tic)
+      tic <- setnames(tic, c("time", "TIC"), c("rt", "intensity"))
+      tic$replicate <- spt[sample %in% i, replicate]
+      tic$sample <- i
+      tic$id <- object@chromsInfo[sample %in% i & chromatogramId %in% "TIC", chromatogramId]
+      setcolorder(tic, c("sample", "replicate", "id", "rt", "intensity"))
+      if (max(tic$rt) < 120) tic[, rt := rt * 60]
+      tic <- tic[intensity > 0, ]
+      tics[[i]] <- tic
+      mzR::close(msf)
+      rm(msf)
+      rm(tic)
+    } else {
+      tic <- extractEICs(
+        object,
+        samples = i,
+        mz = NULL,
+        rt = NULL
+      )
+      tics[[i]] <- tic
+      rm(tic)
+    }
+
+  }
+
+  return(rbindlist(tics))
 })
 
 
@@ -649,13 +683,17 @@ setMethod("plotTICs", "ntsData", function(object,
                                           colorBy = "samples",
                                           title = NULL,
                                           interactive = FALSE) {
-
+  
+  tics <- TICs(
+    object,
+    samples = samples
+  )
+  
+  
   return(
     plotEICs(
-      object,
-      samples = samples,
-      mz = NULL,
-      rt = NULL,
+      tics,
+      samples = NULL,
       colorBy = colorBy,
       title = title,
       interactive = interactive
@@ -670,7 +708,8 @@ setMethod("plotTICs", "ntsData", function(object,
 
 #' @describeIn ntsData Plots a total ion chromatogram (TIC)
 #' from each sample in a \link[data.table]{data.table} object as produced
-#' by the \link{TICs} method.
+#' by the \link{TICs} method. The columns should include the following entries 
+#' "sample", "replicate, "id", "rt" and "intensity".
 #'
 #' @export
 #'
@@ -915,20 +954,12 @@ setMethod("plotXICs", "data.table", function(object,
 #' For the \code{clusteringUnit}, possible values are \emph{mz} (the default) or \emph{ppm}.
 #' The \code{minIntensityPre} and \code{minIntensityPost}
 #' define the minimum intensity for mass traces before and after clustering, respectively.
-#' Set \code{mergeCEs} to \code{TRUE} for merging spectra acquired with different collision energies.
+#' Set \code{mergeVoltages} to \code{TRUE} for merging spectra acquired with different collision energies.
 #' The \code{mergeBy} argument is used to merge spectra by "samples" or "replicates".
 #' When \code{NULL}, MS2 is given per target and per sample.
 #' 
-#' @param isolationTimeWindow A character vector of length one with the time isolation window, in seconds.
-#' @param isolationMassWindow A character vector of length one with the mass isolation window, in Da.
-#' @param clusteringMethod A character vector specifying the clustering unit.
-#' @param clusteringUnit A character vector specifying the clustering unit.
-#' @param clusteringWindow A length one numeric vector with the mass deviation for clustering.
-#' @param minIntensityPre A length one numeric vector with the minimum intensity.
-#' @param minIntensityPost A length one numeric vector with the minimum intensity.
-#' @param asPatRoon Logical, set to \code{TRUE} for return a pkg{patRoon} class object.
-#' @param mergeCEs Logical, set to TRUE to cluster different collision energies.
-#' @param mergeBy A character string applicable to the respective method.
+#' @param algorithm A character vector of length one with the algorithm used to extract and cluster MS2 data.
+#' @param settings A list of parameters settings.
 #'
 #' @export
 #'
@@ -936,16 +967,8 @@ setMethod("MS2s", "ntsData", function(object = NULL,
                                       samples = NULL,
                                       mz = NULL, ppm = 20,
                                       rt = NULL, sec = 60,
-                                      isolationTimeWindow = 10,
-                                      isolationMassWindow = 1.3,
-                                      clusteringMethod = "distance",
-                                      clusteringUnit = "mz",
-                                      clusteringWindow = 0.005,
-                                      minIntensityPre = 200,
-                                      minIntensityPost = 200,
-                                      asPatRoon = FALSE,
-                                      mergeCEs = FALSE,
-                                      mergeBy = "samples") {
+                                      algorithm = NA_character_,
+                                      settings = NULL) {
 
   level <- 2
 
@@ -955,16 +978,8 @@ setMethod("MS2s", "ntsData", function(object = NULL,
     level,
     mz, ppm,
     rt, sec,
-    isolationTimeWindow,
-    isolationMassWindow,
-    clusteringMethod,
-    clusteringUnit,
-    clusteringWindow,
-    minIntensityPre,
-    minIntensityPost,
-    asPatRoon,
-    mergeCEs,
-    mergeBy
+    algorithm,
+    settings
   )
 
   return(ms2)
@@ -985,10 +1000,10 @@ setMethod("MS2s", "ntsData", function(object = NULL,
 #' For the \code{clusteringUnit}, possible values are \emph{mz} (the default) or \emph{ppm}.
 #' The \code{minIntensityPre} and \code{minIntensityPost}
 #' define the minimum intensity for mass traces before and after clustering, respectively.
-#' Set \code{mergeCEs} to \code{TRUE} for merging spectra acquired with different collision energies.
+#' Set \code{mergeVoltages} to \code{TRUE} for merging spectra acquired with different collision energies.
 #' The \code{mergeBy} argument is used to merge spectra by "samples" or "replicates".
 #' When \code{NULL}, MS2 is given per target and per sample. The possible values for the
-#' \code{colorBy} argument are "targets", "samples", "replicates" and "CEs" to color by
+#' \code{colorBy} argument are "targets", "samples", "replicates" and "voltages" to colour by
 #' each target, sample, replicate or collision energy, respectively.
 #'
 #' @export
@@ -997,15 +1012,8 @@ setMethod("plotMS2s", "ntsData", function(object = NULL,
                                           samples = NULL,
                                           mz = NULL, ppm = 20,
                                           rt = NULL, sec = 60,
-                                          isolationTimeWindow = 10,
-                                          isolationMassWindow = 1.3,
-                                          clusteringMethod = "distance",
-                                          clusteringUnit = "mz",
-                                          clusteringWindow = 0.005,
-                                          minIntensityPre = 200,
-                                          minIntensityPost = 200,
-                                          mergeCEs = FALSE,
-                                          mergeBy = "samples",
+                                          algorithm = NA_character_,
+                                          settings = NULL,
                                           legendNames = NULL,
                                           title = NULL,
                                           colorBy = NULL,
@@ -1013,37 +1021,27 @@ setMethod("plotMS2s", "ntsData", function(object = NULL,
 
   level <- 2
 
-  asPatRoon <- FALSE
-
   ms2 <- extractMSn(
     object,
     samples,
     level,
     mz, ppm,
     rt, sec,
-    isolationTimeWindow,
-    isolationMassWindow,
-    clusteringMethod,
-    clusteringUnit,
-    clusteringWindow,
-    minIntensityPre,
-    minIntensityPost,
-    asPatRoon,
-    mergeCEs,
-    mergeBy
+    algorithm,
+    settings
   )
 
   if (nrow(ms2) < 1) return(cat("Data was not found for any of the targets!"))
 
-  if (colorBy == "samples" & "sample" %in% colnames(ms2)) {
+  if ("samples" %in% colorBy & "sample" %in% colnames(ms2)) {
     leg <- unique(ms2$sample)
     varkey <- ms2$sample
-  } else if (colorBy == "replicates" & "replicate" %in% colnames(ms2)) {
+  } else if ("replicates" %in% colorBy & "replicate" %in% colnames(ms2)) {
     leg <- unique(ms2$replicate)
     varkey <- ms2$replicate
-  } else if (colorBy == "CEs" & "CE" %in% colnames(ms2)) {
-    leg <- unique(ms2$CE)
-    varkey <- ms2$CE
+  } else if ("voltages" %in% colorBy & "voltage" %in% colnames(ms2)) {
+    leg <- unique(ms2$voltage)
+    varkey <- ms2$voltage
   } else if (!is.null(legendNames) & length(legendNames) == length(unique(ms2$id))) {
     leg <- legendNames
     names(leg) <- unique(ms2$id)
@@ -1087,7 +1085,7 @@ setMethod("plotMS2s", "ntsData", function(object = NULL,
 #' can be filtered using the \code{samples} and \code{replicates} arguments, respectively.
 #' Note that the column sample/replicate should be present.
 #' The possible values for the \code{colorBy} argument are
-#' "targets", "samples", "replicates" and "CEs" to color by
+#' "targets", "samples", "replicates" and "voltages" to color by
 #' each target, sample, replicate or collision energy, respectively.
 #'
 #' @param replicates A numeric or character vector with the indice/s or name/s
@@ -1104,7 +1102,7 @@ setMethod("plotMS2s", "data.table", function(object = NULL,
                                              colorBy = "targets",
                                              interactive = FALSE) {
 
-  ms2 <- object
+  ms2 <- copy(object)
 
   if (!is.null(samples) & "sample" %in% colnames(ms2)) {
     if (class(samples) == "numeric") samples <- unique(ms2$sample)[samples]
@@ -1126,9 +1124,9 @@ setMethod("plotMS2s", "data.table", function(object = NULL,
   } else if (colorBy == "replicates" & "replicate" %in% colnames(ms2)) {
     leg <- unique(ms2$replicate)
     varkey <- ms2$replicate
-  } else if (colorBy == "CEs" & "CE" %in% colnames(ms2)) {
-    leg <- unique(ms2$CE)
-    varkey <- ms2$CE
+  } else if (colorBy == "voltages" & "voltage" %in% colnames(ms2)) {
+    leg <- unique(ms2$voltage)
+    varkey <- ms2$voltage
   } else if (!is.null(legendNames) & length(legendNames) == length(unique(ms2$id))) {
     leg <- legendNames
     names(leg) <- unique(ms2$id)
@@ -1369,9 +1367,10 @@ setMethod("mapPeaks", "ntsData", function(object,
 
 ### [ sub-setting features ----------------------------------------------------------------------------------
 
-#' @describeIn ntsData Subset on samples, using sample index or name.
+#' @describeIn ntsData Subset on samples and features, using index or name.
+#' Note that this method is irreversible.
 #'
-#' @param j The indice/s or \emph{id}/s for subsettting on features.
+#' @param j The indice/s, \emph{id}/s or \emph{ufi} for subsettting on features.
 #'
 #' @export
 #'
@@ -1392,11 +1391,21 @@ setMethod("[", c("ntsData", "ANY", "ANY", "missing"), function(x, i, j, ...) {
 
     if (!is.character(j)) j <- x@features$id[j]
 
+    if (TRUE %in% grepl("^m.*", j, fixed = FALSE)) {
+      j <- sapply(j, function(z) ifelse(grepl("^m.*", z, fixed = FALSE), x@features[ufi %in% z, id], z))
+    }
+
     x@pat <- x@pat[, j]
+
+    x@ms2 <- x@ms2[, j]
 
     x@peaks <- x@peaks[feature %in% j, ]
 
     x@features <- x@features[id %in% j, ]
+
+    if (nrow(x@removed) > 0) x@removed <- x@removed[id %in% j, ]
+
+    if (nrow(x@unified) > 0) x@unified <- x@unified[id %in% j, ]
   }
 
   return(x)
@@ -1411,9 +1420,6 @@ setMethod("[", c("ntsData", "ANY", "ANY", "missing"), function(x, i, j, ...) {
 #'
 #' @export
 #'
-#' @importFrom checkmate assertSubset
-#' @importFrom dplyr filter between
-#'
 setMethod("features", "ntsData", function(object,
                                           samples = NULL,
                                           targets = NULL,
@@ -1422,7 +1428,13 @@ setMethod("features", "ntsData", function(object,
 
   feats <- object@features
 
-  if (!is.null(targets)) return(feats[id %in% targets, ])
+  if (!is.null(targets)) {
+    if ("ufi" %in% colnames(feats)) {
+      return(feats[id %in% targets | ufi %in% targets, ])
+    }
+
+    return(feats[id %in% targets, ])
+  }
 
   if (!is.null(mz)) {
     targets <- makeTargets(mz, rt, ppm, sec)
@@ -1451,7 +1463,6 @@ setMethod("features", "ntsData", function(object,
 #' The \code{legendNames} is a character vector with the same length as targets for plotting and
 #' can be used to lengend the plot. Note that, by setting \code{legendNames} the \code{colorBy}
 #' is set to "targets" automatically.
-#'
 #'
 #' @export
 #'
@@ -1532,9 +1543,13 @@ setMethod("plotFeatures", "ntsData", function(object,
 
   eic[, var := varkey][]
 
+  data.table::setorder(eic, var, rt)
+
   for (f_tar in unique(pks$feature)) {
     pks[feature %in% f_tar, rt := feats[id %in% f_tar, rt]]
   }
+
+  data.table::setorder(pks, feature)
 
   if (!interactive) {
 
@@ -1563,14 +1578,202 @@ setMethod("plotFeatures", "ntsData", function(object,
 
 
 
-### show ----------------------------------------------------------------------------------------------------
+### components ----------------------------------------------------------------------------------------------
 
-#' @describeIn ntsData Informative printing of the \linkS4class{ntsData} object.
+#' @describeIn ntsData Getter for components (i.e., isotopes and adducts clustered by neutral mass).
+#' When giving the argument \code{all} as \code{TRUE},
+#' all the features within the target feature components are included in the output.
 #'
-#' @param object An \linkS4class{ntsData} object.
+#' @param all Logical, set to \code{TRUE} for displaying all features/peaks.
 #'
 #' @export
+#'
+setMethod("components", "ntsData", function(object,
+                                            targets = NULL,
+                                            mz = NULL, ppm = 20,
+                                            rt = NULL, sec = 60,
+                                            all = FALSE) {
+
+  feats <- object@features
+
+  if (!"component" %in% colnames(feats)) {
+    return(cat("Unique feature identifiers (UFIs) are not present!"))
+  }
+
+  if (!is.null(targets)) {
+
+    if ("ufi" %in% colnames(feats)) {
+      feats <- feats[id %in% targets | ufi %in% targets, ]
+    } else {
+      feats <- feats[id %in% targets, ]
+    }
+
+  } else {
+    targets <- makeTargets(mz, rt, ppm, sec)
+
+    sel <- rep(FALSE, nrow(feats))
+    for (i in seq_len(nrow(targets))) {
+      sel[between(feats$mz, targets$mzmin[i], targets$mzmax[i]) &
+          between(feats$rt, targets$rtmin[i], targets$rtmax[i])] <- TRUE
+    }
+
+    feats <- feats[sel]
+  }
+
+  allfeats <- features(restoreFilteredFeatures(object))
+
+  if (all) {
+    outfeats <- allfeats[component %in% feats$component, ]
+  } else {
+    outfeats <- allfeats[(monoiso %in% feats$id | neutralMass %in% feats$neutralMass) & component %in% feats$component, ]
+  }
+
+  return(outfeats)
+})
+
+
+
+
+### plotComponents --------------------------------------------------------------------------------------------
+
+#' @describeIn ntsData A method for plotting peaks from given features
+#' in an \linkS4class{ntsData} object.
+#' The \code{colorBy} argument can be be \code{"samples"}, \code{replicates} or \code{targets}
+#' (the default), for colouring by samples, replicates or peak targets, respectively.
+#' The \code{legendNames} is a character vector with the same length as targets for plotting and
+#' can be used to lengend the plot. Note that, by setting \code{legendNames} the \code{colorBy}
+#' is set to "targets" automatically.
+#'
+#' @export
+#'
+#' @importFrom data.table rbindlist
+#'
+setMethod("plotComponents", "ntsData", function(object,
+                                                targets = NULL,
+                                                mz = NULL, ppm = 20,
+                                                rt = NULL, sec = 30,
+                                                all = FALSE,
+                                                colorBy = "isotopes",
+                                                spectra = FALSE) {
+
+  comps <- components(
+    object,
+    targets,
+    mz,
+    ppm,
+    rt,
+    sec,
+    all
+  )
+
+  if (!spectra) {
+
+    return(
+      plotComponentsInteractive(
+        object,
+        comps,
+        colorBy
+      )
+    )
+
+  } else {
+
+    return(
+      plotComponentsInteractive(
+        object,
+        comps,
+        colorBy
+      )
+    )
+  }
+
+})
+
+
+
+
+### filter --------------------------------------------------------------------------------------------------
+
+#' @describeIn ntsData Method to filter features in an \linkS4class{ntsData} object.
+#' Filters can be given with extra arguments (i.e., \code{...}).
+#' The available filters are as folllows:
+#' \itemize{
+#'  \item \code{minIntensity}: features below a minimum intensity threshold.
+#' For example, minIntensity = 3000, removes features below 3000 counts;
+#'  \item \code{blankThreshold}: features that are not more intense than a defined
+#' threshold multiplier of the assigned blank intensity.
+#' For example, blankThreshold = 3, features that are not higher than 3 times the blank intensity;
+#'  \item \code{maxReplicateIntensityDeviation} features based on a
+#' maximum standard deviation (SD), in percentage, among replicate samples.
+#' For example, maxReplicateIntensityDeviation = 30, filters features that do not have
+#' the SD below 30% in at least one sample replicate group.
+#'  \item \code{minReplicateAbundance}: features that are not present with at least
+#' a specified frequency in one sample replicate group.
+#' For example, minReplicateAbundance = 2, filters featues that are not represented
+#' in at least two samples within a replicate.
+#'  \item \code{snRatio} features below a minimum signal-to-noise (s/n) ratio threshold.
+#' For example, snRatio = 3, filters features below a s/n ratio of 3.
+#' }
+#'
+#' @param obj An \linkS4class{ntsData} object.
+#' @param ... List of arguments for the respective method.
+#'
+#' @export
+#'
+#' @importMethodsFrom patRoon filter
+#'
+setMethod("filter", "ntsData", function(obj, ...) {
+
+  filterList <- list(...)
+
+  if (length(filterList) == 0) {
+    warning("No filters selected or recognized.")
+    return(obj)
+  }
+
+  filters <- names(filterList)
+
+  listOfViableFilters <- c(
+    "minIntensity",
+    "blankThreshold",
+    "maxReplicateIntensityDeviation",
+    "snRatio",
+    "minReplicateAbundance"
+  )
+
+  if (!all(filters %in% listOfViableFilters)) {
+    warning("At least one filters is not recognized.")
+    return(obj)
+  }
+
+  for (i in seq_len(length(filters))) {
+    switch(names(filterList)[i],
+      minIntensity = (obj <- minIntensity(obj, unlist(filterList[i]))),
+      blankThreshold = (obj <- blankThreshold(obj, unlist(filterList[i]))),
+      maxReplicateIntensityDeviation = (obj <- maxReplicateIntensityDeviation(obj, unlist(filterList[i]))),
+      minReplicateAbundance = (obj <- minReplicateAbundance(obj, unlist(filterList[i]))),
+      snRatio = (obj <- snRatio(obj, unlist(filterList[i])))
+    )
+  }
+
+  obj@filters <- c(obj@filters, filterList)
+
+  return(obj)
+})
+
+
+
+
+### show ----------------------------------------------------------------------------------------------------
+
+#' @rdname show-methods
+#' @aliases msSample-class
+#' 
+#' @export
+#'
 #' @importFrom dplyr count
+#' @importMethodsFrom patRoon groupNames
+#'
 setMethod("show", "ntsData", function(object) {
 
   st <- object@samples[, .(sample, replicate, blank)]
@@ -1580,10 +1783,10 @@ setMethod("show", "ntsData", function(object) {
 
   cat(
     is(object)[[1]], "\n",
-    "  Project: ", object@title, "\n",
-    "  Date:  ", as.character(object@date), "\n",
-    "  Polarity:  ", object@polarity, "\n",
-    "  Path:  ", object@path, "\n",
+    "  Project: ", object@project$title, "\n",
+    "  Date:  ", as.character(object@project$date), "\n",
+    "  Polarity:  ", object@project$polarity, "\n",
+    "  Path:  ", object@project$path, "\n",
     #"  Samples:  ", "\n", "\n", sep = ""
     "\n", sep = ""
   )
@@ -1600,10 +1803,10 @@ setMethod("show", "ntsData", function(object) {
 
   cat("\n")
 
-  cat("  QC samples:  ",
-    ifelse(nrow(object@QC@samples) < 1, "empty", paste(object@QC@samples$sample, collapse = ", ")),
-    "\n", " QC results:  ",
-    ifelse(length(object@QC@results) < 1, "empty", paste(nrow(object@QC@results), " compounds evaluated")),
+  cat("  Control samples:  ",
+    ifelse(nrow(object@controlSamples) < 1, "empty", paste(object@controlSamples$sample, collapse = ", ")),
+    "\n", " Control results:  ",
+    ifelse(length(object@controlResults) < 1, "empty", paste(nrow(object@controlResults), " compounds evaluated")),
     "\n", set = ""
   )
 
@@ -1644,9 +1847,10 @@ setMethod("show", "ntsData", function(object) {
   if (length(object@features) > 0) {
     cat("\n")
     cat("  Number of features:  ", nrow(object@features), "\n", sep = "")
+    cat("  MS/MS data for ", length(patRoon::groupNames(object@patMS2)), " features.", "\n", sep = "")
   }
 
-  if (length(object@features) > 0) {
+  if (nrow(object@features) > 0) {
     cat("  Filtered features:  ", nrow(object@removed), "\n", sep = "")
   }
 

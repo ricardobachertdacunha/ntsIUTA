@@ -190,6 +190,7 @@ setClass("suspectList",
 #' @export
 #'
 #' @importFrom data.table data.table
+#' @importFrom purrr quietly
 #'
 setClass("qcData",
   slots = c(
@@ -204,6 +205,7 @@ setClass("qcData",
     ppm = "numeric",
     pat = "workflowStep",
     comp = "components",
+    ms2 = "MSPeakLists",
     peaks = "data.table",
     features = "data.table",
     unified = "data.table",
@@ -235,6 +237,7 @@ setClass("qcData",
     ppm = 15,
     pat = new("featuresSIRIUS"),
     comp = new("componentsCliqueMS", fGroups = new("featureGroupsSIRIUS", features = new("featuresSIRIUS"))),
+    ms2 = purrr::quietly(new)("MSPeakLists", algorithm = "mzr")$result,
     peaks = data.table::data.table(),
     features = data.table::data.table(),
     unified = data.table::data.table(),
@@ -298,42 +301,49 @@ setClass("isData",
 #' @title ntsData
 #'
 #' @description A S4 class object to store project processed data within the \pkg{ntsIUTA} package.
+#' The data within the slots is stored mostly as \link[data.table]{data.table} objects for a more
+#' flexible and comprehensive processing and assembly of workflows. Only the slot workflows is a 
+#' list composed of \link[data.table]{data.table} objects for each executed workflow step.
 #'
-#' @slot title A character string with the project title.
-#' @slot description A character string with the project description.
-#' @slot date The \link{Date} of the project.
-#' @slot path A character string with the project path.
-#' @slot samples A data.table with six columns:
+#' @slot project A table with five columns:
+#' \enumerate{
+#'  \item title: a character string with the project title;
+#'  \item date: the date of the project;
+#'  \item path: a character string with the project path;
+#'  \item polarity: character string with associated blank replicate;
+#'  \item description: a character string with the project description.
+#' }
+#' @slot samples A table with six columns:
 #' \enumerate{
 #'  \item file: character string with the file path;
 #'  \item sample: character string with the file name;
 #'  \item replicate: character string with the assigned sample replicate group;
 #'  \item blank: character string with associated blank replicate;
-#'  \item polarity: the polarity mode of the respective file; possible values are "positive" or "negative");
-#'  \item method: a character string with the method used to acquire the data file;
-#'  \item scans: a numeric value with the number of scans in the data file;
-#'  \item centroided: a logical value with the centroiding evaluation of the data;
-#'  \item msLevels: a character string with the MS levels in the data file;
-#'  \item rtStart: a numeric value with the retention time start, in seconds;
-#'  \item rtEnd: a numeric value with the retention time end, in seconds;
-#'  \item mzLow: a numeric value of the lowest mass in the data file, in \emph{m/z};
-#'  \item mzHigh: a numeric value of the highest mass in the data file, in \emph{m/z};
-#'  \item CE: a character string with the collision energies used in the data file.
+#'  \item datatype: character string with type of data (i.e., centroided, profile or chromatograms);
+#'  \item size: a numeric value with the total number of scans/chromatograms;
+#'  \item msLevels: a character string with the existing MS levels;
+#'  \item timeStamp: a character string with the start time stamp of thesample/file;
+#'  \item method: a character string with the method name or path used to acquire the data.
 #' }
-#' @slot scans A list with MS scans \link[data.table]{data.table} objects per sample.
-#' @slot metadata A data.table with the same number of rows
-#' as the number of \code{samples}, containing metadata for each sample added as extra columns.
+#' @slot scans A table with the MS information for each scan in each file/sample.
+#' @slot ms1 A table with columns () with MS1 data for each file/sample.
+#' @slot ms2 A table with MS2 data for each file/sample.
+#' @slot chromsInfo A table with chromatographic info for each file/sample.
+#' @slot chroms A table with chromatograms in each file/sample.
+#' @slot metadata A table with the same number of rows
+#' as the number of \code{samples} containing metadata for each sample added as extra columns.
 #' @slot parameters A \linkS4class{ntsParameters} object containing process parameters for the basic workflow.
 #' See \code{?"ntsParameters-class"} for more information.
-#' @slot QC A \linkS4class{qcData} object used for quality control. More information in \code{?"qcData-class"}.
+#' @slot controlSamples A \linkS4class{qcData} object used for quality control. More information in \code{?"qcData-class"}.
+#' @slot controlResults A \linkS4class{qcData} object used for quality control. More information in \code{?"qcData-class"}.
 #' @slot pat An \linkS4class{workflowStep} object from the \pkg{patRoon} package.
-#' @slot peaks A \link[data.table]{data.table} with peaks for each sample.
-#' @slot features A \link[data.table]{data.table} with features (i.e., grouped peaks across samples in the project).
-#' @slot unified A \link[data.table]{data.table} with unified features
+#' @slot peaks A table with peaks for each sample.
+#' @slot features A table with features (i.e., grouped peaks across samples in the project).
+#' @slot unified A table with unified features
 #' (i.e., features collapsed by their isotopes and adducts
 #' as well as respective features acquired with a different ionization).
 #' @slot filters A list of applied filters to the features.
-#' @slot removed A \link[data.table]{data.table} with the removed unified features.
+#' @slot removed A table with the removed unified features.
 #' @slot workflows A list of objects inherent of downstream data processing steps, such as
 #' suspect screening, track of transformations and others.
 #'
@@ -346,63 +356,90 @@ setClass("isData",
 #' @export
 #'
 #' @importFrom data.table data.table
+#' @importFrom purrr quietly
 #'
 setClass("ntsData",
   slots = c(
-    title = "character",
-    description = "character",
-    date = "Date",
-    polarity = "character",
-    path = "character",
+    project = "data.table",
     samples = "data.table",
-    scans = "list",
+    scans = "data.table",
+    ms1 = "data.table",
+    ms2 = "data.table",
+    chromsInfo = "data.table",
+    chroms = "data.table",
     metadata = "data.table",
     parameters = "ntsParameters",
-    QC = "qcData",
-    pat = "workflowStep",
-    comp = "components",
+    controlSamples = "data.table",
+    controlResults = "data.table",
     peaks = "data.table",
     features = "data.table",
     unified = "data.table",
-    filters = "list",
     removed = "data.table",
+    pat = "workflowStep",
+    patComp = "components",
+    patMS2 = "MSPeakLists",
     workflows = "list"
   ),
   prototype = list(
-    title = NA_character_,
-    description = NA_character_,
-    date = Sys.Date(),
-    polarity = NA_character_,
-    path = NA_character_,
+    project = data.table::data.table(
+      title = NA_character_,
+      date = Sys.Date(),
+      path = NA_character_,
+      polarity = NA_character_,
+      description = NA_character_
+    ),
     samples = data.table::data.table(
       file = character(),
       sample = character(),
       replicate = character(),
       blank = character(),
-      scans = numeric(),
-      centroided = logical(),
+      datatype = character(),
+      size = numeric(),
       msLevels = character(),
-      rtStart = numeric(),
-      rtEnd = numeric(),
-      mzLow = numeric(),
-      mzHigh = numeric(),
-      CE = character(),
+      timeStamp = character(),
       method = character()
     ),
-    scans = list(),
+    scans = data.table::data.table(),
+    ms1 = data.table::data.table(
+      sample = character(),
+      rt = numeric(),
+      mz = numeric(),
+      intensity = numeric()
+    ),
+    ms2 = data.table::data.table(
+      sample = character(),
+      rt = numeric(),
+      mz = numeric(),
+      intensity = numeric(),
+      precMZ = numeric(),
+      voltage = numeric()
+    ),
+    chromsInfo = data.table::data.table(),
+    chroms = data.table::data.table(),
     metadata = data.table::data.table(
       sample = character(),
       replicate = character()
     ),
     parameters = new("ntsParameters"),
-    QC = new("qcData"),
-    pat = new("featuresSIRIUS"),
-    comp = new("componentsCliqueMS", fGroups = new("featureGroupsSIRIUS", features = new("featuresSIRIUS"))),
+    controlSamples = data.table::data.table(
+      file = character(),
+      sample = character(),
+      replicate = character(),
+      blank = character(),
+      datatype = character(),
+      size = numeric(),
+      msLevels = character(),
+      timeStamp = character(),
+      method = character()
+    ),
+    controlResults = data.table::data.table(),
     peaks = data.table::data.table(),
     features = data.table::data.table(),
     unified = data.table::data.table(),
-    filters = list(),
     removed = data.table::data.table(),
+    pat = new("featuresSIRIUS"),
+    patComp = new("componentsCliqueMS", fGroups = new("featureGroupsSIRIUS", features = new("featuresSIRIUS"))),
+    patMS2 = purrr::quietly(new)("MSPeakLists", algorithm = "mzr")$result,
     workflows = list()
   )
 )

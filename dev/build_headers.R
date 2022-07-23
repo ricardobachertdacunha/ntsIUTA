@@ -1,14 +1,15 @@
 
 #logo header
-sourcepath <- system.file(package = "ntsIUTA", dir = "extdata")
+#sourcepath <- system.file(package = "ntsIUTA", dir = "extdata")
+sourcepath <- "C:\\Users\\Ricardo\\Documents\\R\\win-library\\4.1\\ntsIUTA\\extdata"
 logo <- file.path(sourcepath, "logo.png")
 img <- htmltools::img(
   src = knitr::image_uri(logo),
   alt = "logo",
   style =
     "position:absolute;
-     top:3%;
-     margin-left:55.5%;
+     top:8%;
+     margin-left:60.5%;
      width:350px;
      height:157px;"
 )

@@ -78,7 +78,7 @@ setClass("ntsSuspectData",
 #' @export
 #'
 #' @importFrom checkmate assertClass
-#' @importFrom dplyr filter arrange left_join select everything mutate distinct desc
+#' @importFrom dplyr arrange left_join select everything mutate distinct desc
 #' @importFrom utils read.csv head
 #' @importFrom data.table rbindlist
 #' @importMethodsFrom patRoon screenSuspects as.data.frame screenInfo annotateSuspects generateFormulas

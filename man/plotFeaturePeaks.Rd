@@ -12,7 +12,8 @@ plotFeaturePeaks(
   ppm = 20,
   rt = NULL,
   sec = 30,
-  legendNames = NULL
+  legendNames = NULL,
+  heights = c(0.6, 0.4)
 )
 }
 \arguments{

@@ -20,7 +20,8 @@ setupProject(
 )
 }
 \arguments{
-\item{path}{The directory for project setup. The default is the \code{utils::choose.dir()} to select or create a folder.
+\item{path}{The directory for project setup.
+The default is the \code{utils::choose.dir()} to select or create a folder.
 Note that the function will look into the folder or subfolders for mzML and/or mzXML files
 or specified raw files when \code{convertFiles} is set to \code{TRUE}.}
 
@@ -36,7 +37,8 @@ The default is \code{FALSE} for no conversion even if vendor MS files are presen
 \item{convertFrom}{The name of the vendor format to be found and converted.
 Possible values are: \emph{thermo}, \emph{bruker}, \emph{agilent}, \emph{ab} (from AB Sciex) and \emph{waters}.}
 
-\item{convertToCentroid}{Logical, set to \code{TRUE} to centroid profile data when converting to mzML. The default is \code{TRUE}.}
+\item{convertToCentroid}{Logical, set to \code{TRUE} to centroid profile data when converting to mzML.
+The default is \code{TRUE}.}
 
 \item{replicates}{Optional character vector with the same length as the number of MS files in the project folder
 with the identifier/name of the sample replicate group for each file.

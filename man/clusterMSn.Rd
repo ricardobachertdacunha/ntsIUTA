@@ -10,7 +10,7 @@ clusterMSn(
   clusteringMethod,
   clusteringUnit,
   clusteringWindow,
-  mergeCEs,
+  mergeVoltages,
   mergeBy,
   targets
 )

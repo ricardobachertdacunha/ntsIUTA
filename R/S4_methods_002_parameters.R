@@ -41,8 +41,6 @@ setMethod("pickingParameters", c("ntsData", "character", "ANY"), function(object
 
 #' @describeIn ntsData Getter for peak grouping parameters.
 #'
-#' @param object An \linkS4class{ntsData} object.
-#'
 #' @export
 #'
 setMethod("groupingParameters", c("ntsData", "missing", "missing"), function(object) object@parameters@grouping)
@@ -77,18 +75,12 @@ setMethod("groupingParameters", c("ntsData", "character", "ANY"), function(objec
 
 #' @describeIn ntsData Getter for fill missing parameters.
 #'
-#' @param object An \linkS4class{ntsData} object.
-#'
 #' @export
 #'
 setMethod("fillingParameters", c("ntsData", "missing", "missing"), function(object) object@parameters@filling)
 
 
 #' @describeIn ntsData Setter for fill missing parameters.
-#'
-#' @param object An \linkS4class{ntsData} object.
-#' @param algorithm A character vector with the name of the algorithm to be applied.
-#' @param settings A list with parameters matching the defined algorithm.
 #'
 #' @export
 #'
@@ -108,7 +100,6 @@ setMethod("fillingParameters", c("ntsData", "character", "ANY"), function(object
   object@parameters@filling@settings <- settings
 
   return(object)
-  
 })
 
 
@@ -117,8 +108,6 @@ setMethod("fillingParameters", c("ntsData", "character", "ANY"), function(object
 #### fragmentsParameters -----
 
 #' @describeIn ntsData Getter for fragments extraction parameters.
-#'
-#' @param object An \linkS4class{ntsData} object.
 #'
 #' @export
 #'
@@ -160,8 +149,6 @@ setMethod("fragmentsParameters", c("ntsData", "character", "ANY"), function(obje
 
 #' @describeIn ntsData Getter for annotation parameters.
 #'
-#' @param object An \linkS4class{ntsData} object.
-#'
 #' @export
 #'
 setMethod("annotationParameters", c("ntsData", "missing", "missing"), function(object) object@parameters@annotation)
@@ -169,20 +156,11 @@ setMethod("annotationParameters", c("ntsData", "missing", "missing"), function(o
 
 #' @describeIn ntsData Setter for annotation parameters.
 #'
-#' @param object An \linkS4class{ntsData} object.
-#' @param algorithm A character vector with the name of the algorithm to be applied.
-#' @param settings A list with parameters matching the defined algorithm.
-#'
 #' @export
 #'
 #' @importFrom checkmate testChoice
 #'
 setMethod("annotationParameters", c("ntsData", "character", "ANY"), function(object, algorithm, settings) {
-
-  # if (!checkmate::testChoice(algorithm, c("xcms3", "xcms", "openms"))) {
-  #   warning("Algorithm not recognized. See ?makeFeatures for more information.")
-  #   return(object)
-  # }
 
   if (!checkmate::testClass(settings, "list")) settings <- list(settings)
 
@@ -196,72 +174,56 @@ setMethod("annotationParameters", c("ntsData", "character", "ANY"), function(obj
 
 
 
+### Save and Load Parameters -----
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#' @title AlteredCameraParam
+#' @describeIn ntsData Method to save the \linkS4class{ntsParameters} in the project path
+#' or other defined by the argument \code{path}.
+#' A name for the \emph{rds} file can be specified by the argument \code{filename}, without format.
 #'
-#' @param sigma The multiplier of the standard deviation for grouping features
-#' by retention time.
-#' @param perfwhm Percentage of the overlapping FWHM to group features.
-#' @param cor_eic_th Threshold for feature EIC correlation in each sample.
-#' @param cor_exp_th Threshold for intensity correlation across samples.
-#' @param pval p-value threshold for testing correlation of significance.
-#' @param validateIsotopePatterns Logical, set to \code{TRUE} for validating
-#' the annotated isotopes with the \emph{kegg} database.
-#' @param ppmIsotopes The expected mass deviation (in ppm) to find isotopes.
-#' @param noise numeric.
-#' @param searchAdducts Logical, set to \code{TRUE} to screen for adducts after finding isotopes.
-#' @param ppmAdducts The expected mass deviation (in ppm) to find adducts.
-#' @param extendedList Logical, set to \code{TRUE} to use the extended list of
-#' adducts. The default is \code{FALSE}.
-#'
-#' @return An \linkS4class{AlteredCameraParam} class object for annotation.
+#' @param path A character vector with a folder location.
+#' @param filename A character string with a file name.
 #'
 #' @export
 #'
-AlteredCameraParam <- function(
-  sigma = 6,
-  perfwhm = 0.4,
-  cor_eic_th = 0.75,
-  cor_exp_th = 0.75,
-  pval = 0.1,
-  validateIsotopePatterns = TRUE,
-  ppmIsotopes = 40,
-  noise = 300,
-  searchAdducts = TRUE,
-  ppmAdducts = 5,
-  extendedList = TRUE) {
+#' @importFrom checkmate testChoice
+#'
+setMethod("saveParameters", "ntsData", function(object, path = NULL, filename = NULL) {
 
-  paramobj <- do.call(new, c("AlteredCameraParam", as.list(environment())))
+  if (missing(path)) {
+    path <- path(object)
+  } else if (is.null(path)) {
+    path <- path(object)
+  }
 
-  paramobj
+  if (missing(filename)) {
+    filename <- "ntsParameters"
+  } else if (is.null(path)) {
+    filename <- "ntsParameters"
+  }
 
-  return(paramobj)
+  saveObject(parameters = object@parameters, path = path, filename = filename)
+})
 
-}
+
+#' @describeIn ntsData Method to load an existing \linkS4class{ntsParameters} from disk.
+#' The complete location of the file should be given by the argument \code{filepath}.
+#' The default is the \link{choose.files} function.
+#'
+#' @param filepath A character string with the complete file path.
+#'
+#' @export
+#'
+#' @importFrom checkmate testChoice
+#'
+setMethod("loadParameters", "ntsData", function(object, filepath = NULL) {
+
+  if (missing(filepath)) {
+    filepath <- choose.files()
+  } else if (is.null(filepath)) {
+    filepath <- choose.files()
+  }
+
+  object@parameters <- readRDS(filepath)
+
+  return(object)
+})

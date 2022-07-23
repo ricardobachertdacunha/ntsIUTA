@@ -12,16 +12,8 @@ extractMSn(
   ppm = 20,
   rt = NULL,
   sec = 60,
-  isolationTimeWindow = 10,
-  isolationMassWindow = 1.3,
-  clusteringMethod = "distance",
-  clusteringUnit = "ppm",
-  clusteringWindow = 25,
-  minIntensityPre = 200,
-  minIntensityPost = 200,
-  asPatRoon = TRUE,
-  mergeCEs = TRUE,
-  mergeBy = "samples"
+  algorithm = NA_character_,
+  settings = NULL
 )
 }
 \arguments{
@@ -32,7 +24,7 @@ of the sample/s to extract the data, respectively.
 When \code{NULL}, all the samples in the \code{object} are used.}
 
 \item{level}{A numeric vector with length 1 to defined the MS level.
-Only level 2, corresponding to MS/MS was tested.}
+Currently, only level 2, corresponding to MS/MS, is possible.}
 
 \item{mz}{A numeric vector with isolation target \emph{m/z} values to extract MSn.
 Alternatively, a two columns data.table or data.frame with
@@ -51,37 +43,13 @@ should be equal to the length or number of rows of \code{mz}.}
 
 \item{sec}{A numeric vector of length one with the time deviation, in seconds, to screen for isolation targets.}
 
-\item{isolationTimeWindow}{A numeric vector of length one with the time deviation of the isolation window, in seconds.}
+\item{algorithm}{A character vector of length one with the algorithm used to extract and cluster MS2 data.}
 
-\item{isolationMassWindow}{A numeric vector of length one with the mass isolation window, in Da.}
-
-\item{clusteringMethod}{A character vector with the method for clustering.
-Possible values are \emph{euclidean} (the default) or \emph{distance}.}
-
-\item{clusteringUnit}{A character vector specifying the clustering unit.
-Possibel values are \emph{mz} (the default) or \emph{ppm}.}
-
-\item{clusteringWindow}{A length one numeric vector with the mass deviation
-for clustering \emph{m/z} values across different fragmentation spectra.}
-
-\item{minIntensityPre}{A length one numeric vector with the minimum intensity of peaks
-to be applied before clustering \emph{m/z} values across spectra.}
-
-\item{minIntensityPost}{A length one numeric vector with the minimum intensity of peaks
-to be applied after clustering and averaging of the \emph{m/z} and intensity values.}
-
-\item{asPatRoon}{Logical, set to \code{TRUE} for return an \linkS4class{MSPeakLists} object.}
-
-\item{mergeCEs}{Logical, set to \code{TRUE} to cluster different collision energies.
-When FALSE, the spectra from different collision energies won't be clustered.}
-
-\item{mergeBy}{A length one character vector with either "samples" (the default) or "replicates"
-to merge the MS2 data for different samples or replicates, respectively.
-When \code{NULL}, the spectra for each target is given per sample.}
+\item{settings}{A list of parameters settings.}
 }
 \value{
 A \code{data.table} with the columns
-\code{sample}, \code{replicate}, \code{id}, \code{CE}, \code{mz}, \code{intensity} and \code{precursor}
+\code{sample}, \code{replicate}, \code{id}, \code{voltage}, \code{mz}, \code{intensity} and \code{precursor}
 representing the sample name (i.e., file), the sample replicate name,
 the isolation target id, the collision energy applied, the \emph{m/z}, the intensity and the presence of the precursor
 (i.e., \emph{m/z} matching the isolation target), respectively.

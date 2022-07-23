@@ -5,7 +5,7 @@
 library(ntsIUTA)
 devtools::load_all()
 
-path <- "C:\\Users\\Ricardo\\Documents\\R_Demo Project"
+path <- "C:\\Users\\Ricardo\\Documents\\R_DemoProject"
 
 dt <- setupProject(
   path = path,
@@ -22,12 +22,12 @@ dt <- setupProject(
   makeNewProject = FALSE
 )
 
-dt <- dt[c(1:6, 16:18)]
+dt <- dt[1:9]
 
 replicates(dt) <- c(
+  rep("QC", 3),
   rep("Blank", 3),
-  rep("IN", 3),
-  rep("QC", 3)
+  rep("IN", 3)
 )
 
 blanks(dt) <- rep("Blank", 9)
@@ -39,7 +39,7 @@ samplesTable(dt)
 
 ### add metadata --------------------------------------------------------------------------------------------
 
-var <- data.table::data.table(matrix = c(rep("clean", 3), rep("dirty", 3), rep("control", 3)))
+var <- data.table::data.table(matrix = c(rep("control", 3), rep("clean", 3), rep("dirty", 3)))
 dt <- addMetadata(dt, var)
 
 metadata(dt)
@@ -56,16 +56,12 @@ plotTICs(tic, samples = NULL, colorBy = "replicates")
 
 ### peak picking --------------------------------------------------------------------------------------------
 
-#### xcms3 ---------------------------------------------------------------
-
-dtxcms <- dt
-
-dtxcms <- pickingParameters(
-  dtxcms,
+dt <- pickingParameters(
+  dt,
   algorithm = "xcms3",
   settings = xcms::CentWaveParam(
     ppm = 15, peakwidth = c(5, 60),
-    snthresh = 10, prefilter = c(6, 1000),
+    snthresh = 5, prefilter = c(6, 500),
     mzCenterFun = "mean", integrate = 2,
     mzdiff = -0.0001, fitgauss = TRUE,
     noise = 250, verboseColumns = TRUE,
@@ -74,143 +70,34 @@ dtxcms <- pickingParameters(
   )
 )
 
-pickingParameters(dtxcms)
+pickingParameters(dt)
 
-dtxcms <- peakPicking(dtxcms, save = FALSE)
-
-
-#### openms --------------------------------------------------------------
-
-dtopenms <- dt
-
-dtopenms <- pickingParameters(
-  dtopenms,
-  algorithm = "openms",
-  settings = list(
-    noiseThrInt = 500,
-    chromSNR = 10,
-    chromFWHM = 10,
-    mzPPM = 15,
-    reEstimateMTSD = TRUE,
-    traceTermCriterion = "sample_rate",
-    traceTermOutliers = 5,
-    minSampleRate = 0.5,
-    minTraceLength = 3,
-    maxTraceLength = -1,
-    widthFiltering = "fixed",
-    minFWHM = 1,
-    maxFWHM = 30,
-    traceSNRFiltering = FALSE,
-    localRTRange = 10,
-    localMZRange = 6.5,
-    isotopeFilteringModel = "metabolites (5% RMS)",
-    MZScoring13C = FALSE,
-    useSmoothedInts = TRUE,
-    extraOpts = NULL,
-    intSearchRTWindow = 3,
-    useFFMIntensities = FALSE
-  )
-)
-
-pickingParameters(dtopenms)
-
-dtopenms <- peakPicking(dtopenms, save = FALSE)
-
-
-#### kpic2 --------------------------------------------------------------
-
-dtkpic2 <- dt
-
-dtkpic2 <- pickingParameters(
-  dtkpic2,
-  algorithm = "kpic2",
-  settings = list(
-    kmeans = FALSE,
-    level = 1000,
-    mztol = 0.01,
-    gap = 3,
-    width = c(5),
-    #alpha = 0.3,
-    min_snr = 4,
-    parallel = TRUE
-  )
-)
-
-pickingParameters(dtkpic2)
-
-dtkpic2 <- peakPicking(dtkpic2, save = FALSE)
-
-
-##### safd ----------------------------------------------------------------------
-# Only mzXML data in profile mode are possible
-
-dtsafd <- dt
-
-dtsafd <- pickingParameters(
-  dtsafd,
-  algorithm = "safd",
-  settings = list(
-    profPath = dirname(dtsafd@samples$file),
-    mzRange = c(0, 1200),
-    maxNumbIter = 1000,
-    maxTPeakW = 300,
-    resolution = 12000,
-    minMSW = 0.02,
-    RThreshold = 0.75,
-    minInt = 500,
-    sigIncThreshold = 5,
-    S2N = 3,
-    minPeakWS = 3
-  )
-)
-
-pickingParameters(dtsafd)
-
-dtsafd <- peakPicking(dtsafd, save = FALSE)
-
-
-##### sirius --------------------------------------------------------------------
-#Note, note working with trimed mzML files
-
-dtsirius <- dt
-
-dtsirius <- pickingParameters(
-  dtsirius,
-  algorithm = "sirius",
-  settings = list()
-)
-
-pickingParameters(dtsirius)
-
-dtsirius <- peakPicking(dtsirius, save = FALSE)
-
+dt <- peakPicking(dt, save = FALSE)
 
 
 #### inspecting peaks ----------------------------------------------------
+
 #using the S4 method and the mz/rt filtering as presented earlier
 mz_01 <- c(247.1651, 239.0628)
 rt_01 <- c(839, 937)
 
-peaks(dtxcms, samples = 2, mz = mz_01, ppm = 5, rt = rt_01, sec = 10)
+peaks(dt, samples = c(1:6), mz = mz_01, ppm = 5, rt = rt_01, sec = 10)[, 1:10]
 
-peaks(dtopenms, samples = 2, mz = mz_01, ppm = 5, rt = rt_01, sec = 10)
+plotPeaks(dt, samples = c(1:6), mz = mz_01, ppm = 5, rt = rt_01, sec = 10, colorBy = "samples")
+plotPeaks(dt, samples = c(1:6), mz = mz_01, ppm = 5, rt = rt_01, sec = 10, colorBy = "targets", interactive = TRUE)
 
-#Note that targets can be given as peaks and/or features IDs.
+mapPeaks(dt, samples = c(1:6), mz = mz_01, ppm = 5, rt = rt_01, sec = 10, colorBy = "targets", ylim = 0.02)
+
+#Note that targets can be given as peaks and/or features IDs/UFIs.
 #when targets are defined, mz/rt arguments are ignored.
 
-plotPeaks(dtxcms, samples = c(1, 4), mz = mz_01, ppm = 5, rt = rt_01, sec = 10, colorBy = "targets")
 
-plotPeaks(dtopenms, samples = c(1:2, 4:5), mz = mz_01, ppm = 5, rt = rt_01, sec = 10, colorBy = "replicates", interactive = TRUE)
-
-mapPeaks(dtopenms, samples = c(1:2), mz = mz_01[1], ppm = 5, rt = rt_01[1], sec = 10, colorBy = "targets", ylim = 0.02)
 
 
 ### peak grouping and alignment -----------------------------------------------------------------------------
 
-#### xcms3 ---------------------------------------------------------------
-
-dtxcms <- groupingParameters(
-  dtxcms,
+dt <- groupingParameters(
+  dt,
   algorithm = "xcms3",
   settings = list(
     rtalign = TRUE,
@@ -238,59 +125,36 @@ dtxcms <- groupingParameters(
   )
 )
 
-groupingParameters(dtxcms)
+groupingParameters(dt)
 
-dtxcms <- peakGrouping(dtxcms, save = FALSE)
-
-
-#### openms --------------------------------------------------------------
-
-dtopenms <- groupingParameters(
-  dtopenms,
-  algorithm = "openms",
-  settings = list(
-    rtalign = TRUE,
-    QT = FALSE,
-    maxAlignRT = 6,
-    maxAlignMZ = 0.01,
-    maxGroupRT = 4,
-    maxGroupMZ = 0.008,
-    extraOptsRT = NULL,
-    extraOptsGroup = NULL
-  )
-)
-
-groupingParameters(dtopenms)
-
-dtopenms <- peakGrouping(dtopenms, save = FALSE)
+dt <- peakGrouping(dt, save = FALSE)
 
 
 #### inspecting features -------------------------------------------------
 
-features(dtxcms, samples = 2, mz = mz_01, ppm = 5, rt = rt_01, sec = 10)
+fts <- features(dt, samples = (1:6), mz = mz_01, ppm = 5, rt = rt_01, sec = 10)
+targets <- fts$id
 
-features(dtopenms, samples = 2, mz = mz_01, ppm = 5, rt = rt_01, sec = 10)
+plotFeatures(dt, samples = c(1:6), targets = targets, colorBy = "targets")
+plotFeatures(dt, samples = c(1:6), targets = targets, colorBy = "replicates", interactive = TRUE)
 
-plotPeaks(dtxcms, samples = c(1, 4), targets = c("M239_R936_251", "M247_R840_281"), colorBy = "targets")
-
-plotFeatures(dtxcms, samples = c(2, 5), mz = mz_01, ppm = 5, rt = rt_01, sec = 10, colorBy = "replicates", interactive = TRUE)
-
-plotFeatures(dtopenms, samples = c(2, 5), mz = mz_01, ppm = 5, rt = rt_01, sec = 10, colorBy = "replicates", interactive = TRUE)
+plotFeaturePeaks(dt, samples = c(1:6), targets = targets, heights = c(0.7, 0.3))
 
 #patRoon option
-patRoon::plotChroms(dtxcms@pat[c(2, 4), "M239_R936_135"])
+patRoon::plotChroms(dt@pat[c(2, 4), targets])
+
 
 #### inspecting alignment ------------------------------------------------
 
-plotAlignment(dtxcms)
+plotAlignment(dt)
+
+
 
 
 ### peak filling --------------------------------------------------------------------------------------------
 
-#### xcms ----------------------------------------------------------------
-
-dtxcms <- fillingParameters(
-  dtxcms,
+dt_fill <- fillingParameters(
+  dt,
   algorithm = "xcms",
   settings = xcms::ChromPeakAreaParam(
     mzmin = function(z) quantile(z, probs = 0.25),
@@ -300,97 +164,29 @@ dtxcms <- fillingParameters(
   )
 )
 
-fillingParameters(dtxcms)
+fillingParameters(dt_fill)
 
-dtxcms <- peakFilling(dtxcms, save = FALSE)
-
-#### openms --------------------------------------------------------------
-
-dtopenms <- fillingParameters(
-  dtopenms,
-  algorithm = "xcms",
-  settings = xcms::FillChromPeaksParam(
-    expandMz = 0,
-    expandRt = 0,
-    ppm = 0,
-    fixedMz = 0,
-    fixedRt = 0
-  )
-)
-
-fillingParameters(dtopenms)
-
-dtopenms <- peakFilling(dtopenms, save = FALSE)
+dt_fill <- peakFilling(dt_fill, save = FALSE)
 
 
 #### inspecting filling --------------------------------------------------
 
-showfill <- features(dtxcms)[hasFilled == TRUE, ]
+showfill <- features(dt_fill)[hasFilled == TRUE, ]
 setorder(showfill, -IN)
 showfill <- showfill[1:5, ]
 
-plotFeaturePeaks(
-  object <- dtxcms,
-  samples = c(1:6),
-  targets = showfill$id,
-  mz = NULL, ppm = 20,
-  rt = NULL, sec = 30,
-  legendNames = NULL
-)
+plotFeaturePeaks(dt_fill, samples = c(1:6), targets = showfill$id)
 
-peaks(dtxcms, targets = showfill$id)
+
 
 
 ### annotation ----------------------------------------------------------------------------------------------
 
-dt_cliquems <- annotationParameters(
-  dtxcms,
-  algorithm = "cliquems",
-  settings = list(
-    ionization = "positive",
-    maxCharge = 3,
-    maxGrade = 5,
-    ppm = 20,
-    adductInfo = NULL,
-    absMzDev = 0.01,
-    minSize = 2,
-    relMinAdductAbundance = 0.5,
-    adductConflictsUsePref = TRUE,
-    NMConflicts = c("preferential"),
-    prefAdducts = c("[M+H]+"),
-    extraOptsCli = NULL,
-    extraOptsIso = NULL,
-    extraOptsAnn = NULL,
-    parallel = TRUE
-  )
-)
-
-dt_ramclustr <- annotationParameters(
-  dtxcms,
-  algorithm = "ramclustr",
-  settings = list(
-    ionization = "positive",
-    st = NULL,
-    sr = NULL,
-    maxt = 12,
-    hmax = 0.3,
-    normalize = "TIC",
-    absMzDev = 0.01,
-    relMzDev = 20,
-    minSize = 2,
-    relMinReplicates = 0.5,
-    RCExperimentVals = list(design = list(platform = "LC-MS"), instrument =
-      list(ionization = "positive", MSlevs = 1)),
-    extraOptsRC = NULL,
-    extraOptsFM = NULL
-  )
-)
-
-dt_xcms <- annotationParameters(
-  dtxcms,
+dt <- annotationParameters(
+  dt,
   algorithm = "camera",
   settings = list(
-    ionization = polarity(dtxcms),
+    ionization = polarity(dt),
     onlyIsotopes = FALSE,
     minSize = 2,
     relMinReplicates = 0.5,
@@ -415,47 +211,158 @@ dt_xcms <- annotationParameters(
   )
 )
 
-dt_cliquems <- peakAnnotation(dt_cliquems, save = FALSE)
-dt_ramclustr <- peakAnnotation(dt_ramclustr, save = FALSE)
-dt_xcms <- peakAnnotation(dtxcms, save = FALSE)
+annotationParameters(dt)
+
+dt <- peakAnnotation(dt, save = FALSE)
+
 
 #### inspect annotation --------------------------------------------------
 
-tg <- features(dt_xcms, targets = "M239_R936_638")
+components(dt, targets = targets, all = TRUE)
 
-#cliqueMS
-eval_cliquems <- features(dt_cliquems)
-eval_cliquems <- eval_cliquems[neutralMass %in% tg$neutralMass, ]
-
-#ramclustr
-eval_ramclustr <- features(dtramclustr)
-eval_ramclustr <- eval_ramclustr[neutralMass %in% tg$neutralMass, ]
-
-#xcms
-eval_xcms <- features(dt_xcms)
-eval_xcms <- eval_xcms[neutralMass %in% tg$neutralMass, ]
-eval_xcms_p <- peaks(dt_xcms)
-eval_xcms_p <- eval_xcms_p[feature %in% annoInsp$id, ]
-
-mapPeaks(object, targets = eval_xcms_p$id)
+plotComponents(dt, targets = targets, all = FALSE, colorBy = "isotopes")
 
 
 
 
+### unique feature identifier -------------------------------------------------------------------------------
+
+dt <- makeUFI(dt)
+
+ufi_ex <- features(dt,
+  mz = data.frame(
+    mz = c(239.0628, 247.1651, 213.1869, 267.0698, 275.23346),
+    rt = c(936, 840, 930, 720, 624)
+  )
+)
+
+ufi_ex[, .(ufi, id, mz, rt)]
+dt@unified[id %in% targets[1], ]
+
+
+
+### wrapper workflow ----------------------------------------------------------------------------------------
+
+#### save and load parameters --------------------------------------------
+
+saveParameters(dt)
+
+dt <- loadParameters(dt)
+
+
+#### wrapper function ----------------------------------------------------
+
+dt2 <- createFeatures(dt, save = FALSE)
 
 
 
 
+### filter features -----------------------------------------------------------------------------------------
+
+dt <- filter(dt,
+  minIntensity = 5000,
+  blankThreshold = 3,
+  maxReplicateIntensityDeviation = 40,
+  minReplicateAbundance = 3
+)
+
+nrow(features(dt))
+
+dt <- removeFilteredFeatures(dt)
+
+nrow(features(dt))
+
+dt <- restoreFilteredFeatures(dt)
+
+nrow(features(dt))
+
+dt <- removeFilteredFeatures(dt)
+
+
+
+### calculate quality of features ---------------------------------------------------------------------------
+
+#### SNR -----------------------------------------------------------------
+
+sn_targets <- features(dt)
+sn_targets <- head(sn_targets, 700)
+sn_targets <- sn_targets$id
+
+dt <- calculateSNR(dt, targets = sn_targets, rtExpand = 200)
+
+features(dt)[1:5]
+
+dt <- filter(
+  dt,
+  snRatio = 3
+)
+
+dt <- removeFilteredFeatures(dt)
+
+#### MetaClean -----------------------------------------------------------
+dt <- calculateFeaturesMetadata(dt, targets = targets)
+features(dt, targets = targets)
 
 
 
 
+### subset on features --------------------------------------------------------------------------------------
+
+dt3 <- dt[7:9, features(dt)[, id]]
+
+samples(dt)
+samples(dt3)
+
+#Note that after subseting on samples might be good to update the feature table
+#as the subset only does a lazy update (i.e., only the averaged mz, rt and intensity as updated)
+dt3 <- updateFeatureTable(dt3, fast = FALSE)
+
+### load MS2 ------------------------------------------------------------------------------------------------
+
+dt3 <- fragmentsParameters(
+  dt3,
+  algorithm = "ntsiuta",
+  settings = list(
+    isolationTimeWindow = 5,
+    isolationMassWindow = 1.3,
+    clusteringMethod = "distance",
+    clusteringUnit = "ppm",
+    clusteringWindow = 25,
+    minIntensityPre = 250,
+    minIntensityPost = 300,
+    asPatRoon = TRUE,
+    mergeCEs = TRUE,
+    mergeBy = NULL
+  )
+)
+
+fragmentsParameters(dt3)
+
+dt3 <- loadMS2(dt3)
+
+
+#### inspection ----------------------------------------------------------
+
+dt3@ms2[["M242_R884_1145"]]$MS
+
+test <- features(dt3)
+
+
+patRoon::plotSpectrum(
+  dt3@ms2,
+  groupName = c("M242_R884_1145", "M242_R884_1145"), #, "M326_R706_2656"
+  analysis1 = 1,
+  analysis2 = 2,
+  MSLevel = 2,
+  title = NULL,
+  specSimParams = patRoon::getDefSpecSimParams(),
+  xlim = NULL,
+  ylim = NULL
+)
 
 
 
-
-
-
+showMethods("plotSpectrum")
 
 
 
@@ -553,6 +460,8 @@ plotMS2s(
 )
 
 
+fragmentsParameters
+
 test_sirius <- findFragments(
   dtxcms,
   database = data.table::fread(paste0(path(object), "//tp_nitro.csv")),
@@ -635,4 +544,3 @@ test1 <- test@phenoData
 test <- xdata@msFeatureData
 
 names(xdata@msFeatureData$adjustedRtime)
-

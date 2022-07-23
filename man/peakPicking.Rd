@@ -4,7 +4,12 @@
 \alias{peakPicking}
 \title{peakPicking}
 \usage{
-peakPicking(object = NULL, algorithm = NULL, settings = NULL, save = TRUE)
+peakPicking(
+  object = NULL,
+  algorithm = NA_character_,
+  settings = NULL,
+  save = FALSE
+)
 }
 \arguments{
 \item{object}{An \linkS4class{ntsData} object.}

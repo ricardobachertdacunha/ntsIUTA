@@ -28,3 +28,10 @@ setwd("C:/Users/Ricardo/Documents/CodeProjects/ntsIUTA")
 
 #ntsIUTA system path
 system.file(package = "ntsIUTA", dir = "extdata")
+
+#load work
+library(ntsIUTA)
+devtools::load_all()
+
+#Code for Strings
+#gsub(".*M(.*)\\].*", "\\1", adduct_ion)

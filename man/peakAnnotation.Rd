@@ -4,7 +4,12 @@
 \alias{peakAnnotation}
 \title{peakAnnotation}
 \usage{
-peakAnnotation(object = NULL, algorithm = NULL, settings = NULL, save = FALSE)
+peakAnnotation(
+  object = NULL,
+  algorithm = NA_character_,
+  settings = NULL,
+  save = FALSE
+)
 }
 \arguments{
 \item{object}{An \linkS4class{ntsData} object with peaks/features.}

@@ -1,132 +1,5 @@
 
 
-#' @title getRawInfo
-#'
-#' @description Get raw information for each sample (i.e., file) in an
-#' \linkS4class{ntsData} object.
-#'
-#' @param ojbect An \linkS4class{ntsData} object.
-#' @param samples A numeric or character vector with the index or name of
-#' samples to collect raw inforamtion, respectively. The default is \code{NULL}
-#' which considers all samples in the \code{object}.
-#'
-#' @return A \link[data.table]{data.table} with raw information for each specified file.
-#'
-#' @export
-#'
-#' @importFrom checkmate assertClass
-#' @importFrom data.table data.table as.data.table copy
-#' @importFrom mzR openMSfile header runInfo
-#'
-getRawInfo <- function(object, samples = NULL) {
-
-  assertClass(object, "ntsData")
-
-  if (is.character(samples)) {
-    if (FALSE %in% (samples %in% object@samples$sample)) {
-      warning("Given sample names not found in the ntsData object!")
-      return(data.table())
-    }
-    samples <- which(object@samples$sample %in% samples)
-  }
-
-  spt <- samplesTable(object)
-  if (!is.null(samples)) spt <- spt[samples]
-
-  spt <- spt[, .(
-    sample,
-    scans,
-    centroided,
-    msLevels,
-    rtStart,
-    rtEnd,
-    mzLow,
-    mzHigh,
-    CE
-  )]
-
-  return(spt)
-}
-
-
-
-
-#' @title addRawInfo
-#'
-#' @description Adds raw info for each sample (i.e., file)
-#' in the samples slot of an \linkS4class{ntsData} object and
-#' a \link[data.table]{data.table} with MS scans for each sample
-#' in the slot scans as list.
-#'
-#' @param object An \linkS4class{ntsData} object.
-#'
-#' @return An \linkS4class{ntsData} object with raw information added
-#' per sample in the samples and scans slot.
-#'
-#' @export
-#'
-#' @importFrom checkmate assertClass
-#' @importFrom data.table data.table as.data.table copy
-#' @importFrom mzR openMSfile header runInfo
-#'
-addRawInfo <- function(object) {
-
-  assertClass(object, "ntsData")
-
-  spt <- samplesTable(object)
-
-  fls <- spt$file
-
-  scans <- list()
-
-  l_fls <- length(fls)
-
-  cat("Loading scans info from MS files... \n")
-  pb <- txtProgressBar(
-    min = 0,
-    max = l_fls,
-    style = 3,
-    width = 50,
-    char = "="
-  )
-
-  for (i in seq_len(l_fls)) {
-    f <- fls[i]
-    msf <- mzR::openMSfile(f, backend = "pwiz")
-    hd <- as.data.table(mzR::header(msf))
-    rInfo <- mzR::runInfo(msf)
-    scans[[samples(object)[i]]] <- hd
-    ce <- unique(hd$collisionEnergy)
-    ce <- sort(ce[!ce %in% NA])
-    ce <- paste(ce, collapse = "/")
-    mslvs <- paste(sort(rInfo$msLevels), collapse = "/")
-
-    spt[i, ":=" (
-      scans = rInfo$scanCount,
-      msLevels = mslvs,
-      rtStart = rInfo$dStartTime,
-      rtEnd = rInfo$dEndTime,
-      mzLow = rInfo$lowMz,
-      mzHigh = rInfo$highMz,
-      centroided = TRUE %in% unique(hd$centroided),
-      CE = ce
-    )]
-
-    setTxtProgressBar(pb, i)
-  }
-
-  close(pb)
-
-  object@samples <- spt
-
-  object@scans <- scans
-
-  return(object)
-}
-
-
-
-
 #' @title openCacheDBScope
 #'
 #' @description Opens the cache database for storing processing data.
@@ -270,11 +143,7 @@ makeTargets <- function(mz, rt, ppm = 20, sec = 60) {
     } else if ("mzmin" %in% colnames(mz)) {
       mzrts <- data.table(
         id = NA_character_,
-        mz = paste(mz$mzmin,
-          "-",
-          mz$mzmax,
-          sep = ""
-          ),
+        mz = apply(mz[, .(mzmin, mzmax)], 1, mean),
         rt = 0,
         mzmin = mz$mzmin,
         mzmax = mz$mzmax,
@@ -282,7 +151,7 @@ makeTargets <- function(mz, rt, ppm = 20, sec = 60) {
         rtmax = 0
       )
       if ("rtmin" %in% colnames(mz)) {
-        mzrts$rt <-  paste(mz$rtmin, "-", mz$rtmax, sep = "")
+        mzrts$rt <-  apply(mz[, .(rtmin, rtmax)], 1, mean)
         mzrts$rtmin <- mz$rtmin
         mzrts$rtmax <- mz$rtmax
       }
@@ -311,7 +180,7 @@ makeTargets <- function(mz, rt, ppm = 20, sec = 60) {
       }
 
       if ("rtmin" %in% colnames(rt) & nrow(rt) == nrow(mz)) {
-        mzrts$rt <-  paste(rt$rtmin, "-", rt$rtmax, sep = "")
+        mzrts$rt <-  apply(mz[, .(rtmin, rtmax)], 1, mean)
         mzrts$rtmin <- rt$rtmin
         mzrts$rtmax <- rt$rtmax
       }
@@ -417,7 +286,7 @@ extractEICs <- function(object = NULL,
       cacheDB = openCacheDBScope()
     )
 
-    targets[mz == 0 & rt == 0, id := "tic"]
+    targets[mz == 0 & rt == 0, id := "TIC"]
     targets[mz == 0 & rt == 0, mz := NA]
     targets[mz == 0 & rt == 0, rt := NA]
     targets[rtmin == 0, rtmin := min(spectra$header$retentionTime, na.rm = TRUE)]
@@ -582,352 +451,8 @@ extractXICs <- function(object = NULL,
 
 
 
-#' @title clusterMsn
-#'
-#' @description Function to cluster MSn data.
-#'
-#' @return A data table with clustered MSn data for given targets.
-#' 
-#' @importFrom data.table copy setcolorder setorder
-#' @importFrom fastcluster hclust
-#'
-clusterMSn <- function(
-  ids,
-  msnList,
-  clusteringMethod,
-  clusteringUnit,
-  clusteringWindow,
-  mergeCEs,
-  mergeBy,
-  targets) {
-
-  msnList <- lapply(ids, function(
-    x,
-    msnList,
-    clusteringMethod,
-    clusteringUnit,
-    clusteringWindow,
-    mergeCEs,
-    mergeBy,
-    targets
-  ) {
-
-    t <- msnList[id == x, ]
-    idf <- targets[id == x, ]
-
-    if (nrow(t) > 2) {
-
-      if (clusteringMethod == "distance") {
-        setorder(t, mz)
-        mzMat <- abs(diff(t$mz))
-        if (clusteringUnit == "ppm") {
-          mzMat <- (mzMat / t$mz[-1]) * 1E6
-        }
-        t[, cluster := 1 + c(0, cumsum(mzMat > clusteringWindow))]
-
-      } else {
-        mzMat <- dist(t$mz, method = clusteringMethod)
-        if (clusteringUnit == "ppm") {
-          mzMat <- as.data.table(as.matrix(mzMat))
-          mzMat <- mzMat[, lapply(.SD, function(x, dt) x / t$mz * 1E6, dt = t), .SDcols = colnames(mzMat)]
-          mzMat <- as.dist(mzMat)
-        }
-        hc <- fastcluster::hclust(mzMat, method = "complete")
-        t[, cluster := cutree(hc, h = clusteringWindow)]
-
-      }
-
-      if ("CE" %in% colnames(t)) {
-        if (any(t[, .(dup = anyDuplicated(seqNum)), key = c("cluster", "sample")][["dup"]] > 0)) {
-          warning(paste0("MSMS traces from the same spectrum were merged for ", idf$id, "\n"))
-        }
-      }
-
-      if (is.null(mergeBy)) mergeBy <- "id"
-
-      if (mergeCEs) {
-
-        if (mergeBy == "replicates" & "CE" %in% colnames(t)) {
-          t <- t[, .(
-            mz = mean(mz),
-            intensity = sum(intensity) / length(unique(seqNum)),
-            CE = I(list(unique(CE))),
-            preMZ = mean(preMZ)
-            ), by = list(replicate, cluster)
-          ][, cluster := NULL]
-
-          t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
-          t[is.na(precursor), precursor := FALSE]
-          t[, id := idf$id][]
-          setorder(t, replicate, mz)
-          setcolorder(t, c("replicate", "id", "mz", "intensity", "CE", "preMZ", "precursor"))
-
-        } else if (mergeBy != "id"  & "CE" %in% colnames(t)) { #mergeBy samples when mergeBy is not null
-          t <- t[, .(
-            mz = mean(mz),
-            intensity = sum(intensity) / length(unique(seqNum)),
-            CE = I(list(unique(CE))),
-            preMZ = mean(preMZ),
-            replicate = unique(replicate)
-            ), by = list(sample, cluster)
-          ][, cluster := NULL]
-
-          t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
-          t[is.na(precursor), precursor := FALSE]
-          t[, id := idf$id][]
-          setorder(t, sample, mz)
-          setcolorder(t, c("sample", "replicate", "id", "mz", "intensity", "CE", "preMZ", "precursor"))
-
-        } else if ("CE" %in% colnames(t)) { #when NULL do not merge by samples
-          t <- t[, .(
-            mz = mean(mz),
-            intensity = sum(intensity) / length(unique(seqNum)),
-            CE = I(list(unique(CE))),
-            preMZ = mean(preMZ)
-            ), by = list(cluster)
-          ][, cluster := NULL]
-
-          t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
-          t[is.na(precursor), precursor := FALSE]
-          t[, id := idf$id][]
-          setorder(t, mz)
-          setcolorder(t, c("id", "mz", "intensity", "CE", "preMZ", "precursor"))
-
-        } else {
-          t <- t[, .(
-            mz = mean(mz),
-            intensity = sum(intensity) / length(unique(seqNum))
-            ), by = list(cluster)
-          ][, cluster := NULL]
-
-          t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
-          t[is.na(precursor), precursor := FALSE]
-          t[, id := idf$id][]
-          setorder(t, mz)
-          setcolorder(t, c("id", "mz", "intensity", "precursor"))
-        }
-
-      } else {
-
-        if (mergeBy == "replicates") {
-          t <- t[, .(
-            mz = mean(mz),
-            intensity = sum(intensity) / length(unique(seqNum)),
-            preMZ = mean(preMZ)
-            ), by = list(CE, replicate, cluster)
-          ][, cluster := NULL]
-
-          t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
-          t[is.na(precursor), precursor := FALSE]
-          t[, id := idf$id][]
-          setorder(t, replicate, CE, mz)
-          setcolorder(t, c("replicate", "id", "mz", "intensity", "CE", "preMZ", "precursor"))
-
-        } else if (mergeBy != "id") { #mergeBy samples when mergeBy is not null
-          t <- t[, .(
-            mz = mean(mz),
-            intensity = sum(intensity) / length(unique(seqNum)),
-            preMZ = mean(preMZ),
-            replicate = unique(replicate)
-            ), by = list(CE, sample, cluster)
-          ][, cluster := NULL]
-
-          t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
-          t[is.na(precursor), precursor := FALSE]
-          t[, id := idf$id][]
-          setorder(t, sample, CE, mz)
-          setcolorder(t, c("sample", "replicate", "id", "mz", "intensity", "CE", "preMZ", "precursor"))
-
-        } else { #when NULL do not merge by samples
-          t <- t[, .(
-            mz = mean(mz),
-            intensity = sum(intensity) / length(unique(seqNum)),
-            preMZ = mean(preMZ)
-            ), by = list(CE, cluster)
-          ][, cluster := NULL]
-
-          t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
-          t[is.na(precursor), precursor := FALSE]
-          t[, id := idf$id][]
-          setorder(t, CE, mz)
-          setcolorder(t, c("id", "mz", "intensity", "CE", "preMZ", "precursor"))
-        }
-      }
-    }
-
-    return(t)
-  },
-  clusteringMethod = clusteringMethod,
-  clusteringUnit = clusteringUnit,
-  clusteringWindow = clusteringWindow,
-  mergeCEs = mergeCEs,
-  mergeBy = mergeBy,
-  targets = targets,
-  msnList = msnList)
-
-  msnList <- rbindlist(msnList)
-
-  return(msnList)
-}
-
-
-
-
-#' @title clusterMSnToPatRoon
-#'
-#' @description Function to cluster spectra and convert to
-#' an \linkS4class{MSPeakLists} object.
-#'
-#' @return A \linkS4class{MSPeakLists} object with clustered data.
-#'
-#' @importFrom data.table copy setnames setcolorder setorder
-#' @importClassesFrom patRoon MSPeakLists
-#' @importFrom fastcluster hclust
-#'
-clusterMSnToPatRoon <- function(
-  cl_plists,
-  mlists,
-  targets,
-  clusteringMethod,
-  clusteringUnit,
-  clusteringWindow,
-  minIntensityPost) {
-
-  av_plists <- list()
-
-  for (i in names(cl_plists)) {
-    for (f in names(cl_plists[[i]])) {
-
-      av_ms <- clusterMSn(
-        ids = f,
-        msnList = cl_plists[[i]][[f]]$MS,
-        clusteringMethod,
-        clusteringUnit,
-        clusteringWindow,
-        mergeCEs = TRUE,
-        mergeBy = "sample",
-        targets
-      )
-
-      av_ms <- av_ms[intensity > minIntensityPost, ]
-      av_ms[, sample := i]
-
-      av_msms <- clusterMSn(
-        ids = f,
-        msnList = cl_plists[[i]][[f]]$MSMS,
-        clusteringMethod,
-        clusteringUnit,
-        clusteringWindow,
-        mergeCEs = TRUE,
-        mergeBy = "sample",
-        targets
-      )
-
-      av_msms <- av_msms[intensity > minIntensityPost, ]
-
-      av_plists[[f]][["MS"]] <- c(av_plists[[f]][["MS"]], list(av_ms))
-      av_plists[[f]][["MSMS"]] <- c(av_plists[[f]][["MSMS"]], list(av_msms))
-
-      cl_plists[[i]][[f]]$MS <- copy(av_ms)
-      cl_plists[[i]][[f]]$MSMS <- copy(av_msms)
-
-      setnames(cl_plists[[i]][[f]]$MS, "id", "ID")
-      cl_plists[[i]][[f]]$MS[, sample := NULL]
-      cl_plists[[i]][[f]]$MS[, ID := seq_len(nrow(cl_plists[[i]][[f]]$MS))]
-
-      setnames(cl_plists[[i]][[f]]$MSMS, "id", "ID")
-      cl_plists[[i]][[f]]$MSMS[, sample := NULL]
-      cl_plists[[i]][[f]]$MSMS[, replicate := NULL]
-      cl_plists[[i]][[f]]$MSMS[, CE := NULL]
-      cl_plists[[i]][[f]]$MSMS[, preMZ := NULL]
-      cl_plists[[i]][[f]]$MSMS[, ID := seq_len(nrow(cl_plists[[i]][[f]]$MSMS))]
-    }
-  }
-
-  for (f in names(av_plists)) {
-    for (lv in names(av_plists[[f]])) {
-
-      t <- copy(rbindlist(av_plists[[f]][[lv]], fill = TRUE))
-      idf <- targets[id == f, ]
-
-      if (nrow(t) > 2) {
-
-        if (clusteringMethod == "distance") {
-          setorder(t, mz)
-          mzMat <- abs(diff(t$mz))
-          if (clusteringUnit == "ppm") {
-            mzMat <- (mzMat / t$mz[-1]) * 1E6
-          }
-          t[, cluster := 1 + c(0, cumsum(mzMat > clusteringWindow))]
-
-        } else {
-          mzMat <- dist(t$mz, method = clusteringMethod)
-          if (clusteringUnit == "ppm") {
-            mzMat <- as.data.table(as.matrix(mzMat))
-            mzMat <- mzMat[, lapply(.SD, function(x, dt) x / t$mz * 1E6, dt = t), .SDcols = colnames(mzMat)]
-            mzMat <- as.dist(mzMat)
-          }
-          hc <- fastcluster::hclust(mzMat, method = "complete")
-          t[, cluster := cutree(hc, h = clusteringWindow)]
-
-        }
-
-        if ("CE" %in% colnames(t)) {
-          if (any(t[, .(dup = anyDuplicated(sample)), key = list(cluster)][["dup"]] > 0)) {
-            warning(paste0("MSMS traces from the same sample were merged during averaging for ", idf$id, "\n"))
-          }
-
-          t <- t[, .(
-          mz = mean(mz),
-          intensity = sum(intensity) / length(unique(sample))
-          ), by = list(cluster)
-          ][, cluster := NULL]
-
-          t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
-          t[is.na(precursor), precursor := FALSE]
-          t <- t[intensity > minIntensityPost, ]
-          setorder(t, mz)
-          t[, ID := seq_len(nrow(t))][]
-          setcolorder(t, c("ID", "mz", "intensity", "precursor"))
-
-        } else {
-          t <- t[, .(
-            mz = mean(mz),
-            intensity = sum(intensity) / length(unique(sample))
-          ), by = list(cluster)
-          ][, cluster := NULL]
-
-          t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
-          t[is.na(precursor), precursor := FALSE]
-          t <- t[intensity > minIntensityPost, ]
-          setorder(t, mz)
-          t[, ID := seq_len(nrow(t))]
-          setcolorder(t, c("ID", "mz", "intensity", "precursor"))
-        }
-      }
-
-      av_plists[[f]][[lv]] <- copy(t)
-    }
-  }
-
-  final_plists <- new("MSPeakLists",
-    peakLists = cl_plists,
-    metadata = mlists,
-    averagedPeakLists = av_plists,
-    avgPeakListArgs = list(),
-    origFGNames = names(av_plists),
-    algorithm = "mzr"
-  )
-
-  final_plists@averagedPeakLists <- av_plists
-
-  return(final_plists)
-}
-
-
-
-
 #' @title extractMSn
+#' 
 #' @description Extracts MSn spectra from defined isolated targets
 #' defined by \emph{m/z} and retention time, including the respective deviations.
 #'
@@ -936,7 +461,7 @@ clusterMSnToPatRoon <- function(
 #' of the sample/s to extract the data, respectively.
 #' When \code{NULL}, all the samples in the \code{object} are used.
 #' @param level A numeric vector with length 1 to defined the MS level.
-#' Only level 2, corresponding to MS/MS was tested.
+#' Currently, only level 2, corresponding to MS/MS, is possible.
 #' @param mz A numeric vector with isolation target \emph{m/z} values to extract MSn.
 #' Alternatively, a two columns data.table or data.frame with
 #' minimum and maximum (in this order) \emph{m/z} values can be used instead of exact \emph{m/z}.
@@ -950,27 +475,11 @@ clusterMSnToPatRoon <- function(
 #' Note that the legnth of the \code{rt} vector of number of rows of the \code{rt} table
 #' should be equal to the length or number of rows of \code{mz}.
 #' @param sec A numeric vector of length one with the time deviation, in seconds, to screen for isolation targets.
-#' @param isolationTimeWindow A numeric vector of length one with the time deviation of the isolation window, in seconds.
-#' @param isolationMassWindow A numeric vector of length one with the mass isolation window, in Da.
-#' @param clusteringMethod A character vector with the method for clustering.
-#' Possible values are \emph{euclidean} (the default) or \emph{distance}.
-#' @param clusteringUnit A character vector specifying the clustering unit.
-#' Possibel values are \emph{mz} (the default) or \emph{ppm}.
-#' @param clusteringWindow A length one numeric vector with the mass deviation
-#' for clustering \emph{m/z} values across different fragmentation spectra.
-#' @param minIntensityPre A length one numeric vector with the minimum intensity of peaks
-#' to be applied before clustering \emph{m/z} values across spectra.
-#' @param minIntensityPost A length one numeric vector with the minimum intensity of peaks
-#' to be applied after clustering and averaging of the \emph{m/z} and intensity values.
-#' @param asPatRoon Logical, set to \code{TRUE} for return an \linkS4class{MSPeakLists} object.
-#' @param mergeCEs Logical, set to \code{TRUE} to cluster different collision energies.
-#' When FALSE, the spectra from different collision energies won't be clustered.
-#' @param mergeBy A length one character vector with either "samples" (the default) or "replicates"
-#' to merge the MS2 data for different samples or replicates, respectively.
-#' When \code{NULL}, the spectra for each target is given per sample.
+#' @param algorithm A character vector of length one with the algorithm used to extract and cluster MS2 data.
+#' @param settings A list of parameters settings.
 #'
 #' @return A \code{data.table} with the columns
-#' \code{sample}, \code{replicate}, \code{id}, \code{CE}, \code{mz}, \code{intensity} and \code{precursor}
+#' \code{sample}, \code{replicate}, \code{id}, \code{voltage}, \code{mz}, \code{intensity} and \code{precursor}
 #' representing the sample name (i.e., file), the sample replicate name,
 #' the isolation target id, the collision energy applied, the \emph{m/z}, the intensity and the presence of the precursor
 #' (i.e., \emph{m/z} matching the isolation target), respectively.
@@ -987,18 +496,22 @@ extractMSn <- function(
   level = 2,
   mz = NULL, ppm = 20,
   rt = NULL, sec = 60,
-  isolationTimeWindow = 10,
-  isolationMassWindow = 1.3,
-  clusteringMethod = "distance",
-  clusteringUnit = "ppm",
-  clusteringWindow = 25,
-  minIntensityPre = 200,
-  minIntensityPost = 200,
-  asPatRoon = TRUE,
-  mergeCEs = TRUE,
-  mergeBy = "samples") {
+  algorithm = NA_character_,
+  settings = NULL) {
 
   checkmate::assertClass(object, "ntsData")
+  
+  if (checkmate::testClass(object, "ntsData")) {
+    if (is.na(algorithm)) algorithm <- fragmentsParameters(object)@algorithm
+    if (is.null(settings)) settings <- fragmentsParameters(object)@settings
+  }
+  
+  if (is.na(algorithm)) {
+    param <- fragmentSettingsDefault()
+    settings <- param@settings
+  }
+  
+  settings$asPatRoon <- FALSE
 
   if (is.character(samples)) {
     samples <- which(object@samples$sample %in% samples)
@@ -1017,14 +530,10 @@ extractMSn <- function(
     }
   }
 
-  if (clusteringUnit == "ppm") {
-    targets$mzmin <- targets$mz - (clusteringWindow / 1E6 * targets$mz)
-    targets$mzmax <- targets$mz + (clusteringWindow / 1E6 * targets$mz)
-  } else {
-    targets$mzmin <- targets$mz - clusteringWindow
-    targets$mzmax <- targets$mz + clusteringWindow
-  }
-
+  isolationMassWindow <- settings$isolationMassWindow/2
+  isolationTimeWindow <- settings$isolationTimeWindow
+  targets <- targets[, `:=`(mzmin = mz - isolationMassWindow, mzmax = mz + isolationMassWindow)]
+  targets <- targets[rt > 0, `:=`(rtmin = rtmin - isolationTimeWindow, rtmax = rtmax + isolationTimeWindow)]
 
   mlists <- list()
 
@@ -1032,17 +541,18 @@ extractMSn <- function(
     mz = numeric(),
     intensity = numeric(),
     seqNum = numeric(),
-    CE = numeric(),
+    voltage = numeric(),
     preMZ = numeric()
   )
+
+  spt <- samplesTable(object)
+  spt <- spt[file %in% fls, ]
 
   plists <- lapply(fls, function(
     x,
     targets,
     spt,
     level,
-    isolationTimeWindow,
-    isolationWindow,
     minIntensityPre,
     dummy) {
 
@@ -1057,7 +567,9 @@ extractMSn <- function(
     )
 
     hd <- as.data.table(spectra$header)
-    hd <- hd[retentionTime >= rtRange[1] & retentionTime <= rtRange[2], ]
+    if (!is.null(rtRange)) {
+      hd <- hd[retentionTime >= rtRange[1] & retentionTime <= rtRange[2], ]
+    }
     hd[, newSeqNum := seq_len(length(spectra$spectra))]
 
     if (length(spectra$spectra) != nrow(hd)) {
@@ -1077,11 +589,16 @@ extractMSn <- function(
       hd_msms <- copy(hd[msLevel == level, ])
 
       hd_msms <- hd_msms[
-        retentionTime >= (targets$rt[i] - isolationTimeWindow) &
-        retentionTime <= (targets$rt[i] + isolationTimeWindow) &
-        precursorMZ >= (targets$mz[i] - isolationMassWindow) &
-        precursorMZ <= (targets$mz[i] + isolationMassWindow),
+        precursorMZ >= targets$mzmin[i] &
+        precursorMZ <= targets$mzmax[i],
       ]
+      
+      if (targets$rt[i] > 0) {
+        hd_msms <- hd_msms[
+          retentionTime >= targets$rtmin[i] &
+          retentionTime <= targets$rtmax[i],
+        ]
+      }
 
       hd_ms <- copy(hd[msLevel == (level - 1), ])
       hd_ms <- hd_ms[acquisitionNum %in% unique(hd_msms$precursorScanNum), ]
@@ -1093,13 +610,13 @@ extractMSn <- function(
         prd <- as.data.table(spectra$spectra[[scans$newSeqNum[x_msms]]])
         setnames(prd, c("mz", "intensity"))
         prd[, seqNum := scans$seqNum[x_msms]]
-        prd[, CE := scans$collisionEnergy[x_msms]]
+        prd[, voltage := scans$collisionEnergy[x_msms]]
         prd[, preMZ := scans$precursorMZ[x_msms]]
         return(prd)
       }, scans = hd_msms, spectra = spectra)
 
       msms <- rbindlist(c(msms, list(dummy)))
-      msms <- msms[intensity >= minIntensityPre, ]
+      msms <- msms[intensity >= settings$minIntensityPre, ]
 
       ms <- lapply(seq_len(nrow(hd_ms)), function(x_ms, spectra, scans) {
         prd <- as.data.table(spectra$spectra[[scans$newSeqNum[x_ms]]])
@@ -1109,7 +626,7 @@ extractMSn <- function(
       }, scans = hd_ms, spectra = spectra)
 
       ms <- rbindlist(c(ms, list(dummy[, .(mz, intensity, seqNum)])))
-      ms <- ms[intensity >= minIntensityPre, ]
+      ms <- ms[intensity >= settings$minIntensityPre, ]
 
       msms[, id := idf]
       msms[, sample := spt[file == x, sample]]
@@ -1129,19 +646,17 @@ extractMSn <- function(
 
   },
   targets = targets,
-  spt = samplesTable(object)[file %in% fls, ],
+  spt = spt,
   level = level,
-  isolationTimeWindow = isolationTimeWindow,
-  isolationWindow = isolationWindow,
   minIntensityPre = minIntensityPre,
   dummy = dummy
   )
 
-  names(plists) <- samplesTable(object)[file %in% fls, sample]
+  names(plists) <- spt[file %in% fls, sample]
 
   cat("Clustering spectra... \n")
 
-  if (asPatRoon) {
+  if (settings$asPatRoon) {
 
     cl_plists <- copy(plists)
 
@@ -1150,10 +665,10 @@ extractMSn <- function(
         cl_plists,
         mlists,
         targets,
-        clusteringMethod,
-        clusteringUnit,
-        clusteringWindow,
-        minIntensityPost
+        settings$clusteringMethod,
+        settings$clusteringUnit,
+        settings$clusteringWindow,
+        settings$minIntensityPost
       )
     )
 
@@ -1167,17 +682,457 @@ extractMSn <- function(
       msnList <- clusterMSn(
         ids,
         msnList,
-        clusteringMethod,
-        clusteringUnit,
-        clusteringWindow,
-        mergeCEs,
-        mergeBy,
+        settings$clusteringMethod,
+        settings$clusteringUnit,
+        settings$clusteringWindow,
+        settings$mergeVoltages,
+        settings$mergeBy,
         targets
       )
     }
 
-    msnList <- msnList[intensity >= minIntensityPost, ]
-
+    msnList <- msnList[intensity >= settings$minIntensityPost, ]
+    
+    cat("Done! \n")
+    
     return(msnList)
   }
 }
+
+
+
+
+#' @title clusterMsn
+#'
+#' @description Function to cluster MSn data.
+#'
+#' @return A data table with clustered MSn data for given targets.
+#'
+#' @importFrom data.table copy setcolorder setorder
+#' @importFrom fastcluster hclust
+#'
+clusterMSn <- function(
+    ids,
+    msnList,
+    clusteringMethod,
+    clusteringUnit,
+    clusteringWindow,
+    mergeVoltages,
+    mergeBy,
+    targets) {
+  
+  msnList <- lapply(ids, function(
+    x,
+    msnList,
+    clusteringMethod,
+    clusteringUnit,
+    clusteringWindow,
+    mergeVoltages,
+    mergeBy,
+    targets
+  ) {
+    
+    t <- msnList[id == x, ]
+    idf <- targets[id == x, ]
+    
+    if (nrow(t) > 2) {
+      
+      if (clusteringMethod == "distance") {
+        setorder(t, mz)
+        mzMat <- abs(diff(t$mz))
+        if (clusteringUnit == "ppm") {
+          mzMat <- (mzMat / t$mz[-1]) * 1E6
+        }
+        t[, cluster := 1 + c(0, cumsum(mzMat > clusteringWindow))]
+        
+      } else {
+        mzMat <- dist(t$mz, method = clusteringMethod)
+        if (clusteringUnit == "ppm") {
+          mzMat <- as.data.table(as.matrix(mzMat))
+          mzMat <- mzMat[, lapply(.SD, function(x, dt) x / t$mz * 1E6, dt = t), .SDcols = colnames(mzMat)]
+          mzMat <- as.dist(mzMat)
+        }
+        hc <- fastcluster::hclust(mzMat, method = "complete")
+        t[, cluster := cutree(hc, h = clusteringWindow)]
+        
+      }
+      
+      if ("voltage" %in% colnames(t)) {
+        if (any(t[, .(dup = anyDuplicated(seqNum)), key = c("cluster", "sample")][["dup"]] > 0)) {
+          message(paste0("MSMS traces from the same spectrum were merged for ", idf$id, "\n"))
+        }
+      }
+      
+      if (is.null(mergeBy)) mergeBy <- "id"
+      
+      if (mergeVoltages) {
+        
+        if (mergeBy == "replicates" & "voltage" %in% colnames(t)) {
+          t <- t[, .(
+            mz = mean(mz),
+            intensity = sum(intensity) / length(unique(seqNum)),
+            voltage = I(list(unique(voltage))),
+            preMZ = mean(preMZ)
+          ), by = list(replicate, cluster)
+          ][, cluster := NULL]
+          
+          t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
+          t[is.na(precursor), precursor := FALSE]
+          t[, id := idf$id]
+          setorder(t, replicate, mz)
+          setcolorder(t, c("replicate", "id", "mz", "intensity", "voltage", "preMZ", "precursor"))
+          
+        } else if (mergeBy != "id"  & "voltage" %in% colnames(t)) { #mergeBy samples when mergeBy is not null
+          t <- t[, .(
+            mz = mean(mz),
+            intensity = sum(intensity) / length(unique(seqNum)),
+            voltage = I(list(unique(voltage))),
+            preMZ = mean(preMZ),
+            replicate = unique(replicate)
+          ), by = list(sample, cluster)
+          ][, cluster := NULL]
+          
+          t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
+          t[is.na(precursor), precursor := FALSE]
+          t[, id := idf$id]
+          setorder(t, sample, mz)
+          setcolorder(t, c("sample", "replicate", "id", "mz", "intensity", "voltage", "preMZ", "precursor"))
+          
+        } else if ("voltage" %in% colnames(t)) { #when NULL do not merge by samples
+          t <- t[, .(
+            mz = mean(mz),
+            intensity = sum(intensity) / length(unique(seqNum)),
+            voltage = I(list(unique(voltage))),
+            preMZ = mean(preMZ)
+          ), by = list(cluster)
+          ][, cluster := NULL]
+          
+          t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
+          t[is.na(precursor), precursor := FALSE]
+          t[, id := idf$id]
+          setorder(t, mz)
+          setcolorder(t, c("id", "mz", "intensity", "voltage", "preMZ", "precursor"))
+          
+        } else {
+          t <- t[, .(
+            mz = mean(mz),
+            intensity = sum(intensity) / length(unique(seqNum))
+          ), by = list(cluster)
+          ][, cluster := NULL]
+          
+          t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
+          t[is.na(precursor), precursor := FALSE]
+          t[, id := idf$id]
+          setorder(t, mz)
+          setcolorder(t, c("id", "mz", "intensity", "precursor"))
+        }
+        
+      } else {
+        
+        if (mergeBy == "replicates") {
+          t <- t[, .(
+            mz = mean(mz),
+            intensity = sum(intensity) / length(unique(seqNum)),
+            preMZ = mean(preMZ)
+          ), by = list(voltage, replicate, cluster)
+          ][, cluster := NULL]
+          
+          t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
+          t[is.na(precursor), precursor := FALSE]
+          t[, id := idf$id]
+          setorder(t, replicate, voltage, mz)
+          setcolorder(t, c("replicate", "id", "mz", "intensity", "voltage", "preMZ", "precursor"))
+          
+        } else if (mergeBy != "id") { #mergeBy samples when mergeBy is not null
+          t <- t[, .(
+            mz = mean(mz),
+            intensity = sum(intensity) / length(unique(seqNum)),
+            preMZ = mean(preMZ),
+            replicate = unique(replicate)
+          ), by = list(voltage, sample, cluster)
+          ][, cluster := NULL]
+          
+          t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
+          t[is.na(precursor), precursor := FALSE]
+          t[, id := idf$id]
+          setorder(t, sample, voltage, mz)
+          setcolorder(t, c("sample", "replicate", "id", "mz", "intensity", "voltage", "preMZ", "precursor"))
+          
+        } else { #when NULL do not merge by samples
+          t <- t[, .(
+            mz = mean(mz),
+            intensity = sum(intensity) / length(unique(seqNum)),
+            preMZ = mean(preMZ)
+          ), by = list(voltage, cluster)
+          ][, cluster := NULL]
+          
+          t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
+          t[is.na(precursor), precursor := FALSE]
+          t[, id := idf$id]
+          setorder(t, voltage, mz)
+          setcolorder(t, c("id", "mz", "intensity", "voltage", "preMZ", "precursor"))
+        }
+      }
+    } else if (nrow(t) == 1 | nrow(t) == 2) {
+      
+      if ("seqNum" %in% colnames(t)) t[, seqNum := NULL]
+      
+      if (mergeBy == "replicates" & "voltage" %in% colnames(t)) {
+        t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
+        t[is.na(precursor), precursor := FALSE]
+        t[, id := idf$id]
+        t[, voltage := I(voltage)]
+        setorder(t, replicate, mz)
+        setcolorder(t, c("replicate", "id", "mz", "intensity", "voltage", "preMZ", "precursor"))
+        
+      } else if (mergeBy != "id"  & "voltage" %in% colnames(t)) { #mergeBy samples when mergeBy is not null
+        t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
+        t[is.na(precursor), precursor := FALSE]
+        t[, id := idf$id]
+        t[, voltage := I(voltage)]
+        setorder(t, sample, mz)
+        setcolorder(t, c("sample", "replicate", "id", "mz", "intensity", "voltage", "preMZ", "precursor"))
+        
+      } else if ("voltage" %in% colnames(t)) { #when NULL do not merge by samples
+        t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
+        t[is.na(precursor), precursor := FALSE]
+        t[, id := idf$id]
+        t[, voltage := I(voltage)]
+        setorder(t, mz)
+        setcolorder(t, c("id", "mz", "intensity", "voltage", "preMZ", "precursor"))
+      } else {
+        t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
+        t[is.na(precursor), precursor := FALSE]
+        t[, id := idf$id][]
+        setorder(t, mz)
+        setcolorder(t, c("id", "mz", "intensity", "precursor"))
+      }
+    }
+    
+    return(t)
+  },
+  clusteringMethod = clusteringMethod,
+  clusteringUnit = clusteringUnit,
+  clusteringWindow = clusteringWindow,
+  mergeVoltages = mergeVoltages,
+  mergeBy = mergeBy,
+  targets = targets,
+  msnList = msnList)
+  
+  msnList <- rbindlist(msnList)
+  
+  return(msnList)
+}
+
+
+
+
+#' @title clusterMSnToPatRoon
+#'
+#' @description Function to cluster spectra and convert to
+#' an \linkS4class{MSPeakLists} object.
+#'
+#' @return A \linkS4class{MSPeakLists} object with clustered data.
+#'
+#' @importFrom data.table copy setnames setcolorder setorder
+#' @importClassesFrom patRoon MSPeakLists
+#' @importFrom fastcluster hclust
+#'
+clusterMSnToPatRoon <- function(
+    cl_plists,
+    mlists,
+    targets,
+    clusteringMethod,
+    clusteringUnit,
+    clusteringWindow,
+    minIntensityPost) {
+  
+  av_plists <- list()
+  
+  cat("Clustering MS/MS for peaks...")
+  
+  LoopLength <- sum(lengths(cl_plists))
+  
+  pb <- txtProgressBar(
+    min = 0,
+    max = LoopLength,
+    style = 3,
+    width = 50,
+    char = "="
+  )
+  
+  loopN <- 0
+  
+  for (i in names(cl_plists)) {
+    for (f in names(cl_plists[[i]])) {
+      
+      loopN <- loopN + 1
+      
+      av_ms <- clusterMSn(
+        ids = f,
+        msnList = cl_plists[[i]][[f]]$MS,
+        clusteringMethod,
+        clusteringUnit,
+        clusteringWindow,
+        mergeVoltages = TRUE,
+        mergeBy = "sample",
+        targets
+      )
+      
+      av_ms <- av_ms[intensity > minIntensityPost, ]
+      av_ms[, sample := i]
+      
+      av_msms <- clusterMSn(
+        ids = f,
+        msnList = cl_plists[[i]][[f]]$MSMS,
+        clusteringMethod,
+        clusteringUnit,
+        clusteringWindow,
+        mergeVoltages = TRUE,
+        mergeBy = "sample",
+        targets
+      )
+      
+      av_msms <- av_msms[intensity > minIntensityPost, ]
+      
+      av_plists[[f]][["MS"]] <- c(av_plists[[f]][["MS"]], list(av_ms))
+      av_plists[[f]][["MSMS"]] <- c(av_plists[[f]][["MSMS"]], list(av_msms))
+      
+      cl_plists[[i]][[f]]$MS <- copy(av_ms)
+      cl_plists[[i]][[f]]$MSMS <- copy(av_msms)
+      
+      setnames(cl_plists[[i]][[f]]$MS, "id", "ID")
+      cl_plists[[i]][[f]]$MS[, sample := NULL]
+      cl_plists[[i]][[f]]$MS[, ID := seq_len(nrow(cl_plists[[i]][[f]]$MS))]
+      
+      setnames(cl_plists[[i]][[f]]$MSMS, "id", "ID")
+      cl_plists[[i]][[f]]$MSMS[, sample := NULL]
+      cl_plists[[i]][[f]]$MSMS[, replicate := NULL]
+      cl_plists[[i]][[f]]$MSMS[, voltage := NULL]
+      cl_plists[[i]][[f]]$MSMS[, preMZ := NULL]
+      cl_plists[[i]][[f]]$MSMS[, ID := seq_len(nrow(cl_plists[[i]][[f]]$MSMS))]
+      
+      setTxtProgressBar(pb, loopN)
+    }
+  }
+  
+  cat("Done! \n")
+  close(pb)
+  
+  cat("Clustering and averaging MS/MS for features...")
+  
+  LoopLength2 <- sum(lengths(av_plists))
+  
+  pb2 <- txtProgressBar(
+    min = 0,
+    max = LoopLength2,
+    style = 3,
+    width = 50,
+    char = "="
+  )
+  
+  loopN2 <- 0
+  
+  for (f in names(av_plists)) {
+    for (lv in names(av_plists[[f]])) {
+      
+      loopN2 <- loopN2 + 1
+      
+      t <- av_plists[[f]][[lv]]
+      t <- t[sapply(t, nrow) > 0]
+      t <- copy(rbindlist(t, fill = TRUE))
+      idf <- targets[id == f, ]
+      
+      if (nrow(t) > 2) {
+        
+        if (clusteringMethod == "distance") {
+          setorder(t, mz)
+          mzMat <- abs(diff(t$mz))
+          if (clusteringUnit == "ppm") {
+            mzMat <- (mzMat / t$mz[-1]) * 1E6
+          }
+          t[, cluster := 1 + c(0, cumsum(mzMat > clusteringWindow))]
+          
+        } else {
+          mzMat <- dist(t$mz, method = clusteringMethod)
+          if (clusteringUnit == "ppm") {
+            mzMat <- as.data.table(as.matrix(mzMat))
+            mzMat <- mzMat[, lapply(.SD, function(x, dt) x / t$mz * 1E6, dt = t), .SDcols = colnames(mzMat)]
+            mzMat <- as.dist(mzMat)
+          }
+          hc <- fastcluster::hclust(mzMat, method = "complete")
+          t[, cluster := cutree(hc, h = clusteringWindow)]
+          
+        }
+        
+        if ("voltage" %in% colnames(t)) {
+          t <- t[, .(
+            mz = mean(mz),
+            intensity = sum(intensity) / length(unique(sample))
+          ), by = list(cluster)
+          ][, cluster := NULL]
+          
+          t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
+          t[is.na(precursor), precursor := FALSE]
+          t <- t[intensity > minIntensityPost, ]
+          setorder(t, mz)
+          t[, ID := seq_len(nrow(t))][]
+          setcolorder(t, c("ID", "mz", "intensity", "precursor"))
+          
+        } else {
+          t <- t[, .(
+            mz = mean(mz),
+            intensity = sum(intensity) / length(unique(sample))
+          ), by = list(cluster)
+          ][, cluster := NULL]
+          
+          t[mz >= idf$mzmin[1] & mz <= idf$mzmax[1], precursor := TRUE]
+          t[is.na(precursor), precursor := FALSE]
+          t <- t[intensity > minIntensityPost, ]
+          setorder(t, mz)
+          t[, ID := seq_len(nrow(t))]
+          setcolorder(t, c("ID", "mz", "intensity", "precursor"))
+        }
+      }
+      
+      av_plists[[f]][[lv]] <- copy(t)
+      
+      setTxtProgressBar(pb2, loopN2)
+    }
+  }
+  
+  cat("Done! \n")
+  close(pb2)
+  
+  final_plists <- new("MSPeakLists",
+                      peakLists = cl_plists,
+                      metadata = mlists,
+                      averagedPeakLists = av_plists,
+                      avgPeakListArgs = list(),
+                      origFGNames = names(av_plists),
+                      algorithm = "mzr"
+  )
+  
+  cat("Done! \n")
+  
+  final_plists@averagedPeakLists <- av_plists
+  
+  return(final_plists)
+}
+
+
+
+loadMS1 <- function(object, sample = NULL) {
+  
+  
+  test <- RaMS::grabMSdata(filePaths(dt)[1])
+  
+  ms2 <- test$MS2
+  
+  ms2[premz > 273 & premz < 274, ]
+  
+  View(ms2)
+
+}
+
+

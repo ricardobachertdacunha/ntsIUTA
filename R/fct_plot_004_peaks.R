@@ -206,8 +206,6 @@ plotPeaksInteractive <- function(eic, pks, title, colorBy) {
 #'
 #' @export
 #'
-#' @importFrom checkmate assertClass assertSubset
-#' @importFrom dplyr between filter
 #' @importFrom plotly toRGB plot_ly add_trace layout
 #'
 mapPeaksInteractive <- function(pks, xlim = 60, ylim = 5, title, colorBy = "targets") {
@@ -275,7 +273,7 @@ mapPeaksInteractive <- function(pks, xlim = 60, ylim = 5, title, colorBy = "targ
                 font = list(size = 9, color = "black"))
 
   xaxis <- list(linecolor = toRGB("black"),
-                linewidth = 2, title = "Retention Time (sec.)",
+                linewidth = 2, title = "Retention time (seconds)",
                 titlefont = list(size = 12, color = "black"),
                 range = rtr,
                 autotick = TRUE, ticks = "outside")
@@ -285,10 +283,13 @@ mapPeaksInteractive <- function(pks, xlim = 60, ylim = 5, title, colorBy = "targ
                 range = mzr,
                 titlefont = list(size = 12, color = "black"))
 
-  plot <- plot %>% plotly::layout(xaxis = xaxis,
-                                  yaxis = yaxis,
-                                  title = title,
-                                  shapes = shapes)
+  plot <- plot %>% plotly::layout(
+    legend = list(title = list(text = paste("<b>", colorBy, "</b>"))),
+    xaxis = xaxis,
+    yaxis = yaxis,
+    title = title,
+    shapes = shapes
+  )
 
   return(plot)
 }

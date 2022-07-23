@@ -4,13 +4,10 @@
 \alias{createFeatures}
 \title{createFeatures}
 \usage{
-createFeatures(obj, excludeBlanks = FALSE, save = TRUE)
+createFeatures(object, save = FALSE)
 }
 \arguments{
-\item{obj}{An \linkS4class{ntsData} object.}
-
-\item{excludeBlanks}{Logical, set to \code{TRUE} to exclude
-blank replicate groups from annotation.}
+\item{object}{An \linkS4class{ntsData} object.}
 
 \item{save}{Logical, set to \code{TRUE} to save updated
 \linkS4class{ntsData} object in the \strong{rdata} folder.
@@ -23,9 +20,10 @@ An \linkS4class{ntsData} object with peaks
 grouped and annotated across samples as features.
 }
 \description{
-Wrapper function for peak picking, grouping and annotation when parameters are defined.
+Wrapper function for peak picking, grouping, filling, annotation
+and creation of UFIs when settings are already defined in the \linkS4class{ntsParameters}.
 }
 \note{
-The  \linkS4class{ntsData} object should contain the parameters
+The \linkS4class{ntsData} object should contain the parameter settings
 required for creation and annotation of features.
 }

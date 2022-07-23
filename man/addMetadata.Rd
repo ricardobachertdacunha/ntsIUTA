@@ -20,7 +20,7 @@ For \code{data.frame} or \code{data.table}, multiple columns can be added.}
 An \linkS4class{ntsData} with metadata added to the slot metadata.
 }
 \description{
-Adds metadata for each sample replicate in an \linkS4class{ntsData} object.
+Adds metadata for each sample in an \linkS4class{ntsData} object.
 If metadata already exists in the \linkS4class{ntsData} object,
 the new variable/s are added as new column/s.
 }

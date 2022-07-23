@@ -4,7 +4,7 @@
 \alias{generateMS2}
 \title{generateMS2}
 \usage{
-generateMS2(object, algorithm = NULL, settings = NULL)
+generateMS2(object, algorithm = NA_character_, settings = NULL)
 }
 \arguments{
 \item{object}{An \linkS4class{ntsData} or a \linkS4class{featureGroups} object to

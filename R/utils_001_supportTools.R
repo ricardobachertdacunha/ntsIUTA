@@ -29,9 +29,6 @@ saveObject <- function(format = "rds",
   if (class(dots[[1]]) == "ntsData") path <- path(dots[[1]])
 
   if (format == "rds") {
-    rdata <- paste0(path, "\\rdata")
-    if (!dir.exists(rdata)) dir.create(rdata)
-
     if (is.null(filename)) {
       if (class(dots[[1]]) == "ntsData") {
         filename <- "ntsData"
@@ -39,10 +36,9 @@ saveObject <- function(format = "rds",
         filename <- as.character(names(dots[[1]]))
       }
     }
-
-    saveRDS(dots[[1]], file = paste0(rdata, "\\", filename, ".rds"))
-
+    saveRDS(dots[[1]], file = paste0(path, "\\", filename, ".rds"))
   }
+  
   #TODO Implement saving for other file types, ex. plots and tables
 }
 
